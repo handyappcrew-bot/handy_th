@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "160358701554",
+    "project_id": "handy-3529b",
+    "storage_bucket": "handy-3529b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:160358701554:android:d6ffd3a7d5c09e535d736b",
+        "android_client_info": {
+          "package_name": "com.handy.handy9073"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3yECIQPw9gWEffM2eb-EjXbDbnEY1Zk4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
