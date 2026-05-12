@@ -1,0 +1,12 @@
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Backend
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/app/uploads/
+backend/app/.env
+backend/app/firebase-service-account.json
