@@ -13,3 +13,5 @@ solapi
 firebase-admin
 python-multipart
 tzdata
+apscheduler
+alembic

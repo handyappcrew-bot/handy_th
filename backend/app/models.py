@@ -21,12 +21,14 @@ class Member(Base):
     gender = Column(String(10), nullable=True)
     image_url = Column(String(255), default="default.png")
     is_deleted = Column(Boolean, default=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     social_accounts = relationship("SocialAccount", back_populates="member", cascade="all, delete-orphan")
     tokens = relationship("JwtTokens", back_populates="member", cascade="all, delete-orphan")
     store_memberships = relationship("StoreMembers", back_populates="member", cascade="all, delete-orphan")
     member_requests = relationship("MemberRequest", back_populates="member", cascade="all, delete-orphan")
     feedbacks = relationship("Feedback", back_populates="member", cascade="all, delete-orphan")
+    withdrawals = relationship("Withdrawal", back_populates="member", cascade="all, delete-orphan")
 
 
 class SocialAccount(Base):
@@ -166,6 +168,7 @@ class BusinessRequest(Base):
     __tablename__ = "business_requests"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
+    member_id = Column(BigInteger, ForeignKey("members.id"), nullable=False, comment="신청한 사장 member_id")
     raw_digits = Column(String(30), nullable=False, comment="사업자 등록 번호")
     name = Column(String(100), nullable=False)
     address = Column(String(255), nullable=False)
@@ -249,7 +252,8 @@ class StaffContract(Base):
     salary_day = Column(String(20), nullable=True, comment="급여일 (예: 15, 말일)")
     is_probation = Column(Boolean, server_default="false", comment="수습 여부")
 
-    # 4대보험 / 세금 (퍼센트 or 금액)
+    # 4대보험 / 세금
+    deduction_type = Column(String(10), server_default="percent", comment="percent(비율) / amount(고정금액)")
     income_tax = Column(Numeric(8, 4), nullable=True)
     local_income_tax = Column(Numeric(8, 4), nullable=True)
     national_pension = Column(Numeric(8, 4), nullable=True)
@@ -570,6 +574,8 @@ class Withdrawal(Base):
     __tablename__ = "withdrawals"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    member_id = Column(BigInteger, ForeignKey("members.id"), nullable=False)
+    member_id = Column(BigInteger, ForeignKey("members.id", ondelete="CASCADE"), nullable=False)
     reason = Column(String(300), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+
+    member = relationship("Member", back_populates="withdrawals")

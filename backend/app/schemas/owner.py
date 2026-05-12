@@ -37,6 +37,7 @@ class StaffContractUpdateReq(BaseModel):
     salary_cycle: Optional[str] = None
     salary_day: Optional[str] = None
     is_probation: Optional[bool] = None
+    deduction_type: Optional[str] = None   # "percent" | "amount"
     income_tax: Optional[float] = None
     local_income_tax: Optional[float] = None
     national_pension: Optional[float] = None

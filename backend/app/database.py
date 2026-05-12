@@ -27,13 +27,37 @@ def get_db():
 
 
 def create_tables():
-    import models
+    import models  # noqa: F401
+    _run_migrations()
     Base.metadata.create_all(bind=engine)
     print("DB 연결 성공")
     _insert_seed_data()
 
 
+def _run_migrations():
+    """Alembic 마이그레이션을 프로그래밍 방식으로 최신 상태까지 적용"""
+    from pathlib import Path
+    from alembic.config import Config
+    from alembic import command
+
+    backend_dir = Path(__file__).resolve().parent.parent
+    # ini 파일을 읽지 않고 직접 옵션 설정 (Windows 인코딩 문제 회피)
+    alembic_cfg = Config()
+    alembic_cfg.set_main_option("script_location", str(backend_dir / "alembic"))
+    alembic_cfg.set_main_option(
+        "sqlalchemy.url",
+        f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
+    )
+    try:
+        command.upgrade(alembic_cfg, "head")
+        print("Migration complete")
+    except Exception as e:
+        print(f"Migration error: {e}")
+
+
 def _insert_seed_data():
+    if os.getenv("ENV") == "production":
+        return
     from models import Store, Member, StoreMembers, StoreShift, StoreSetting, StaffContract
     from utils.auth_utils import password_encode
     from sqlalchemy import update as sa_update
@@ -56,7 +80,7 @@ def _insert_seed_data():
             db.execute(sa_update(Member).where(Member.phone == phone).values(name=name, gender=gender))
         db.commit()
 
-        # 직원 계정 (정수민)
+        # 직원 계정 (정수민) — 항상 비밀번호 초기화
         member = db.query(Member).filter(Member.phone == "01011111111").first()
         if not member:
             member = Member(password=password_encode("1111"), phone="01011111111", name="정수민", gender="female")
@@ -65,9 +89,13 @@ def _insert_seed_data():
             db.refresh(member)
             print("정수민 계정 생성")
         else:
+            member.password = password_encode("1111")
+            member.is_deleted = False
+            member.deleted_at = None
+            db.commit()
             db.refresh(member)
 
-        # 사장 계정
+        # 사장 계정 — 항상 비밀번호 초기화
         owner = db.query(Member).filter(Member.phone == "01022222222").first()
         if not owner:
             owner = Member(password=password_encode("2222"), phone="01022222222", name="테스트사장", gender="male")
@@ -76,6 +104,10 @@ def _insert_seed_data():
             db.refresh(owner)
             print("사장 계정 생성")
         else:
+            owner.password = password_encode("2222")
+            owner.is_deleted = False
+            owner.deleted_at = None
+            db.commit()
             db.refresh(owner)
 
         # 매장
@@ -142,8 +174,27 @@ def _insert_seed_data():
                 db.refresh(m)
                 print(f"계정 생성: {emp['name']}")
             else:
+                m.password = password_encode(emp["password"])
+                m.is_deleted = False
+                m.deleted_at = None
+                db.commit()
                 db.refresh(m)
             ensure_member_in_store(m, "employee", emp["contract"])
+
+        # 노량전자·강서물산 계정 비밀번호 초기화 (매장 연결은 init_data.sql에서 처리)
+        extra_reset = [
+            {"phone": "01077777777", "password": "7777", "name": "한지수"},
+            {"phone": "01088888888", "password": "8888", "name": "김태훈"},
+            {"phone": "01099999999", "password": "9999", "name": "김민형"},
+            {"phone": "01000000001", "password": "0001", "name": "김재욱"},
+        ]
+        for emp in extra_reset:
+            m = db.query(Member).filter(Member.phone == emp["phone"]).first()
+            if m:
+                m.password = password_encode(emp["password"])
+                m.is_deleted = False
+                m.deleted_at = None
+                db.commit()
 
     except Exception as e:
         print(f"시드 데이터 생성 중 오류: {e}")

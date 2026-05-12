@@ -11,10 +11,10 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from pathlib import Path
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from models import Member, SocialAccount, JwtTokens, StoreMembers, Store
+from models import Member, SocialAccount, JwtTokens, StoreMembers, Store, Withdrawal
 from database import get_db
 from utils.auth_utils import (
     normalize_phone, normalize_birth, convert_gender,
@@ -22,8 +22,9 @@ from utils.auth_utils import (
     generate_code, save_code, send_code_to_user, verify_code, check_daily_limit,
     add_token_for_cookie, encode_temp_signup_token, decode_temp_signup_token,
     verify_token, create_access_token,
+    save_oauth_state, consume_oauth_state,
 )
-from schemas.auth import ValidLogin, Signup, PhoneReq, VerifyReq
+from schemas.auth import ValidLogin, Signup, PhoneReq, VerifyReq, WithdrawalReq
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,6 @@ APPLE_REDIRECT_URI = os.getenv("APPLE_REDIRECT_URI")
 FRONTEND_URL = os.getenv("VITE_API_URL")
 
 router = APIRouter(prefix="/api/auth", tags=["인증"])
-
-_state_store: dict = {}
 
 
 def get_current_member_with_refresh(
@@ -162,8 +161,7 @@ def send_sms(req: PhoneReq, db: Session = Depends(get_db)):
     if not check_daily_limit(phone):
         raise HTTPException(status_code=400, detail="인증번호는 하루 최대 5번까지 발송 가능해요")
     code = generate_code()
-    print(code)
-    # send_code_to_user(phone, code)
+    send_code_to_user(phone, code)
     save_code(phone, code)
     return {"message": "인증번호 발송 완료"}
 
@@ -240,12 +238,25 @@ def logout(
 
 
 # ===== 회원탈퇴 =====
-@router.delete("/withdrawal/{user_id}")
-def delete_user(user_id: int, res: Response, db: Session = Depends(get_db)):
-    member = db.query(Member).filter(Member.id == user_id).first()
-    if not member:
-        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-    member.is_deleted = True
+@router.delete("/withdrawal")
+def delete_user(
+    body: WithdrawalReq,
+    res: Response,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
+
+    current_member.is_deleted = True
+    current_member.deleted_at = now
+
+    # 모든 활성 토큰 revoke
+    db.query(JwtTokens).filter(
+        JwtTokens.member_id == current_member.id,
+        JwtTokens.is_revoked == False,
+    ).update({"is_revoked": True})
+
+    db.add(Withdrawal(member_id=current_member.id, reason=body.reason))
     db.commit()
 
     is_prod = os.getenv("ENV") == "production"
@@ -258,7 +269,7 @@ def delete_user(user_id: int, res: Response, db: Session = Depends(get_db)):
 @router.get("/kakao/login")
 def kakao_login():
     state = str(uuid.uuid4())
-    _state_store[state] = datetime.now(ZoneInfo("Asia/Seoul")) + timedelta(minutes=10)
+    save_oauth_state(state)
     url = (
         f"https://kauth.kakao.com/oauth/authorize"
         f"?response_type=code&client_id={KAKAO_CLIENT_ID}"
@@ -269,11 +280,8 @@ def kakao_login():
 
 @router.get("/kakao/callback")
 async def kakao_callback(code: str, state: str, db: Session = Depends(get_db)):
-    if state not in _state_store or _state_store[state] < datetime.now(ZoneInfo("Asia/Seoul")):
-        _state_store.pop(state, None)
+    if not consume_oauth_state(state):
         return JSONResponse(status_code=400, content={"error": "유효하지 않은 요청입니다."})
-    del _state_store[state]
-
     try:
         async with httpx.AsyncClient() as client:
             token_res = await client.post(
@@ -314,7 +322,7 @@ async def kakao_callback(code: str, state: str, db: Session = Depends(get_db)):
 @router.get("/google/login")
 def google_login():
     state = str(uuid.uuid4())
-    _state_store[state] = datetime.now(ZoneInfo("Asia/Seoul")) + timedelta(minutes=10)
+    save_oauth_state(state)
     url = (
         f"https://accounts.google.com/o/oauth2/auth"
         f"?response_type=code&client_id={GOOGLE_CLIENT_ID}"
@@ -326,10 +334,8 @@ def google_login():
 
 @router.get("/google/callback")
 async def google_callback(code: str, state: str, db: Session = Depends(get_db)):
-    if state not in _state_store or _state_store[state] < datetime.now(ZoneInfo("Asia/Seoul")):
-        _state_store.pop(state, None)
+    if not consume_oauth_state(state):
         return JSONResponse(status_code=400, content={"error": "유효하지 않은 요청입니다."})
-    del _state_store[state]
 
     try:
         async with httpx.AsyncClient() as client:
@@ -371,7 +377,7 @@ async def google_callback(code: str, state: str, db: Session = Depends(get_db)):
 @router.get("/apple/login")
 def apple_login():
     state = str(uuid.uuid4())
-    _state_store[state] = datetime.now(ZoneInfo("Asia/Seoul")) + timedelta(minutes=10)
+    save_oauth_state(state)
     url = (
         f"https://appleid.apple.com/auth/authorize"
         f"?response_type=code&client_id={APPLE_CLIENT_ID}"
@@ -388,6 +394,8 @@ async def apple_callback(
     state: str = Form(None),
     db: Session = Depends(get_db),
 ):
+    if not state or not consume_oauth_state(state):
+        return JSONResponse(status_code=400, content={"error": "유효하지 않은 요청입니다."})
     client_secret = _create_apple_client_secret()
     try:
         async with httpx.AsyncClient() as client:

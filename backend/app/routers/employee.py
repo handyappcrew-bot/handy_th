@@ -47,6 +47,18 @@ def get_employee_or_404(db: Session, store_id: int, member_id: int) -> StoreMemb
     return emp
 
 
+def verify_store_member(store_id: int, member_id: int, db: Session) -> StoreMembers:
+    """요청자가 해당 매장의 구성원(사장 또는 직원)인지 검증"""
+    sm = db.query(StoreMembers).filter(
+        StoreMembers.store_id == store_id,
+        StoreMembers.member_id == member_id,
+        StoreMembers.is_deleted == False,
+    ).first()
+    if not sm:
+        raise HTTPException(status_code=403, detail="해당 매장의 구성원만 접근 가능합니다.")
+    return sm
+
+
 async def save_file(file: UploadFile, upload_dir: str) -> str:
     ext = os.path.splitext(file.filename)[1]
     filename = f"{uuid.uuid4()}{ext}"
@@ -205,7 +217,13 @@ async def modify_todo(
 
 # ======= 공지사항 =======
 @router.post("/notice")
-async def get_notice_list(req: StoreIdReq, db: Session = Depends(get_db)):
+async def get_notice_list(
+    req: StoreIdReq,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    verify_store_member(req.store_id, current_member.id, db)
+
     notices = (
         db.query(StoreCommunity, Member.name)
         .join(StoreMembers, StoreMembers.id == StoreCommunity.employee_id)
@@ -296,9 +314,10 @@ async def get_salary_preview(
         if not sched or not sched.work_start or not sched.work_end:
             continue
 
-        sched_start = datetime.combine(log.work_date, sched.work_start)
-        sched_end = datetime.combine(log.work_date, sched.work_end)
-        actual_end = log.end_time.replace(tzinfo=None) if log.end_time else None
+        kst = ZoneInfo("Asia/Seoul")
+        sched_start = datetime.combine(log.work_date, sched.work_start, tzinfo=kst)
+        sched_end = datetime.combine(log.work_date, sched.work_end, tzinfo=kst)
+        actual_end = log.end_time.astimezone(kst) if log.end_time else None
         if not actual_end:
             continue
 
@@ -341,7 +360,11 @@ def get_schedule_change_by_id(
 
 # ======= 특정 추가 스케줄 조회 (알림 클릭용) =======
 @router.get("/schedule-work/{id}")
-def get_schedule_work_by_id(id: int, db: Session = Depends(get_db)):
+def get_schedule_work_by_id(
+    id: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
     sched = db.query(Schedule).options(joinedload(Schedule.shift)).filter(Schedule.id == id).first()
     if not sched:
         raise HTTPException(status_code=404, detail="스케줄을 찾을 수 없습니다.")
@@ -470,8 +493,10 @@ async def get_schedule(
 @router.get("/schedule/{store_id}/detail")
 def get_schedule_detail(
     store_id: int, year: int, month: int, day: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_store_member(store_id, current_member.id, db)
     target = date(year, month, day)
     schedules = db.query(Schedule).options(
         joinedload(Schedule.shift),
@@ -503,7 +528,12 @@ def get_schedule_detail(
 
 # ======= 월별 전체 직원 스케줄 요약 =======
 @router.get("/schedule/{store_id}/all")
-def get_all_schedule(store_id: int, year: int, month: int, db: Session = Depends(get_db)):
+def get_all_schedule(
+    store_id: int, year: int, month: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    verify_store_member(store_id, current_member.id, db)
     start = date(year, month, 1)
     end = date(year, month, monthrange(year, month)[1])
 
@@ -570,9 +600,10 @@ def check_closing_status(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    today = datetime.now(ZoneInfo("Asia/Seoul")).date()
     exists = db.query(DailyClosingReport).filter(
         DailyClosingReport.store_id == store_id,
-        DailyClosingReport.report_date == date.today(),
+        DailyClosingReport.report_date == today,
     ).first()
     return {"is_completed": bool(exists)}
 
@@ -661,6 +692,7 @@ def get_my_info(
         "salary_day": contract.salary_day if contract else None,
         "hourly_rate": contract.hourly_rate if contract else None,
         "is_probation": contract.is_probation if contract else False,
+        "deduction_type": contract.deduction_type if contract else "percent",
         "income_tax": float(contract.income_tax) if contract and contract.income_tax else None,
         "local_income_tax": float(contract.local_income_tax) if contract and contract.local_income_tax else None,
         "national_pension": float(contract.national_pension) if contract and contract.national_pension else None,

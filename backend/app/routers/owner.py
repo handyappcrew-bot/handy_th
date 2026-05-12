@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import uuid
 
+from sqlalchemy import func
 from models import (
     BusinessRequest, Store, StoreSetting, StoreShift,
     StoreMembers, StaffContract, Member, StoreMap,
@@ -31,6 +32,18 @@ UPLOAD_DIR = "uploads/business_registrations/"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
+def verify_owner(store_id: int, member_id: int, db: Session):
+    """요청자가 해당 매장의 사장인지 검증"""
+    sm = db.query(StoreMembers).filter(
+        StoreMembers.store_id == store_id,
+        StoreMembers.member_id == member_id,
+        StoreMembers.role == "owner",
+        StoreMembers.is_deleted == False,
+    ).first()
+    if not sm:
+        raise HTTPException(status_code=403, detail="해당 매장의 사장만 접근 가능합니다.")
+
+
 # ===== 사업자등록번호 조회 =====
 @router.get("/business/{bno}")
 async def verify_business(bno: str):
@@ -54,6 +67,7 @@ async def add_store_request(
     owner_name: str = Form(...),
     owner_phone: str = Form(...),
     image: UploadFile = File(...),
+    current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
     ext = os.path.splitext(image.filename)[1]
@@ -62,6 +76,7 @@ async def add_store_request(
 
     try:
         db.add(BusinessRequest(
+            member_id=current_member.id,
             raw_digits=raw_digits,
             name=store_name,
             address=address,
@@ -81,7 +96,13 @@ async def add_store_request(
 
 # ===== 매장 정보 조회 =====
 @router.get("/store/{store_id}")
-async def get_store_info(store_id: int, db: Session = Depends(get_db)):
+async def get_store_info(
+    store_id: int,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member_with_refresh),
+):
+    verify_owner(store_id, current_member.id, db)
+
     store = (
         db.query(Store)
         .options(joinedload(Store.setting), joinedload(Store.shifts))
@@ -135,6 +156,8 @@ async def update_store_info(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(req.id, current_member.id, db)
+
     store = db.query(Store).filter(Store.id == req.id).first()
     if not store:
         raise HTTPException(status_code=404, detail="해당 매장을 찾을 수 없습니다.")
@@ -155,6 +178,8 @@ async def update_store_setting(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     setting = db.query(StoreSetting).filter(StoreSetting.store_id == store_id).first()
     if not setting:
         setting = StoreSetting(store_id=store_id)
@@ -174,6 +199,8 @@ async def update_attendance_standard(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     store = db.query(Store).filter(Store.id == store_id).first()
     if not store:
         raise HTTPException(status_code=404)
@@ -208,6 +235,8 @@ async def update_store_shifts(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     shifts_data = data.get("shifts", [])
     existing = {sh.sort_order: sh for sh in
                 db.query(StoreShift).filter(StoreShift.store_id == store_id).all()}
@@ -236,7 +265,14 @@ async def update_store_shifts(
 
 # ===== 출근 현황 (사장 홈 / 근태 관리) =====
 @router.get("/store/{store_id}/attendance/today")
-def get_today_attendance(store_id: int, date: str = None, db: Session = Depends(get_db), current_member: Member = Depends(get_current_member_with_refresh)):
+def get_today_attendance(
+    store_id: int,
+    date: str = None,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member_with_refresh),
+):
+    verify_owner(store_id, current_member.id, db)
+
     from datetime import date as date_cls
     from zoneinfo import ZoneInfo
     from datetime import datetime as dt
@@ -275,7 +311,7 @@ def get_today_attendance(store_id: int, date: str = None, db: Session = Depends(
         shift_name = sched.shift.name if sched and sched.shift else None
 
         if not sched:
-            continue  # 오늘 스케줄 없는 직원은 출근 현황에 표시 안 함
+            continue
 
         if log:
             if log.status == "working":
@@ -310,7 +346,13 @@ def get_today_attendance(store_id: int, date: str = None, db: Session = Depends(
 
 # ===== 직원 목록 =====
 @router.get("/store/{store_id}/staffs")
-async def get_staff_list(store_id: int, db: Session = Depends(get_db), current_member: Member = Depends(get_current_member_with_refresh)):
+async def get_staff_list(
+    store_id: int,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member_with_refresh),
+):
+    verify_owner(store_id, current_member.id, db)
+
     staff = (
         db.query(StoreMembers)
         .options(joinedload(StoreMembers.contract), joinedload(StoreMembers.member))
@@ -348,7 +390,14 @@ async def get_staff_list(store_id: int, db: Session = Depends(get_db), current_m
 
 # ===== 직원 상세 =====
 @router.get("/store/{store_id}/staff/{staff_id}")
-async def get_staff_detail(store_id: int, staff_id: int, db: Session = Depends(get_db), current_member: Member = Depends(get_current_member_with_refresh)):
+async def get_staff_detail(
+    store_id: int,
+    staff_id: int,
+    db: Session = Depends(get_db),
+    current_member: Member = Depends(get_current_member_with_refresh),
+):
+    verify_owner(store_id, current_member.id, db)
+
     staff = (
         db.query(StoreMembers)
         .options(joinedload(StoreMembers.contract), joinedload(StoreMembers.member))
@@ -375,6 +424,14 @@ async def get_staff_detail(store_id: int, staff_id: int, db: Session = Depends(g
             "salary_cycle": staff.contract.salary_cycle if staff.contract else None,
             "salary_day": staff.contract.salary_day if staff.contract else None,
             "is_probation": staff.contract.is_probation if staff.contract else False,
+            "deduction_type": staff.contract.deduction_type if staff.contract else "percent",
+            "income_tax": float(staff.contract.income_tax) if staff.contract and staff.contract.income_tax else None,
+            "local_income_tax": float(staff.contract.local_income_tax) if staff.contract and staff.contract.local_income_tax else None,
+            "national_pension": float(staff.contract.national_pension) if staff.contract and staff.contract.national_pension else None,
+            "health_insurance": float(staff.contract.health_insurance) if staff.contract and staff.contract.health_insurance else None,
+            "long_term_care": float(staff.contract.long_term_care) if staff.contract and staff.contract.long_term_care else None,
+            "employment_insurance": float(staff.contract.employment_insurance) if staff.contract and staff.contract.employment_insurance else None,
+            "industrial_accident": float(staff.contract.industrial_accident) if staff.contract and staff.contract.industrial_accident else None,
             "memo": staff.contract.memo if staff.contract else None,
             "resume": staff.contract.resume if staff.contract else None,
             "employment_contract": staff.contract.employment_contract if staff.contract else None,
@@ -391,6 +448,8 @@ async def update_staff_contract(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     staff = db.query(StoreMembers).filter(
         StoreMembers.store_id == store_id, StoreMembers.id == staff_id
     ).first()
@@ -429,24 +488,29 @@ async def get_my_stores(
     store_ids = [sm.store_id for sm in q.all()]
     stores = db.query(Store).filter(Store.id.in_(store_ids), Store.is_deleted == False).all()
 
-    result = []
-    for store in stores:
-        emp_count = db.query(StoreMembers).filter(
-            StoreMembers.store_id == store.id, StoreMembers.role == "employee"
-        ).count()
-        result.append({
-            "id": store.id,
-            "code": store.code,
-            "industry": store.industry,
-            "address": store.address,
-            "address_detail": store.address_detail,
-            "name": store.name,
-            "owner_name": store.owner_name,
-            "phone": store.phone,
-            "employee_count": emp_count,
-            "created_at": store.created_at,
-        })
-    return result
+    emp_counts = dict(
+        db.query(StoreMembers.store_id, func.count(StoreMembers.id))
+        .filter(
+            StoreMembers.store_id.in_(store_ids),
+            StoreMembers.role == "employee",
+            StoreMembers.is_deleted == False,
+        )
+        .group_by(StoreMembers.store_id)
+        .all()
+    )
+
+    return [{
+        "id": store.id,
+        "code": store.code,
+        "industry": store.industry,
+        "address": store.address,
+        "address_detail": store.address_detail,
+        "name": store.name,
+        "owner_name": store.owner_name,
+        "phone": store.phone,
+        "employee_count": emp_counts.get(store.id, 0),
+        "created_at": store.created_at,
+    } for store in stores]
 
 
 # ===== 사장 마이페이지 - 인적사항 =====
@@ -490,6 +554,8 @@ async def update_nickname(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     sm = db.query(StoreMembers).filter(
         StoreMembers.store_id == store_id, StoreMembers.id == body.member_id
     ).first()
@@ -507,6 +573,8 @@ async def delete_store(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(body.store_id, current_member.id, db)
+
     store = db.query(Store).filter(Store.id == body.store_id).first()
     if not store:
         raise HTTPException(status_code=404, detail="일치하는 매장 정보를 찾을 수 없습니다.")
@@ -523,6 +591,8 @@ def get_closing_reports(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     from sqlalchemy import extract
     q = db.query(DailyClosingReport).filter(DailyClosingReport.store_id == store_id)
     if year:
@@ -564,6 +634,8 @@ def update_closing_report(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     report = db.query(DailyClosingReport).filter(
         DailyClosingReport.id == report_id,
         DailyClosingReport.store_id == store_id,
@@ -591,6 +663,8 @@ def get_worklog_requests(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     rows = (
         db.query(WorkLogChangeRequest, Member)
         .join(StoreMembers, StoreMembers.id == WorkLogChangeRequest.employee_id)
@@ -626,6 +700,8 @@ def handle_worklog_request(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     req = db.query(WorkLogChangeRequest).filter(
         WorkLogChangeRequest.id == req_id, WorkLogChangeRequest.store_id == store_id
     ).first()
@@ -647,6 +723,8 @@ def get_schedule_requests(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     rows = (
         db.query(ScheduleChangeRequest, Member)
         .join(StoreMembers, StoreMembers.id == ScheduleChangeRequest.employee_id)
@@ -683,6 +761,8 @@ def handle_schedule_request(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     req = db.query(ScheduleChangeRequest).filter(
         ScheduleChangeRequest.id == req_id, ScheduleChangeRequest.store_id == store_id
     ).first()
@@ -707,6 +787,8 @@ def get_payslips(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     rows = (
         db.query(Payslip, StoreMembers, Member, StaffContract)
         .join(StoreMembers, Payslip.employee_id == StoreMembers.id)
@@ -766,6 +848,8 @@ def publish_payslip(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     from datetime import datetime
     p = db.query(Payslip).filter(Payslip.id == payslip_id, Payslip.store_id == store_id).first()
     if not p:
@@ -783,6 +867,8 @@ def transfer_payslip(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     from datetime import datetime
     p = db.query(Payslip).filter(Payslip.id == payslip_id, Payslip.store_id == store_id).first()
     if not p:
@@ -799,6 +885,8 @@ def get_payslip_months(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     from sqlalchemy import distinct
     rows = (
         db.query(distinct(Payslip.year), Payslip.month)
@@ -816,6 +904,8 @@ def get_payslip(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     row = (
         db.query(Payslip, StoreMembers, Member, StaffContract)
         .join(StoreMembers, Payslip.employee_id == StoreMembers.id)
@@ -879,6 +969,8 @@ def update_payslip(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    verify_owner(store_id, current_member.id, db)
+
     p = db.query(Payslip).filter(Payslip.id == payslip_id, Payslip.store_id == store_id).first()
     if not p:
         raise HTTPException(status_code=404)

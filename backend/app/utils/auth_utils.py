@@ -28,7 +28,7 @@ r = redis.Redis(host="localhost", port=6379, db=0)
 
 SMS_KEY = os.getenv("SMS_CLIENT_ID")
 SMS_SECRET_KEY = os.getenv("SMS_CLIENT_SECRET")
-message_service = SolapiMessageService(api_key=SMS_KEY, api_secret=SMS_SECRET_KEY)
+message_service = SolapiMessageService(api_key=SMS_KEY, api_secret=SMS_SECRET_KEY) if SMS_KEY and SMS_SECRET_KEY else None
 
 
 # ===== 정규화 =====
@@ -68,6 +68,10 @@ def generate_code():
 
 
 def send_code_to_user(phone: str, code: str):
+    if not message_service:
+        import logging
+        logging.getLogger(__name__).warning(f"[SMS 미설정] {phone} 인증번호: {code}")
+        return
     message = RequestMessage(
         to=phone,
         from_=os.getenv("SMS_SENDER"),
@@ -91,18 +95,30 @@ def verify_code(phone: str, input_code: str):
     return True, "인증 되었습니다."
 
 
-def check_daily_limit(phone: str):
+def check_daily_limit(phone: str) -> bool:
     key = f"sms:count:{phone}"
-    cnt = r.get(key)
-    if cnt and int(cnt) >= 5:
+    count = r.incr(key)           # atomic: 읽기+쓰기 한 번에
+    if count == 1:
+        r.expire(key, 86400)      # 첫 발송 시 만료 설정
+    if count > 5:
+        r.decr(key)               # 초과분 롤백
         return False
-    pipe = r.pipeline()
-    pipe.incr(key)
-    pipe.ttl(key)
-    count, ttl = pipe.execute()
-    if ttl == -1:
-        r.expire(key, 86400)
     return True
+
+
+# ===== OAuth State (Redis) =====
+def save_oauth_state(state: str) -> None:
+    r.setex(f"oauth:state:{state}", 600, "1")  # 10분 TTL
+
+
+def consume_oauth_state(state: str) -> bool:
+    """state 토큰 존재 확인 후 즉시 삭제 (재사용 방지)"""
+    key = f"oauth:state:{state}"
+    pipe = r.pipeline()
+    pipe.get(key)
+    pipe.delete(key)
+    value, _ = pipe.execute()
+    return bool(value)
 
 
 # ===== 임시 회원가입 토큰 =====
@@ -165,15 +181,13 @@ def add_token_for_cookie(member_id: int, db: Session, response: Response):
     access_token = create_access_token(member_id)
     refresh_token, expire = create_refresh_token(member_id)
 
+    # 해당 멤버의 모든 활성 토큰 일괄 revoke (다중 기기 로그인 처리)
     now = datetime.now(ZoneInfo("Asia/Seoul"))
-    old = db.query(JwtTokens).filter(
+    db.query(JwtTokens).filter(
         JwtTokens.member_id == member_id,
         JwtTokens.expires_at > now,
         JwtTokens.is_revoked == False,
-    ).first()
-    if old:
-        old.is_revoked = True
-        db.commit()
+    ).update({"is_revoked": True})
 
     db.add(JwtTokens(member_id=member_id, refresh_token=refresh_token, expires_at=expire))
     db.commit()

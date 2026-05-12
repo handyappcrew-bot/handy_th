@@ -46,27 +46,42 @@ async def delete_faq(id: int, db: Session = Depends(get_db)):
 # ===== 매장 승인 목록 =====
 @router.get("/business-requests")
 async def get_business_requests(db: Session = Depends(get_db)):
-    return db.query(BusinessRequest).filter(
-        BusinessRequest.status == "pending"
-    ).order_by(BusinessRequest.created_at).all()
+    from models import Member
+    rows = (
+        db.query(BusinessRequest, Member)
+        .join(Member, Member.id == BusinessRequest.member_id)
+        .filter(BusinessRequest.status == "pending")
+        .order_by(BusinessRequest.created_at)
+        .all()
+    )
+    return [{
+        "id": br.id,
+        "member_id": br.member_id,
+        "applicant_name": m.name,
+        "applicant_phone": m.phone,
+        "raw_digits": br.raw_digits,
+        "name": br.name,
+        "address": br.address,
+        "address_detail": br.address_detail,
+        "industry": br.industry,
+        "owner_name": br.owner_name,
+        "phone": br.phone,
+        "business_image": br.business_image,
+        "status": br.status,
+        "created_at": str(br.created_at),
+    } for br, m in rows]
 
 
 # ===== 매장 승인 =====
 @router.post("/business-requests/{req_id}/approve")
-async def approve_business_request(req_id: int, data: dict, db: Session = Depends(get_db)):
-    """
-    사업자 등록 신청을 승인하여 Store + 기본 교대 슬롯 3개 + 사장 StoreMembers 생성
-    data: { member_id: int }
-    """
+async def approve_business_request(req_id: int, db: Session = Depends(get_db)):
     br = db.query(BusinessRequest).filter(BusinessRequest.id == req_id).first()
     if not br:
         raise HTTPException(status_code=404, detail="신청을 찾을 수 없습니다.")
     if br.status != "pending":
         raise HTTPException(status_code=400, detail="이미 처리된 신청입니다.")
-
-    member_id = data.get("member_id")
-    if not member_id:
-        raise HTTPException(status_code=400, detail="member_id가 필요합니다.")
+    if not br.member_id:
+        raise HTTPException(status_code=400, detail="신청자 정보가 없습니다. 해당 신청은 재신청이 필요합니다.")
 
     store_code = await create_store_code(db)
 
@@ -84,12 +99,10 @@ async def approve_business_request(req_id: int, data: dict, db: Session = Depend
     db.add(store)
     db.flush()
 
-    # 기본 교대 슬롯 3개 생성
     for order, name in [(1, "오픈"), (2, "미들"), (3, "마감")]:
         db.add(StoreShift(store_id=store.id, sort_order=order, name=name, is_active=True))
 
-    # 사장 StoreMembers 등록
-    db.add(StoreMembers(store_id=store.id, member_id=member_id, role="owner"))
+    db.add(StoreMembers(store_id=store.id, member_id=br.member_id, role="owner"))
 
     br.status = "approved"
     br.checked_at = datetime.now()

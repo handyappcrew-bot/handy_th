@@ -30,3 +30,7 @@ class VerifyReq(BaseModel):
 class AppleCallbackRequest(BaseModel):
     code: str
     id_token: Optional[str] = None
+
+
+class WithdrawalReq(BaseModel):
+    reason: Optional[str] = None
