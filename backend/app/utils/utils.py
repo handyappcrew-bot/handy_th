@@ -15,9 +15,9 @@ def format_phone_number(number: str) -> str:
     return re.sub(r'(\d{3})(\d{3,4})(\d{4})', r'\1-\2-\3', clean)
 
 
-async def create_store_code(db: Session):
+async def create_store_code(db: Session) -> int:
     while True:
-        code = str(secrets.randbelow(100000)).zfill(5)
+        code = secrets.randbelow(900000) + 100000  # 100000-999999 (6자리)
         if not db.query(Store).filter(Store.code == code).first():
             return code
 

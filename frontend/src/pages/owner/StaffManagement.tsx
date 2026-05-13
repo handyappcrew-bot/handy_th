@@ -14,18 +14,18 @@ const SHIFT_STYLE: Record<ShiftType, { bg: string; text: string }> = {
 };
 
 interface JoinRequest {
-  id: string;
+  id: number;
+  member_id: number;
   name: string;
   gender: string;
-  birthDate: string;
+  birth: string;
   phone: string;
   avatarColor: string;
   requestedAt: string;
   bank?: string;
-  accountNumber?: string;
+  account_name?: string;
+  account_number?: string;
 }
-
-const INITIAL_JOIN_REQUESTS: JoinRequest[] = [];
 
 export default function StaffManagement() {
   const navigate = useNavigate();
@@ -33,8 +33,8 @@ export default function StaffManagement() {
   const initialTab = (searchParams.get("tab") as "관리" | "가입요청" | "초대") || "관리";
   const [activeTab, setActiveTab] = useState<"관리" | "가입요청" | "초대">(initialTab);
   const [activeFilter, setActiveFilter] = useState<FilterType>("전체");
-  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>(INITIAL_JOIN_REQUESTS);
-  const [confirmPopup, setConfirmPopup] = useState<{ open: boolean; type: "accept" | "reject"; requestId: string }>({ open: false, type: "accept", requestId: "" });
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [confirmPopup, setConfirmPopup] = useState<{ open: boolean; type: "accept" | "reject"; requestId: number }>({ open: false, type: "accept", requestId: 0 });
   const [focusedMemoId, setFocusedMemoId] = useState<string | null>(null);
   const [memoSheetOpen, setMemoSheetOpen] = useState(false);
   const [memoSheetStaffId, setMemoSheetStaffId] = useState<string | null>(null);
@@ -46,6 +46,33 @@ export default function StaffManagement() {
     if (storeId) staffStore.loadFromApi(storeId);
     return staffStore.subscribe(() => forceUpdate(n => n + 1));
   }, []);
+
+  const AVATAR_COLORS = ["#4261FF", "#FF6B6B", "#1EDC83", "#FF9F43", "#A29BFE", "#FD79A8"];
+  const fetchJoinRequests = async () => {
+    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
+    if (!storeId) return;
+    try {
+      const res = await fetch(`/api/owner/store/${storeId}/member-requests`, { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setJoinRequests(data.map((r: any, i: number) => ({
+        id: r.id,
+        member_id: r.member_id,
+        name: r.name,
+        gender: r.gender === "male" ? "남자" : r.gender === "female" ? "여자" : r.gender ?? "",
+        birth: r.birth ?? "",
+        phone: r.phone ?? "",
+        avatarColor: AVATAR_COLORS[i % AVATAR_COLORS.length],
+        requestedAt: r.created_at ? r.created_at.slice(0, 10) : "",
+        bank: r.bank ?? "",
+        account_name: r.account_name ?? "",
+        account_number: r.account_number ?? "",
+      })));
+    } catch {}
+  };
+
+  useEffect(() => { fetchJoinRequests(); }, []);
+  useEffect(() => { if (activeTab === "가입요청") fetchJoinRequests(); }, [activeTab]);
 
   const staffData = staffStore.getAll();
 
@@ -93,20 +120,34 @@ export default function StaffManagement() {
   const { toast } = useToast();
 
   const handleInvite = async () => {
-    const inviteData = {
-      title: "직원 초대",
-      text: "사장님이 근무 관리 앱에 초대했어요. 아래 링크로 가입해주세요 🙌",
-      url: window.location.origin,
-    };
+    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
+
+    let storeCode = "";
+    let storeName = "";
+    if (storeId) {
+      try {
+        const res = await fetch(`/api/owner/store/${storeId}`, { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          storeCode = String(data.code ?? "");
+          storeName = data.name ?? "";
+        }
+      } catch {}
+    }
+
+    const shareText = storeCode
+      ? `[핸디] ${storeName} 매장에 초대합니다!\n앱 가입 후 아래 매장 코드를 입력해주세요.\n\n매장 코드: ${storeCode}\n\n${window.location.origin}`
+      : `사장님이 근무 관리 앱 핸디에 초대했어요. 아래 링크로 가입해주세요!\n\n${window.location.origin}`;
+
     if (navigator.share) {
       try {
-        await navigator.share(inviteData);
+        await navigator.share({ title: "핸디 직원 초대", text: shareText });
       } catch (e) {
         // 사용자 취소 무시
       }
     } else {
       try {
-        await navigator.clipboard.writeText(`${inviteData.text}\n${inviteData.url}`);
+        await navigator.clipboard.writeText(shareText);
         toast({ description: "초대 링크가 클립보드에 복사되었어요.", duration: 2000 });
       } catch {
         toast({ description: "공유 기능을 지원하지 않는 환경이에요.", duration: 2000 });
@@ -114,69 +155,33 @@ export default function StaffManagement() {
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const isAccept = confirmPopup.type === "accept";
     const req = joinRequests.find(r => r.id === confirmPopup.requestId);
+    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
 
-    if (isAccept && req) {
-      const newId = `jr_${Date.now()}`;
-      const genderCode = req.gender === "여자" ? "여" : "남";
-      const birthYear = req.birthDate ? parseInt(req.birthDate.split(".")[0]) : 0;
-      const age = birthYear ? new Date().getFullYear() - birthYear : 0;
+    setConfirmPopup({ open: false, type: "accept", requestId: 0 });
 
-      const newStaff: import("@/lib/staffStore").StaffData = {
-        id: newId,
-        name: req.name,
-        avatarColor: req.avatarColor,
-        employmentType: "" as any,
-        gender: genderCode,
-        age,
-        birthDate: req.birthDate,
-        birthAge: age,
-        hireDate: new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\. /g, ".").replace(/\.$/, ""),
-        hireDaysAgo: 0,
-        salaryType: "",
-        salaryAmount: "",
-        isAnnualSalary: false,
-        annualSalary: "",
-        payCycle: "",
-        payDay: "",
-        includeHolidayPay: false,
-        probation: false,
-        probationRate: "",
-        probationStart: "",
-        probationEnd: "",
-        workSchedule: [],
-        incomeTax: [
-          { key: "income", label: "소득세", value: "3", active: false },
-          { key: "local", label: "지방소득세", value: "0.3", active: false },
-        ],
-        socialInsurance: [
-          { key: "national", label: "국민연금", value: "4.75", active: false },
-          { key: "health", label: "건강보험", value: "3.595", active: false },
-          { key: "longterm", label: "장기요양보험", value: "4.75", active: false },
-          { key: "employment", label: "고용보험", value: "1.8", active: false },
-          { key: "industrial", label: "산재보험", value: "1.47", active: false },
-        ],
-        phone: req.phone,
-        bank: req.bank || "",
-        accountNumber: req.accountNumber || "",
-        memo: "",
-        resume: "",
-        laborContract: "",
-        healthCert: "",
-        workStatus: "재직",
-        includeBreakTime: false,
-        breakMinutes: 0,
-        isNew: true,
-      };
-      staffStore.add(newStaff);
+    try {
+      const res = await fetch(`/api/owner/store/${storeId}/member-requests/${confirmPopup.requestId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: isAccept ? "approved" : "rejected" }),
+      });
+      if (!res.ok) {
+        toast({ description: "처리에 실패했습니다.", duration: 2000, variant: "destructive" });
+        return;
+      }
+    } catch {
+      toast({ description: "서버 통신 오류가 발생했습니다.", duration: 2000, variant: "destructive" });
+      return;
     }
 
     setJoinRequests(prev => prev.filter(r => r.id !== confirmPopup.requestId));
-    setConfirmPopup({ open: false, type: "accept", requestId: "" });
 
     if (isAccept) {
+      staffStore.loadFromApi(storeId);
       setTimeout(() => setActiveTab("관리"), 300);
     }
 
@@ -378,7 +383,7 @@ export default function StaffManagement() {
                       <div style={{ paddingLeft: '16px', paddingRight: '16px', paddingTop: '12px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                           <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '-0.02em', color: '#292B2E', width: '56px', flexShrink: 0 }}>생년월일</span>
-                          <span style={{ fontSize: '14px', fontWeight: 400, letterSpacing: '-0.02em', color: '#70737B', marginLeft: '20px' }}>{req.birthDate}</span>
+                          <span style={{ fontSize: '14px', fontWeight: 400, letterSpacing: '-0.02em', color: '#70737B', marginLeft: '20px' }}>{req.birth}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                           <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '-0.02em', color: '#292B2E', width: '56px', flexShrink: 0 }}>전화번호</span>
@@ -478,7 +483,7 @@ export default function StaffManagement() {
 
       {/* 가입요청 팝업 */}
       {confirmPopup.open && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80" onClick={() => setConfirmPopup({ open: false, type: "accept", requestId: "" })}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80" onClick={() => setConfirmPopup({ open: false, type: "accept", requestId: 0 })}>
           <div className="animate-in zoom-in-95" style={{ maxWidth: '320px', width: 'calc(100% - 48px)', backgroundColor: '#FFFFFF', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 16px' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B', textAlign: 'center', marginBottom: '8px' }}>
               {confirmPopup.type === "accept" ? "가입 요청 승인하기" : "가입 요청 거절하기"}
@@ -487,7 +492,7 @@ export default function StaffManagement() {
               {confirmPopup.type === "accept" ? "가입요청을 승인하시겠어요?" : "가입요청을 거절하시겠어요?"}
             </p>
             <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-              <button onClick={() => setConfirmPopup({ open: false, type: "accept", requestId: "" })} className="pressable flex-1 font-semibold"
+              <button onClick={() => setConfirmPopup({ open: false, type: "accept", requestId: 0 })} className="pressable flex-1 font-semibold"
                 style={{ height: '52px', backgroundColor: '#EBEBEB', color: '#70737B', borderRadius: '12px', fontSize: '16px', border: 'none', cursor: 'pointer' }}>
                 취소
               </button>

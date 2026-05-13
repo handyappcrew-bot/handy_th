@@ -23,11 +23,12 @@ const BankAccountStep = ({ store_id, onBack, onSubmit }: BankAccountStepProps) =
       const res = await fetch("/api/employee/member/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           store_id,
           bank,
-          accountName: accountHolder,
-          accountNumber
+          account_name: accountHolder,
+          account_number: accountNumber
         }),
       });
 
@@ -35,7 +36,10 @@ const BankAccountStep = ({ store_id, onBack, onSubmit }: BankAccountStepProps) =
         onSubmit({ bank, accountHolder, accountNumber });
       } else {
         const result = await res.json();
-        alert(result.detail || "신청에 실패했습니다.");
+        const detail = Array.isArray(result.detail)
+          ? result.detail.map((d: any) => d.msg || JSON.stringify(d)).join(", ")
+          : result.detail || "신청에 실패했습니다.";
+        alert(detail);
       }
     } catch (error) {
       alert("서버 통신 오류가 발생했습니다.");
@@ -43,7 +47,7 @@ const BankAccountStep = ({ store_id, onBack, onSubmit }: BankAccountStepProps) =
   };
 
   const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9]/g, "");
+    const value = e.target.value.replace(/[^0-9\-]/g, "");
     setAccountNumber(value);
   };
 
@@ -97,10 +101,9 @@ const BankAccountStep = ({ store_id, onBack, onSubmit }: BankAccountStepProps) =
         </label>
         <input
           type="text"
-          inputMode="numeric"
           value={accountNumber}
           onChange={handleAccountNumberChange}
-          placeholder="숫자만 입력"
+          placeholder="계좌번호 입력 (예: 1234-567-890123)"
           className="w-full h-[52px] px-4 rounded-xl border border-[hsl(0,0%,90%)] bg-background text-foreground text-[16px] outline-none placeholder:text-[hsl(0,0%,75%)] focus:border-[#4261FF]"
         />
 

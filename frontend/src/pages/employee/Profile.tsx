@@ -78,7 +78,7 @@ const Profile = () => {
     } catch (err) {
       console.error(err);
     } finally {
-      navigate("/employee/home");
+      navigate("/", { replace: true });
     }
   };
 
@@ -160,7 +160,7 @@ const Profile = () => {
         <section className="py-5 px-[20px]">
           <h2 className="text-[20px] tracking-[-0.02em] font-bold text-[hsl(210,5%,16%)] mb-4">인적 사항</h2>
           <div className="space-y-3">
-            <InfoRow label="생년월일" value={`${profileData.birth ?? "-"} (${profileData.age}세)`} />
+            <InfoRow label="생년월일" value={profileData.birth ? `${profileData.birth} (${profileData.age}세)` : "-"} />
             <InfoRow label="성별" value={profileData.gender ?? "-"} />
             <InfoRow label="전화번호" value={profileData.phone} />
             <InfoRow label="은행" value={profileData.bank ?? "-"} />

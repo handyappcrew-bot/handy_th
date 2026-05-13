@@ -65,11 +65,41 @@ const DEFAULT_INSURANCE: StaffData["socialInsurance"] = [
 ];
 const AVATAR_COLORS = ["#5C4033","#C0392B","#1ABC9C","#2C3E50","#8E44AD","#E67E22","#4261FF","#E74C3C","#27AE60","#F39C12"];
 
+function applyTaxFromApi(defaults: TaxItem[], keyMap: Record<string, number | null>): TaxItem[] {
+  return defaults.map(item => {
+    const val = keyMap[item.key];
+    if (val !== null && val !== undefined) {
+      return { ...item, value: String(val), active: true };
+    }
+    return item;
+  });
+}
+
 function apiToStaffData(s: any): StaffData {
   const birth = s.birth ? s.birth.replace(/-/g, ".") : "";
   const hired = s.joined_at ? s.joined_at.slice(0, 10).replace(/-/g, ".") : "";
   const hireDaysAgo = hired ? Math.floor((Date.now() - new Date(s.joined_at).getTime()) / 86400000) : 0;
   const c = s.contract ?? {};
+
+  const salaryType = c.hourly_rate ? "시급" : c.monthly_salary ? "월급 (연봉 포함)" : "";
+  const salaryAmount = c.hourly_rate
+    ? c.hourly_rate.toLocaleString()
+    : c.monthly_salary
+    ? c.monthly_salary.toLocaleString()
+    : "";
+
+  const incomeTax = applyTaxFromApi(DEFAULT_TAX, {
+    income: c.income_tax ?? null,
+    local: c.local_income_tax ?? null,
+  });
+  const socialInsurance = applyTaxFromApi(DEFAULT_INSURANCE, {
+    national: c.national_pension ?? null,
+    health: c.health_insurance ?? null,
+    longterm: c.long_term_care ?? null,
+    employment: c.employment_insurance ?? null,
+    industrial: c.industrial_accident ?? null,
+  });
+
   return {
     id: String(s.id),
     name: s.name ?? "",
@@ -81,8 +111,8 @@ function apiToStaffData(s: any): StaffData {
     birthAge: birth ? new Date().getFullYear() - parseInt(birth.slice(0, 4)) : 0,
     hireDate: hired,
     hireDaysAgo,
-    salaryType: c.hourly_rate ? "시급" : "월급 (연봉 포함)",
-    salaryAmount: c.hourly_rate ? c.hourly_rate.toLocaleString() : "0",
+    salaryType,
+    salaryAmount,
     isAnnualSalary: false,
     annualSalary: "",
     payCycle: c.salary_cycle ?? "월 1회 (월급)",
@@ -95,8 +125,8 @@ function apiToStaffData(s: any): StaffData {
     probationStart: "",
     probationEnd: "",
     workSchedule: [],
-    incomeTax: DEFAULT_TAX,
-    socialInsurance: DEFAULT_INSURANCE,
+    incomeTax,
+    socialInsurance,
     phone: s.phone ?? "",
     bank: s.bank ?? "",
     accountNumber: s.account_number ?? "",
@@ -153,6 +183,20 @@ export const staffStore = {
     _loaded = false;
     _store = [];
     _listeners.forEach(fn => fn());
+  },
+  async saveToApi(staffId: string, storeId: number, patch: Record<string, any>): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/owner/store/${storeId}/staff/${staffId}/contract`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(patch),
+      });
+      if (res.ok) _loaded = false; // 다음 loadFromApi 호출 시 최신 데이터 반영
+      return res.ok;
+    } catch {
+      return false;
+    }
   },
 };
 

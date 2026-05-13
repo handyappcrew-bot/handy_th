@@ -35,70 +35,33 @@ const ProfilePhotoPage = () => {
   };
 
 
-  const handleComplete = async () => {
+  const doSignup = async (withPhoto: boolean) => {
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phone,
-          password,
-          name,
-          birth: birthdate,
-          gender,
-          imageUrl: photoUrl
-        })
-      });
-
-      if (res.ok) {
-        navigate("/signup-complete", {
-          state: { name },
-        });
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleSkip = async () => {
-
-    console.log(phone)
-    console.log(password)
-    console.log(name)
-    console.log(birthdate)
-    console.log(gender)
-    console.log(photoUrl)
-    console.log(type)
-
-    try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           phone,
           password: password || "",
           name,
           birth: birthdate,
           gender,
-          imageUrl: photoUrl,
-          type
-        })
+          imageUrl: withPhoto ? photoUrl : null,
+          type,
+        }),
       });
 
       if (res.ok) {
-        navigate("/signup-complete", {
-          state: { name },
-        });
+        navigate("/signup-complete", { state: { name } });
       }
     } catch (err) {
       console.error(err);
     }
-
   };
+
+  const handleComplete = () => doSignup(true);
+  const handleSkip = () => doSignup(false);
 
   return (
     <PageLayout

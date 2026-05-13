@@ -3,7 +3,7 @@ import { ChevronLeft, Pencil } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { getMe } from "@/api/public";
+import { getMe, logout } from "@/api/public";
 
 interface StoreInfo {
   id: number; name: string; code: string; industry: string;
@@ -23,7 +23,7 @@ export default function Profile() {
   const [memberName, setMemberName] = useState("");
   const [memberInfo, setMemberInfo] = useState<{ birth: string; gender: string; phone: string } | null>(null);
   const [stores, setStores] = useState<StoreInfo[]>([]);
-  const [primaryStoreId] = useState(() => Number(localStorage.getItem("currentStoreId") ?? 0));
+  const [primaryStoreId, setPrimaryStoreId] = useState(() => Number(localStorage.getItem("currentStoreId") ?? 0));
 
   useEffect(() => {
     const load = async () => {
@@ -56,17 +56,23 @@ export default function Profile() {
 
   const handleSwitchConfirm = (storeIdx: number) => {
     setSwitchDialog(null);
-    setStoreOrder((prev) => {
-      const newOrder = prev.filter((i) => i !== storeIdx);
-      return [storeIdx, ...newOrder];
-    });
-    toast({ description: "매장이 전환되었어요", duration: 2000 });
+    const targetStore = stores[storeIdx];
+    if (!targetStore) return;
+    localStorage.setItem("currentStoreId", String(targetStore.id));
+    setPrimaryStoreId(targetStore.id);
+    toast({ description: `${targetStore.name}으로 전환되었어요`, duration: 2000 });
+    navigate("/owner/home", { replace: true });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setLogoutDialog(false);
-    toast({ description: "로그아웃 되었어요", duration: 2000 });
-    navigate("/");
+    try {
+      await logout();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      navigate("/", { replace: true });
+    }
   };
 
   return (

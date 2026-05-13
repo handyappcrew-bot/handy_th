@@ -5,8 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { addBoard, modifyBoard } from "@/api/board";
 
-// 직원은 공지사항 카테고리 없음
-const categoryOptions = ["건의사항", "비품관리", "대타요청", "일반 게시글"];
+const role = localStorage.getItem("currentRole");
+const categoryOptions = role === "owner"
+  ? ["공지사항", "건의사항", "비품관리", "대타요청", "일반 게시글"]
+  : ["건의사항", "비품관리", "대타요청", "일반 게시글"];
 
 export default function BoardWrite() {
   const navigate = useNavigate();

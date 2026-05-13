@@ -7,6 +7,7 @@ import time
 import json
 from jwt.algorithms import RSAAlgorithm
 from fastapi import APIRouter, Depends, Cookie, HTTPException, Response, Form, Request
+from pydantic import BaseModel
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from pathlib import Path
@@ -14,7 +15,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from models import Member, SocialAccount, JwtTokens, StoreMembers, Store, Withdrawal
+from models import Member, SocialAccount, JwtTokens, StoreMembers, Store, Withdrawal, BusinessRequest, MemberRequest
 from database import get_db
 from utils.auth_utils import (
     normalize_phone, normalize_birth, convert_gender,
@@ -111,7 +112,14 @@ def get_me(access_token: str = Cookie(None), db: Session = Depends(get_db)):
     if not member:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
-    return {"id": member.id, "name": member.name, "phone": member.phone}
+    return {
+        "id": member.id,
+        "name": member.name,
+        "phone": member.phone,
+        "birth": str(member.birth) if member.birth else None,
+        "gender": member.gender,
+        "image_url": member.image_url,
+    }
 
 
 @router.get("/my/stores")
@@ -122,7 +130,11 @@ def get_my_stores(
     memberships = (
         db.query(StoreMembers, Store)
         .join(Store, StoreMembers.store_id == Store.id)
-        .filter(StoreMembers.member_id == current_member.id)
+        .filter(
+            StoreMembers.member_id == current_member.id,
+            StoreMembers.is_deleted == False,
+            Store.is_deleted == False,
+        )
         .all()
     )
     return [
@@ -131,9 +143,48 @@ def get_my_stores(
             "store_id": store.id,
             "store_name": store.name,
             "role": sm.role,
+            "employee_type": sm.contract.employee_type if sm.contract else None,
         }
         for sm, store in memberships
     ]
+
+
+# ===== 온보딩 상태 조회 =====
+@router.get("/onboarding/status")
+def get_onboarding_status(
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    stores = db.query(StoreMembers).filter(
+        StoreMembers.member_id == current_member.id,
+        StoreMembers.is_deleted == False,
+    ).first()
+    if stores:
+        return {"status": "ready"}
+
+    biz = db.query(BusinessRequest).filter(
+        BusinessRequest.member_id == current_member.id,
+        BusinessRequest.status == "pending",
+    ).first()
+    if biz:
+        return {"status": "owner_pending", "store_name": biz.name}
+
+    req = db.query(MemberRequest).filter(
+        MemberRequest.member_id == current_member.id,
+        MemberRequest.status == "pending",
+    ).first()
+    if req:
+        store = db.query(Store).filter(Store.id == req.store_id).first()
+        return {"status": "employee_pending", "store_name": store.name if store else ""}
+
+    req_rejected = db.query(MemberRequest).filter(
+        MemberRequest.member_id == current_member.id,
+        MemberRequest.status == "rejected",
+    ).first()
+    if req_rejected:
+        return {"status": "employee_rejected"}
+
+    return {"status": "no_store"}
 
 
 # ===== 일반 로그인 =====
@@ -152,12 +203,54 @@ def login(req: ValidLogin, response: Response, db: Session = Depends(get_db)):
     }
 
 
+# ===== 개발 전용 빠른 로그인 =====
+@router.post("/dev/login")
+def dev_login(
+    req: dict,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    import os as _os
+    if _os.getenv("ENV") == "production":
+        raise HTTPException(status_code=404)
+
+    phone = normalize_phone(req.get("phone", ""))
+    if not phone:
+        raise HTTPException(status_code=400, detail="phone 필수")
+
+    member = db.query(Member).filter(Member.phone == phone, Member.is_deleted == False).first()
+    if not member:
+        member = Member(
+            phone=phone,
+            name=req.get("name", "테스트유저"),
+            birth=normalize_birth(req.get("birth", "1999-01-01")),
+            gender=convert_gender(req.get("gender", "남자")),
+        )
+        db.add(member)
+        db.commit()
+        db.refresh(member)
+
+    add_token_for_cookie(member.id, db, response)
+    stores = db.query(StoreMembers).filter(StoreMembers.member_id == member.id).all()
+    return {
+        "id": member.id,
+        "name": member.name,
+        "stores": [{"store_member_id": sm.id, "store_id": sm.store_id, "role": sm.role} for sm in stores],
+    }
+
+
 # ===== 인증번호 =====
 @router.post("/signup/code/send")
 def send_sms(req: PhoneReq, db: Session = Depends(get_db)):
+    import os as _os
     phone = normalize_phone(req.phone)
     if db.query(Member).filter(Member.phone == phone).first():
         raise HTTPException(status_code=400, detail="이미 가입된 회원이에요")
+
+    if _os.getenv("ENV") != "production":
+        save_code(phone, "00000")
+        return {"message": "인증번호 발송 완료"}
+
     if not check_daily_limit(phone):
         raise HTTPException(status_code=400, detail="인증번호는 하루 최대 5번까지 발송 가능해요")
     code = generate_code()
@@ -212,7 +305,12 @@ def signup(
         db.add(member)
 
     db.commit()
+    db.refresh(member)
     res.delete_cookie(key="signup_token")
+
+    # 회원가입 즉시 자동 로그인
+    add_token_for_cookie(member.id, db, res)
+    return {"id": member.id, "name": member.name}
 
 
 # ===== 로그아웃 =====
@@ -235,6 +333,21 @@ def logout(
     cookie_opts = dict(httponly=True, secure=is_prod, samesite="none" if is_prod else "lax")
     res.delete_cookie(key="access_token", **cookie_opts)
     res.delete_cookie(key="refresh_token", **cookie_opts)
+
+
+# ===== FCM 토큰 저장 =====
+class FcmTokenReq(BaseModel):
+    token: str
+
+@router.post("/fcm-token")
+def save_fcm_token(
+    req: FcmTokenReq,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    current_member.fcm_token = req.token
+    db.commit()
+    return {"success": True}
 
 
 # ===== 회원탈퇴 =====

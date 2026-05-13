@@ -2,14 +2,22 @@ import { ChevronRight, User } from "lucide-react";
 import { useNavToast } from "@/hooks/use-nav-toast";
 
 interface Notice {
-  id: string;
-  author: string;
-  timeAgo: string;
-  content: string;
+  id: number;
+  writer: string;
+  title: string;
+  created_at: string;
 }
 
 interface StoreNoticesProps {
   notices: Notice[];
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return "방금 전";
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  return `${Math.floor(diff / 86400)}일 전`;
 }
 
 const StoreNotices = ({ notices }: StoreNoticesProps) => {
@@ -40,10 +48,10 @@ const StoreNotices = ({ notices }: StoreNoticesProps) => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-[hsl(var(--notice-author))]">{notice.author}</span>
-                <span className="shrink-0 text-xs font-medium text-[hsl(var(--notice-time))]">{notice.timeAgo}</span>
+                <span className="text-sm font-medium text-[hsl(var(--notice-author))]">{notice.writer}</span>
+                <span className="shrink-0 text-xs font-medium text-[hsl(var(--notice-time))]">{formatTimeAgo(notice.created_at)}</span>
               </div>
-              <p className="mt-1 text-base font-medium text-[hsl(var(--notice-content))] overflow-hidden text-ellipsis whitespace-nowrap">{notice.content}</p>
+              <p className="mt-1 text-base font-medium text-[hsl(var(--notice-content))] overflow-hidden text-ellipsis whitespace-nowrap">{notice.title}</p>
             </div>
           </div>
         ))}

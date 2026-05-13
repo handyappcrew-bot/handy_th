@@ -48,6 +48,7 @@ const ProfilePhotoPage = lazy(() => import("@/pages/signup/ProfilePhotoPage"));
 const SignupCompletePage = lazy(() => import("@/pages/signup/SignupCompletePage"));
 
 const PublicIndex = lazy(() => import("@/pages/Index"));
+const MemberTypePage = lazy(() => import("@/pages/onboarding/MemberTypePage"));
 const EmployeeHome = lazy(() => import("@/pages/employee/Index"));
 const OwnerHome = lazy(() => import("./pages/owner/Index"));
 
@@ -107,6 +108,7 @@ const OwnerAttendanceManagement = lazy(() => import("./pages/owner/AttendanceMan
 const OwnerAttendanceEdit = lazy(() => import("./pages/owner/AttendanceEdit"));
 const OwnerAttendanceDetail = lazy(() => import("./pages/owner/AttendanceDetail"));
 const OwnerScheduleManagement = lazy(() => import("./pages/owner/ScheduleManagement"));
+const SelectRole = lazy(() => import("./pages/SelectRole"));
 
 const queryClient = new QueryClient();
 
@@ -199,7 +201,8 @@ const AnimatedRoutes = () => {
         <Route path="/profile-info" element={<ProfileInfoPage />} />
         <Route path="/profile-photo" element={<ProfilePhotoPage />} />
         <Route path="/signup-complete" element={<SignupCompletePage />} />
-        <Route path="/onboarding/member-type" element={<PublicIndex />} />
+        <Route path="/onboarding/member-type" element={<MemberTypePage />} />
+        <Route path="/select-role" element={<SelectRole />} />
 
         {/* ===== 공통 기능 ===== */}
         <Route path="/board" element={<AuthGuard><BoardList /></AuthGuard>} />

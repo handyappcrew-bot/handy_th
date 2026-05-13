@@ -8,7 +8,7 @@ import uuid
 
 from sqlalchemy import func
 from models import (
-    BusinessRequest, Store, StoreSetting, StoreShift,
+    BusinessRequest, MemberRequest, Store, StoreSetting, StoreShift,
     StoreMembers, StaffContract, Member, StoreMap,
     Schedule, WorkLog, DailyClosingReport, WorkLogChangeRequest,
     ScheduleChangeRequest, Notification, Payslip,
@@ -17,6 +17,7 @@ from database import get_db
 from schemas.owner import (
     StoreInfoUpdateReq, NicknameUpdateReq,
     DeleteStoreReq, ShiftUpdateItem, StaffContractUpdateReq,
+    ScheduleCreateReq, ScheduleUpdateReq, ScheduleBulkCreateReq,
 )
 from utils.utils import create_store_code, get_coords_from_address
 from routers.auth import get_current_member_with_refresh
@@ -56,7 +57,7 @@ async def verify_business(bno: str):
     return res.json()
 
 
-# ===== 매장 등록 신청 =====
+# ===== 매장 등록 =====
 @router.post("/stores")
 async def add_store_request(
     raw_digits: str = Form(...),
@@ -75,6 +76,9 @@ async def add_store_request(
     content = await image.read()
 
     try:
+        code = await create_store_code(db)
+
+        # 어드민 감사용 신청 기록
         db.add(BusinessRequest(
             member_id=current_member.id,
             raw_digits=raw_digits,
@@ -85,13 +89,60 @@ async def add_store_request(
             owner_name=owner_name,
             phone=owner_phone,
             business_image=filename,
+            status="approved",
         ))
+
+        # 매장 생성
+        store = Store(
+            code=code,
+            raw_digits=raw_digits,
+            name=store_name,
+            address=address,
+            address_detail=address_detail,
+            industry=business_type,
+            owner_name=owner_name,
+            phone=owner_phone,
+            business_image=filename,
+            radius=100,
+        )
+        db.add(store)
+        db.flush()
+
+        # 사장 멤버십 등록
+        db.add(StoreMembers(
+            store_id=store.id,
+            member_id=current_member.id,
+            role="owner",
+        ))
+
+        # 매장 설정 기본값
+        db.add(StoreSetting(store_id=store.id))
+
+        # 교대 슬롯 기본 3개 (오픈/미들/마감)
+        for order, name in enumerate(["오픈", "미들", "마감"], start=1):
+            db.add(StoreShift(store_id=store.id, sort_order=order, name=name))
+
+        # 좌표 등록 (실패해도 매장 생성은 진행)
+        try:
+            lat, lng = await get_coords_from_address(address)
+            db.add(StoreMap(store_id=store.id, lat=lat, lng=lng))
+        except Exception:
+            pass
+
         db.commit()
+
         with open(os.path.join(UPLOAD_DIR, filename), "wb") as f:
             f.write(content)
-    except Exception as e:
+
+        return {
+            "store_id": store.id,
+            "store_name": store.name,
+            "code": str(store.code),
+        }
+
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail="데이터 저장 중 오류가 발생했습니다.")
+        raise HTTPException(status_code=500, detail="매장 등록 중 오류가 발생했습니다.")
 
 
 # ===== 매장 정보 조회 =====
@@ -377,9 +428,18 @@ async def get_staff_list(
         "contract": {
             "employee_type": s.contract.employee_type if s.contract else None,
             "working_status": s.contract.working_status if s.contract else None,
+            "hourly_rate": s.contract.hourly_rate if s.contract else None,
+            "monthly_salary": s.contract.monthly_salary if s.contract else None,
             "salary_cycle": s.contract.salary_cycle if s.contract else None,
             "salary_day": s.contract.salary_day if s.contract else None,
-            "hourly_rate": s.contract.hourly_rate if s.contract else None,
+            "is_probation": s.contract.is_probation if s.contract else False,
+            "income_tax": float(s.contract.income_tax) if s.contract and s.contract.income_tax else None,
+            "local_income_tax": float(s.contract.local_income_tax) if s.contract and s.contract.local_income_tax else None,
+            "national_pension": float(s.contract.national_pension) if s.contract and s.contract.national_pension else None,
+            "health_insurance": float(s.contract.health_insurance) if s.contract and s.contract.health_insurance else None,
+            "long_term_care": float(s.contract.long_term_care) if s.contract and s.contract.long_term_care else None,
+            "employment_insurance": float(s.contract.employment_insurance) if s.contract and s.contract.employment_insurance else None,
+            "industrial_accident": float(s.contract.industrial_accident) if s.contract and s.contract.industrial_accident else None,
             "memo": s.contract.memo if s.contract else None,
             "resume": s.contract.resume if s.contract else None,
             "employment_contract": s.contract.employment_contract if s.contract else None,
@@ -461,8 +521,14 @@ async def update_staff_contract(
         contract = StaffContract(store_member_id=staff.id)
         db.add(contract)
 
-    for field, value in req.model_dump(exclude_none=True).items():
-        setattr(contract, field, value)
+    member_fields = {"bank", "account_name", "account_number"}
+    contract_data = req.model_dump(exclude_unset=True)
+
+    for field, value in contract_data.items():
+        if field in member_fields:
+            setattr(staff, field, value)
+        else:
+            setattr(contract, field, value)
 
     db.commit()
     return {"ok": True}
@@ -983,5 +1049,256 @@ def update_payslip(
     for f in int_fields:
         if f in body:
             setattr(p, f, int(body[f]))
+    db.commit()
+    return {"ok": True}
+
+
+# ===== 스케줄 조회 (사장) =====
+@router.get("/store/{store_id}/schedules")
+def get_schedules(
+    store_id: int,
+    year: int,
+    month: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    from datetime import date as date_cls
+    from calendar import monthrange
+    verify_owner(store_id, current_member.id, db)
+
+    start = date_cls(year, month, 1)
+    end = date_cls(year, month, monthrange(year, month)[1])
+
+    rows = (
+        db.query(Schedule, StoreMembers, Member, StoreShift)
+        .join(StoreMembers, Schedule.employee_id == StoreMembers.id)
+        .join(Member, StoreMembers.member_id == Member.id)
+        .outerjoin(StoreShift, Schedule.shift_id == StoreShift.id)
+        .filter(
+            Schedule.store_id == store_id,
+            Schedule.work_date >= start,
+            Schedule.work_date <= end,
+        )
+        .order_by(Schedule.work_date, Schedule.employee_id)
+        .all()
+    )
+
+    return [{
+        "id": s.id,
+        "work_date": str(s.work_date),
+        "employee_id": sm.id,
+        "employee_name": m.name,
+        "shift_id": s.shift_id,
+        "shift_name": sh.name if sh else None,
+        "work_start": str(s.work_start)[:5] if s.work_start else None,
+        "work_end": str(s.work_end)[:5] if s.work_end else None,
+        "is_holiday": s.is_holiday,
+        "is_substitution": s.is_substitution,
+    } for s, sm, m, sh in rows]
+
+
+# ===== 스케줄 단건 추가 =====
+@router.post("/store/{store_id}/schedules")
+def create_schedule(
+    store_id: int,
+    req: ScheduleCreateReq,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    from datetime import time as time_cls
+    verify_owner(store_id, current_member.id, db)
+
+    def parse_time(s):
+        return time_cls.fromisoformat(s) if s else None
+
+    schedule = Schedule(
+        store_id=store_id,
+        employee_id=req.employee_id,
+        shift_id=req.shift_id,
+        work_date=req.work_date,
+        work_start=parse_time(req.work_start),
+        work_end=parse_time(req.work_end),
+        is_holiday=req.is_holiday,
+        is_substitution=req.is_substitution,
+    )
+    db.add(schedule)
+    db.commit()
+    db.refresh(schedule)
+    return {"id": schedule.id}
+
+
+# ===== 스케줄 일괄 추가 =====
+@router.post("/store/{store_id}/schedules/bulk")
+def create_schedules_bulk(
+    store_id: int,
+    req: ScheduleBulkCreateReq,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    from datetime import time as time_cls
+    verify_owner(store_id, current_member.id, db)
+
+    def parse_time(s):
+        return time_cls.fromisoformat(s) if s else None
+
+    created_ids = []
+    for item in req.schedules:
+        schedule = Schedule(
+            store_id=store_id,
+            employee_id=item.employee_id,
+            shift_id=item.shift_id,
+            work_date=item.work_date,
+            work_start=parse_time(item.work_start),
+            work_end=parse_time(item.work_end),
+            is_holiday=item.is_holiday,
+            is_substitution=item.is_substitution,
+        )
+        db.add(schedule)
+        db.flush()
+        created_ids.append(schedule.id)
+
+    db.commit()
+    return {"ids": created_ids, "count": len(created_ids)}
+
+
+# ===== 스케줄 수정 =====
+@router.put("/store/{store_id}/schedules/{schedule_id}")
+def update_schedule(
+    store_id: int,
+    schedule_id: int,
+    req: ScheduleUpdateReq,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    from datetime import time as time_cls
+    verify_owner(store_id, current_member.id, db)
+
+    schedule = db.query(Schedule).filter(
+        Schedule.id == schedule_id,
+        Schedule.store_id == store_id,
+    ).first()
+    if not schedule:
+        raise HTTPException(status_code=404, detail="스케줄을 찾을 수 없습니다.")
+
+    def parse_time(s):
+        return time_cls.fromisoformat(s) if s else None
+
+    if req.shift_id is not None:
+        schedule.shift_id = req.shift_id
+    if req.work_start is not None:
+        schedule.work_start = parse_time(req.work_start)
+    if req.work_end is not None:
+        schedule.work_end = parse_time(req.work_end)
+    if req.is_holiday is not None:
+        schedule.is_holiday = req.is_holiday
+    if req.is_substitution is not None:
+        schedule.is_substitution = req.is_substitution
+
+    db.commit()
+    return {"ok": True}
+
+
+# ===== 스케줄 삭제 =====
+@router.delete("/store/{store_id}/schedules/{schedule_id}")
+def delete_schedule(
+    store_id: int,
+    schedule_id: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    verify_owner(store_id, current_member.id, db)
+
+    schedule = db.query(Schedule).filter(
+        Schedule.id == schedule_id,
+        Schedule.store_id == store_id,
+    ).first()
+    if not schedule:
+        raise HTTPException(status_code=404, detail="스케줄을 찾을 수 없습니다.")
+
+    db.delete(schedule)
+    db.commit()
+    return {"ok": True}
+
+
+# ===== 직원 가입신청 목록 조회 =====
+@router.get("/store/{store_id}/member-requests")
+def get_member_requests(
+    store_id: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    verify_owner(store_id, current_member.id, db)
+
+    rows = (
+        db.query(MemberRequest, Member)
+        .join(Member, Member.id == MemberRequest.member_id)
+        .filter(
+            MemberRequest.store_id == store_id,
+            MemberRequest.status == "pending",
+        )
+        .order_by(MemberRequest.created_at.desc())
+        .all()
+    )
+    return [{
+        "id": req.id,
+        "member_id": member.id,
+        "name": member.name,
+        "phone": member.phone,
+        "gender": member.gender,
+        "birth": str(member.birth) if member.birth else None,
+        "bank": req.bank,
+        "account_name": req.account_name,
+        "account_number": req.account_number,
+        "created_at": str(req.created_at),
+    } for req, member in rows]
+
+
+# ===== 직원 가입신청 승인/거절 =====
+@router.put("/store/{store_id}/member-requests/{req_id}")
+def handle_member_request(
+    store_id: int,
+    req_id: int,
+    body: dict,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    verify_owner(store_id, current_member.id, db)
+
+    req = db.query(MemberRequest).filter(
+        MemberRequest.id == req_id,
+        MemberRequest.store_id == store_id,
+    ).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="가입신청을 찾을 수 없습니다.")
+
+    new_status = body.get("status")
+    if new_status not in ("approved", "rejected"):
+        raise HTTPException(status_code=400, detail="status는 approved 또는 rejected만 가능합니다.")
+
+    req.status = new_status
+
+    if new_status == "approved":
+        existing = db.query(StoreMembers).filter(
+            StoreMembers.store_id == store_id,
+            StoreMembers.member_id == req.member_id,
+        ).first()
+        if existing:
+            existing.is_deleted = False
+            existing.bank = req.bank
+            existing.account_name = req.account_name
+            existing.account_number = req.account_number
+        else:
+            sm = StoreMembers(
+                store_id=store_id,
+                member_id=req.member_id,
+                role="employee",
+                bank=req.bank,
+                account_name=req.account_name,
+                account_number=req.account_number,
+            )
+            db.add(sm)
+            db.flush()
+            db.add(StaffContract(store_member_id=sm.id))
+
     db.commit()
     return {"ok": True}

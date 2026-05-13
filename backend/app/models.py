@@ -20,6 +20,7 @@ class Member(Base):
     birth = Column(Date, nullable=True)
     gender = Column(String(10), nullable=True)
     image_url = Column(String(255), default="default.png")
+    fcm_token = Column(String(500), nullable=True)
     is_deleted = Column(Boolean, default=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
@@ -211,6 +212,7 @@ class StoreMembers(Base):
     role = Column(String(10), server_default="employee", comment="owner / employee")
     nickname = Column(String(50), nullable=True)
     bank = Column(String(50), nullable=True)
+    account_name = Column(String(100), nullable=True)
     account_number = Column(String(100), nullable=True)
     image_url = Column(String(500), nullable=True)
     joined_at = Column(DateTime, server_default=func.now())
@@ -248,6 +250,7 @@ class StaffContract(Base):
 
     # 급여
     hourly_rate = Column(Integer, nullable=True, comment="시급(원)")
+    monthly_salary = Column(Integer, nullable=True, comment="월급(원)")
     salary_cycle = Column(String(10), nullable=True, comment="매월 / 격주 / 매주")
     salary_day = Column(String(20), nullable=True, comment="급여일 (예: 15, 말일)")
     is_probation = Column(Boolean, server_default="false", comment="수습 여부")
@@ -509,6 +512,17 @@ class StoreCommunityComment(Base):
     author = relationship("StoreMembers", back_populates="comments")
     parent = relationship("StoreCommunityComment", remote_side=[id], back_populates="replies")
     replies = relationship("StoreCommunityComment", back_populates="parent", cascade="all, delete-orphan")
+
+
+class StoreCommunityView(Base):
+    __tablename__ = "store_community_views"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    post_id = Column(BigInteger, ForeignKey("store_community.id", ondelete="CASCADE"), nullable=False)
+    employee_id = Column(BigInteger, ForeignKey("store_members.id", ondelete="CASCADE"), nullable=False)
+    viewed_at = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("post_id", "employee_id"),)
 
 
 # ==========================================

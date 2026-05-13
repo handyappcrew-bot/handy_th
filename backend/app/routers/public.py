@@ -8,9 +8,23 @@ from typing import Optional, List
 
 from database import get_db
 from models import (
-    Store, StoreMap, StoreCommunity, StoreCommunityComment,
+    Store, StoreMap, StoreCommunity, StoreCommunityComment, StoreCommunityView,
     StoreMembers, Member, Notice, Faq, Feedback, Notification, Withdrawal,
 )
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    from firebase_init import send_push as _send_push
+    def send_push(token: str, title: str, body: str):
+        try:
+            _send_push(token, title, body)
+        except Exception:
+            logger.warning("FCM 전송 실패 (token: %s...)", token[:10])
+except Exception:
+    def send_push(token: str, title: str, body: str):
+        pass
 from utils.auth_utils import password_encode, password_decode, verify_token
 from schemas.public import (
     BoardListReq, BoardDetailResponse, CommentCreateReq,
@@ -107,6 +121,23 @@ async def get_board_detail(id: int, access_token: str = Cookie(None), db: Sessio
         if not error:
             current_member_id = member_id
 
+    # 조회 기록 저장 (로그인한 경우만)
+    if current_member_id:
+        viewer_sm = db.query(StoreMembers).filter(
+            StoreMembers.store_id == board.store_id,
+            StoreMembers.member_id == current_member_id,
+            StoreMembers.is_deleted == False,
+        ).first()
+        if viewer_sm:
+            existing_view = db.query(StoreCommunityView).filter(
+                StoreCommunityView.post_id == id,
+                StoreCommunityView.employee_id == viewer_sm.id,
+            ).first()
+            if not existing_view:
+                db.add(StoreCommunityView(post_id=id, employee_id=viewer_sm.id))
+                board.view_count = (board.view_count or 0) + 1
+                db.commit()
+
     comments = (
         db.query(StoreCommunityComment, Member.name.label("cname"), StoreMembers.role.label("crole"), Member.id.label("cmember_id"))
         .join(StoreMembers, StoreMembers.id == StoreCommunityComment.employee_id)
@@ -120,6 +151,7 @@ async def get_board_detail(id: int, access_token: str = Cookie(None), db: Sessio
         "id": board.id, "category": board.category, "title": board.title,
         "content": board.content, "created_at": board.created_at,
         "writer": author_name, "role": role, "comment_count": comment_count,
+        "view_count": board.view_count or 0,
         "comments": [
             {
                 "id": c.id, "content": c.content, "created_at": c.created_at,
@@ -130,6 +162,41 @@ async def get_board_detail(id: int, access_token: str = Cookie(None), db: Sessio
         ],
         "photos": board.image if board.image else [],
     }
+
+
+# ===== 게시글 조회자 목록 (사장 전용) =====
+@router.get("/board/{id}/viewers")
+async def get_board_viewers(
+    id: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    board = db.query(StoreCommunity).filter(StoreCommunity.id == id, StoreCommunity.is_deleted == False).first()
+    if not board:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+
+    is_owner = db.query(StoreMembers).filter(
+        StoreMembers.store_id == board.store_id,
+        StoreMembers.member_id == current_member.id,
+        StoreMembers.role == "owner",
+        StoreMembers.is_deleted == False,
+    ).first()
+    if not is_owner:
+        raise HTTPException(status_code=403, detail="사장만 조회할 수 있습니다.")
+
+    rows = (
+        db.query(StoreCommunityView, Member.name, StoreMembers.role)
+        .join(StoreMembers, StoreMembers.id == StoreCommunityView.employee_id)
+        .join(Member, Member.id == StoreMembers.member_id)
+        .filter(StoreCommunityView.post_id == id)
+        .order_by(StoreCommunityView.viewed_at.asc())
+        .all()
+    )
+
+    return [
+        {"name": name, "role": role, "viewed_at": view.viewed_at}
+        for view, name, role in rows
+    ]
 
 
 # ===== 게시글 작성 =====
@@ -149,6 +216,9 @@ async def add_board(
     if not emp:
         raise HTTPException(status_code=404, detail="직원 정보를 찾을 수 없습니다.")
 
+    if category == "공지사항" and emp.role != "owner":
+        raise HTTPException(status_code=403, detail="공지사항은 사장님만 작성할 수 있어요.")
+
     image_urls = [await save_upload(img, BOARD_DIR) for img in images] if images else []
 
     post = StoreCommunity(
@@ -160,8 +230,27 @@ async def add_board(
         image=image_urls if image_urls else None,
     )
     db.add(post)
+    db.flush()
+
+    if category == "공지사항":
+        employees = db.query(StoreMembers).filter(
+            StoreMembers.store_id == store_id,
+            StoreMembers.role == "employee",
+            StoreMembers.is_deleted == False,
+        ).all()
+        for e in employees:
+            db.add(Notification(
+                store_id=store_id,
+                employee_id=e.id,
+                type="notice",
+                message="사장님이 공지를 작성했어요",
+                reference_id=post.id,
+            ))
+            member = db.query(Member).filter(Member.id == e.member_id).first()
+            if member and member.fcm_token:
+                send_push(member.fcm_token, "새 공지사항", "사장님이 공지를 작성했어요")
+
     db.commit()
-    db.refresh(post)
     return {"id": post.id}
 
 
@@ -175,11 +264,16 @@ async def modify_board(
     clear_images: bool = Form(default=False),
     images: Optional[List[UploadFile]] = File(default=None),
     existing_images: Optional[str] = Form(default=None),
+    current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
     board = db.query(StoreCommunity).filter(StoreCommunity.id == board_id).first()
     if not board:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+
+    author_sm = db.query(StoreMembers).filter(StoreMembers.id == board.employee_id).first()
+    if not author_sm or author_sm.member_id != current_member.id:
+        raise HTTPException(status_code=403, detail="본인이 작성한 게시글만 수정할 수 있어요.")
 
     new_urls = [await save_upload(img, BOARD_DIR) for img in images] if images else []
     existing_urls = json.loads(existing_images) if existing_images else []
@@ -198,10 +292,26 @@ async def modify_board(
 
 # ===== 게시글 삭제 =====
 @router.delete("/board/{id}")
-async def delete_board(id: int, db: Session = Depends(get_db)):
+async def delete_board(
+    id: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
     board = db.query(StoreCommunity).filter(StoreCommunity.id == id).first()
     if not board:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+
+    author_sm = db.query(StoreMembers).filter(StoreMembers.id == board.employee_id).first()
+    is_author = author_sm and author_sm.member_id == current_member.id
+    is_owner = db.query(StoreMembers).filter(
+        StoreMembers.store_id == board.store_id,
+        StoreMembers.member_id == current_member.id,
+        StoreMembers.role == "owner",
+        StoreMembers.is_deleted == False,
+    ).first() is not None
+    if not (is_author or is_owner):
+        raise HTTPException(status_code=403, detail="삭제 권한이 없어요.")
+
     board.is_deleted = True
     db.commit()
 
@@ -237,10 +347,26 @@ async def add_comment(
 
 
 @router.delete("/board/comment/{comment_id}")
-async def delete_comment(comment_id: int, db: Session = Depends(get_db)):
+async def delete_comment(
+    comment_id: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
     comment = db.query(StoreCommunityComment).filter(StoreCommunityComment.id == comment_id).first()
     if not comment:
         raise HTTPException(status_code=404, detail="댓글을 찾을 수 없습니다.")
+
+    post = db.query(StoreCommunity).filter(StoreCommunity.id == comment.post_id).first()
+    author_sm = db.query(StoreMembers).filter(StoreMembers.id == comment.employee_id).first()
+    is_author = author_sm and author_sm.member_id == current_member.id
+    is_owner = post and db.query(StoreMembers).filter(
+        StoreMembers.store_id == post.store_id,
+        StoreMembers.member_id == current_member.id,
+        StoreMembers.role == "owner",
+        StoreMembers.is_deleted == False,
+    ).first() is not None
+    if not (is_author or is_owner):
+        raise HTTPException(status_code=403, detail="삭제 권한이 없어요.")
 
     comment.is_deleted = True
     if comment.parent_id is None:

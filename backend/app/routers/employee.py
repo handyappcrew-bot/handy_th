@@ -680,7 +680,7 @@ def get_my_info(
         "age": age,
         "gender": "남자" if member.gender == "male" else "여자",
         "phone": member.phone,
-        "image_url": sm.image_url,
+        "image_url": sm.image_url or member.image_url,
         "bank": sm.bank,
         "account_number": sm.account_number,
         "joined_at": sm.joined_at.strftime("%Y.%m.%d"),

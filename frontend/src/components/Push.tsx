@@ -21,10 +21,19 @@ export default function Push() {
         });
 
         // 🔥 리스너 먼저 등록
-        PushNotifications.addListener("registration", t => {
+        PushNotifications.addListener("registration", async t => {
             console.log("🔥 TOKEN:", t.value);
-            alert("토큰 발급됨");
             setToken(t.value);
+            try {
+                await fetch("/api/auth/fcm-token", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: t.value }),
+                    credentials: "include",
+                });
+            } catch (e) {
+                console.warn("FCM 토큰 저장 실패", e);
+            }
         });
 
         PushNotifications.addListener("registrationError", e => {

@@ -37,6 +37,7 @@ export async function getMe() {
 export async function codeVerify(phone: string, code: string) {
     const response = await fetch(`${BASE_URL}/api/auth/signup/code/verify`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, code })
     });
     if (!response.ok) throw new Error("인증번호 검증 실패");
@@ -47,6 +48,7 @@ export async function codeVerify(phone: string, code: string) {
 export async function codeResend(phone: string) {
     const response = await fetch(`${BASE_URL}/api/auth/signup/code/send`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone })
     });
     if (!response.ok) throw new Error("인증번호 재전송 실패");
@@ -126,6 +128,7 @@ export async function markNotificationRead(id: string) {
 export async function addWithdrawalReason(member_id: number, reason: string) {
     const response = await fetch(`${BASE_URL}/api/common/withdrawal`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ member_id, reason })
     });
     if (!response.ok) throw new Error("회원 탈퇴 추가 실패");

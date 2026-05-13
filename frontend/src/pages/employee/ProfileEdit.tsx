@@ -405,7 +405,7 @@ const ProfileEdit = () => {
                 <X style={{ width: '20px', height: '20px', color: '#19191B' }} strokeWidth={2.5} />
               </button>
             </div>
-            <input type="text" inputMode="numeric" value={accountInput} onChange={(e) => setAccountInput(e.target.value.replace(/\D/g, ""))} placeholder="숫자만 입력" className="w-full h-[52px] rounded-xl border border-border px-4 text-[16px] focus:outline-none focus:border-primary" style={{ color: '#19191B' }} />
+            <input type="text" inputMode="tel" value={accountInput} onChange={(e) => setAccountInput(e.target.value.replace(/[^0-9-]/g, ""))} placeholder="숫자 및 - 입력 (예: 3333-01-333333)" className="w-full h-[52px] rounded-xl border border-border px-4 text-[16px] focus:outline-none focus:border-primary" style={{ color: '#19191B' }} />
             <button onClick={handleAccountSubmit} disabled={!accountInput.trim()} className="mt-6 w-full py-4 rounded-xl text-[16px] font-semibold" style={{ backgroundColor: accountInput.trim() ? '#4261FF' : '#E5E7EB', color: accountInput.trim() ? '#FFFFFF' : '#9CA3AF' }}>입력 완료</button>
           </div>
         </DrawerContent>

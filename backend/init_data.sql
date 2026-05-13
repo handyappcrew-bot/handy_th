@@ -2,21 +2,35 @@
 -- 사용법: psql -U <user> -d handy_v2 -f init_data.sql
 
 -- members
-INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (2, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01022222222', '김다힌', NULL, 'male', 'default.png', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (7, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01077777777', '한지수', '1999-03-15', 'F', NULL, FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (8, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01088888888', '김태훈', '1985-07-22', 'M', NULL, FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (9, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01099999999', '김민형', '2001-11-08', 'M', NULL, FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (10, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01000000001', '김재욱', '2000-05-30', 'M', NULL, FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (1, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01011111111', '정수민', NULL, 'female', 'default.png', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (3, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01033333333', '김정민', NULL, 'male', 'default.png', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (4, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01044444444', '문자영', NULL, 'female', 'default.png', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (5, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01055555555', '이수진', NULL, 'female', 'default.png', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (6, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01066666666', '박지훈', NULL, 'male', 'default.png', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (2, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01022222222', '김다힌', '1990-04-20', 'male', 'default.png', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (7, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01077777777', '한지수', '1999-03-15', 'female', 'default.png', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (8, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01088888888', '김태훈', '1985-07-22', 'male', 'default.png', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (9, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01099999999', '김민형', '2001-11-08', 'male', 'default.png', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (10, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01000000001', '김재욱', '2000-05-30', 'male', 'default.png', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (1, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01011111111', '정수민', '2000-07-15', 'female', 'default.png', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (3, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01033333333', '김정민', '1998-02-28', 'male', 'default.png', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (4, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01044444444', '문자영', '2002-09-10', 'female', 'default.png', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (5, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01055555555', '이수진', '1997-12-03', 'female', 'default.png', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO members (id, password, phone, name, birth, gender, image_url, is_deleted) VALUES (6, '$2b$12$quyaERlWQvthJJgmtNblqe0WkxdY..pTIx.Pa7uPyljLn15WA28oO', '01066666666', '박지훈', '1995-06-17', 'male', 'default.png', FALSE) ON CONFLICT DO NOTHING;
 
--- stores
-INSERT INTO stores (id, code, raw_digits, name, address, address_detail, industry, owner_name, phone, business_image, radius, created_at, is_deleted) VALUES (1, 12345, '1234567890', '노량물산', '서울특별시 동작구 노량진로 151', NULL, 'test', '김다힌', '027272112', 'default.png', 500, '2026-05-11', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO stores (id, code, raw_digits, name, address, address_detail, industry, owner_name, phone, business_image, radius, created_at, is_deleted) VALUES (2, 23456, '2345678901', '노량전자', '서울특별시 동작구 노량진로 160', '2층', '전자제품', '김다힌', '027272200', 'default.png', 500, '2026-05-12', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO stores (id, code, raw_digits, name, address, address_detail, industry, owner_name, phone, business_image, radius, created_at, is_deleted) VALUES (3, 34567, '3456789012', '강서물산', '서울특별시 강서구 강서로 123', '1층', '마트', '김태훈', '027272300', 'default.png', 500, '2026-05-12', FALSE) ON CONFLICT DO NOTHING;
+-- 기존 DB에 이미 데이터가 있을 경우를 위한 UPDATE (birth/gender 누락분 보정)
+UPDATE members SET birth = '2000-07-15', image_url = COALESCE(NULLIF(image_url, ''), 'default.png') WHERE id = 1 AND birth IS NULL;
+UPDATE members SET birth = '1990-04-20', image_url = COALESCE(NULLIF(image_url, ''), 'default.png') WHERE id = 2 AND birth IS NULL;
+UPDATE members SET birth = '1998-02-28', image_url = COALESCE(NULLIF(image_url, ''), 'default.png') WHERE id = 3 AND birth IS NULL;
+UPDATE members SET birth = '2002-09-10', image_url = COALESCE(NULLIF(image_url, ''), 'default.png') WHERE id = 4 AND birth IS NULL;
+UPDATE members SET birth = '1997-12-03', image_url = COALESCE(NULLIF(image_url, ''), 'default.png') WHERE id = 5 AND birth IS NULL;
+UPDATE members SET birth = '1995-06-17', image_url = COALESCE(NULLIF(image_url, ''), 'default.png') WHERE id = 6 AND birth IS NULL;
+UPDATE members SET gender = 'female', image_url = COALESCE(NULLIF(image_url, ''), 'default.png') WHERE id = 7 AND gender NOT IN ('male', 'female');
+UPDATE members SET gender = 'male',   image_url = COALESCE(NULLIF(image_url, ''), 'default.png') WHERE id IN (8, 9, 10) AND gender NOT IN ('male', 'female');
+
+-- stores (코드 6자리)
+INSERT INTO stores (id, code, raw_digits, name, address, address_detail, industry, owner_name, phone, business_image, radius, created_at, is_deleted) VALUES (1, 123456, '1234567890', '노량물산', '서울특별시 동작구 노량진로 151', NULL, '카페', '김다힌', '027272112', 'default.png', 500, '2026-05-11', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO stores (id, code, raw_digits, name, address, address_detail, industry, owner_name, phone, business_image, radius, created_at, is_deleted) VALUES (2, 234567, '2345678901', '노량전자', '서울특별시 동작구 노량진로 160', '2층', '판매/매장', '김다힌', '027272200', 'default.png', 500, '2026-05-12', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO stores (id, code, raw_digits, name, address, address_detail, industry, owner_name, phone, business_image, radius, created_at, is_deleted) VALUES (3, 345678, '3456789012', '강서물산', '서울특별시 강서구 강서로 123', '1층', '서비스업', '김태훈', '027272300', 'default.png', 500, '2026-05-12', FALSE) ON CONFLICT DO NOTHING;
+-- 기존 5자리 코드 → 6자리 업데이트
+UPDATE stores SET code = 123456 WHERE id = 1 AND code = 12345;
+UPDATE stores SET code = 234567 WHERE id = 2 AND code = 23456;
+UPDATE stores SET code = 345678 WHERE id = 3 AND code = 34567;
 
 -- store_maps
 INSERT INTO store_maps (id, store_id, lat, lng) VALUES (1, 1, '37.5705490', '126.8442340') ON CONFLICT DO NOTHING;
@@ -39,20 +53,20 @@ INSERT INTO store_shifts (id, store_id, sort_order, name, start_time, end_time, 
 INSERT INTO store_shifts (id, store_id, sort_order, name, start_time, end_time, is_active) VALUES (8, 3, 2, '미들', NULL, NULL, TRUE) ON CONFLICT DO NOTHING;
 INSERT INTO store_shifts (id, store_id, sort_order, name, start_time, end_time, is_active) VALUES (9, 3, 3, '마감', NULL, NULL, TRUE) ON CONFLICT DO NOTHING;
 
--- store_members
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (1, 1, 1, 'employee', NULL, NULL, NULL, NULL, '2026-05-11 20:59:41.960771', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (2, 1, 2, 'owner', NULL, NULL, NULL, NULL, '2026-05-11 20:59:41.965554', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (3, 1, 3, 'employee', NULL, NULL, NULL, NULL, '2026-05-11 22:11:54.278919', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (4, 1, 4, 'employee', NULL, NULL, NULL, NULL, '2026-05-11 22:11:54.436226', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (5, 1, 5, 'employee', NULL, NULL, NULL, NULL, '2026-05-11 22:11:54.592058', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (6, 1, 6, 'employee', NULL, NULL, NULL, NULL, '2026-05-11 22:11:54.748266', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (7, 2, 2, 'owner', '김다힌', NULL, NULL, NULL, '2026-05-12 14:22:10.276776', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (8, 2, 1, 'employee', '정수민', NULL, NULL, NULL, '2026-05-12 14:22:10.276776', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (9, 2, 7, 'employee', '한지수', NULL, NULL, NULL, '2026-05-12 14:22:10.276776', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (10, 3, 8, 'owner', '김태훈', NULL, NULL, NULL, '2026-05-12 14:22:10.278057', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (11, 3, 9, 'employee', '김민형', NULL, NULL, NULL, '2026-05-12 14:22:10.278057', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (12, 3, 10, 'employee', '김재욱', NULL, NULL, NULL, '2026-05-12 14:22:10.278057', FALSE) ON CONFLICT DO NOTHING;
-INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_number, image_url, joined_at, is_deleted) VALUES (13, 3, 2, 'employee', '김다힌', NULL, NULL, NULL, '2026-05-12 14:22:10.278057', FALSE) ON CONFLICT DO NOTHING;
+-- store_members (account_name 컬럼 포함)
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (1, 1, 1, 'employee', NULL, '국민', '정수민', '123456-78-901234', NULL, '2026-05-11 20:59:41.960771', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (2, 1, 2, 'owner', NULL, NULL, NULL, NULL, NULL, '2026-05-11 20:59:41.965554', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (3, 1, 3, 'employee', NULL, '신한', '김정민', '110-123-456789', NULL, '2026-05-11 22:11:54.278919', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (4, 1, 4, 'employee', NULL, '카카오', '문자영', '3333-01-1234567', NULL, '2026-05-11 22:11:54.436226', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (5, 1, 5, 'employee', NULL, '하나', '이수진', '123-456789-01234', NULL, '2026-05-11 22:11:54.592058', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (6, 1, 6, 'employee', NULL, '농협', '박지훈', '301-1234-5678-91', NULL, '2026-05-11 22:11:54.748266', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (7, 2, 2, 'owner', '김다힌', NULL, NULL, NULL, NULL, '2026-05-12 14:22:10.276776', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (8, 2, 1, 'employee', '정수민', '국민', '정수민', '123456-78-901234', NULL, '2026-05-12 14:22:10.276776', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (9, 2, 7, 'employee', '한지수', '토스', '한지수', '100-1234-5678', NULL, '2026-05-12 14:22:10.276776', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (10, 3, 8, 'owner', '김태훈', NULL, NULL, NULL, NULL, '2026-05-12 14:22:10.278057', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (11, 3, 9, 'employee', '김민형', '우리', '김민형', '1002-123-456789', NULL, '2026-05-12 14:22:10.278057', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (12, 3, 10, 'employee', '김재욱', '신한', '김재욱', '110-987-654321', NULL, '2026-05-12 14:22:10.278057', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_members (id, store_id, member_id, role, nickname, bank, account_name, account_number, image_url, joined_at, is_deleted) VALUES (13, 3, 2, 'employee', '김다힌', '기업', '김다힌', '080-123456-01-012', NULL, '2026-05-12 14:22:10.278057', FALSE) ON CONFLICT DO NOTHING;
 
 -- staff_contracts
 INSERT INTO staff_contracts (id, store_member_id, employee_type, working_status, hourly_rate, salary_cycle, salary_day, is_probation, income_tax, local_income_tax, national_pension, health_insurance, long_term_care, employment_insurance, industrial_accident, memo, resume, employment_contract, health_certificate) VALUES (1, 1, '알바생', '재직', 10030, '월 1회 (월급)', '25일', FALSE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
@@ -218,7 +232,11 @@ INSERT INTO store_community (id, store_id, employee_id, category, title, content
 INSERT INTO store_community (id, store_id, employee_id, category, title, content, image, view_count, created_at, is_deleted) VALUES (21, 1, 1, '일반 게시글', '테스트 제목', '테스트 내용', NULL, 0, '2026-05-12 15:40:40.616695', TRUE) ON CONFLICT DO NOTHING;
 INSERT INTO store_community (id, store_id, employee_id, category, title, content, image, view_count, created_at, is_deleted) VALUES (22, 1, 1, '일반 게시글', '테스트 제목', '테스트 내용', NULL, 0, '2026-05-12 15:40:40.632589', TRUE) ON CONFLICT DO NOTHING;
 INSERT INTO store_community (id, store_id, employee_id, category, title, content, image, view_count, created_at, is_deleted) VALUES (5, 1, 1, '일반 게시글', '삭제용', '테스트 내용', NULL, 0, '2026-05-12 15:39:42.947412', TRUE) ON CONFLICT DO NOTHING;
-INSERT INTO store_community (id, store_id, employee_id, category, title, content, image, view_count, created_at, is_deleted) VALUES (2, 1, 1, '일반 게시글', '테스트 제목', '테스트 내용sx', '[''/uploads/board/cddae265-f912-44fc-983d-6f97411a9405.jpg'']', 0, '2026-05-12 15:39:42.804741', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_community (id, store_id, employee_id, category, title, content, image, view_count, created_at, is_deleted) VALUES (2, 1, 1, '일반 게시글', '테스트 제목', '테스트 내용sx', '["/uploads/board/cddae265-f912-44fc-983d-6f97411a9405.jpg"]', 0, '2026-05-12 15:39:42.804741', FALSE) ON CONFLICT DO NOTHING;
+-- 공지사항 게시글 (직원 홈 화면 노출용, 사장(store_member_id=2)이 작성)
+INSERT INTO store_community (id, store_id, employee_id, category, title, content, image, view_count, created_at, is_deleted) VALUES (23, 1, 2, '공지사항', '5월 근무 일정 안내', '이번 달 근무 일정을 확인해 주세요. 변경이 필요하신 분은 사전에 말씀 부탁드립니다.', NULL, 0, '2026-05-12 09:00:00', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_community (id, store_id, employee_id, category, title, content, image, view_count, created_at, is_deleted) VALUES (24, 1, 2, '공지사항', '매장 위생 점검 안내', '다음 주 수요일 위생 점검이 예정되어 있습니다. 청결 상태를 미리 점검해 주세요.', NULL, 0, '2026-05-13 10:30:00', FALSE) ON CONFLICT DO NOTHING;
+INSERT INTO store_community (id, store_id, employee_id, category, title, content, image, view_count, created_at, is_deleted) VALUES (25, 3, 10, '공지사항', '신규 직원 입사 안내', '이번 주부터 새로운 직원이 합류합니다. 잘 부탁드립니다.', NULL, 0, '2026-05-13 11:00:00', FALSE) ON CONFLICT DO NOTHING;
 
 -- store_community_comments
 INSERT INTO store_community_comments (id, post_id, employee_id, parent_id, content, created_at, is_deleted) VALUES (1, 14, 1, NULL, '댓글 내용', '2026-05-12 15:40:13.593776', FALSE) ON CONFLICT DO NOTHING;

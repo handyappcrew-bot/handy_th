@@ -33,7 +33,23 @@ export interface PostDetail {
     created_at: string;
     photos: string[];
     comment_count: number;
+    view_count: number;
     comments: Comment[];
+}
+
+export interface Viewer {
+    name: string;
+    role: string;
+    viewed_at: string;
+}
+
+// 게시글 조회자 목록 (사장 전용)
+export async function fetchBoardViewers(boardId: number): Promise<Viewer[]> {
+    const res = await fetch(`${BASE_URL}/api/common/board/${boardId}/viewers`, {
+        credentials: 'include',
+    });
+    if (!res.ok) throw new Error("조회자 목록 조회 실패");
+    return res.json();
 }
 
 // 게시글 목록 조회

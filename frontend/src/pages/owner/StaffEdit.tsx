@@ -671,7 +671,27 @@ function SectionContract({ staffId, initial, onBack, onRequestCancel }: { staffI
     setValidationError("");
     setSaveOpen(true);
   };
-  const doSave = () => {
+  const doSave = async () => {
+    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
+    const apiPatch: Record<string, any> = {
+      employee_type: employmentType,
+      salary_cycle: payCycle,
+      salary_day: payDay,
+      is_probation: probation,
+      hourly_rate: null,
+      monthly_salary: null,
+    };
+    if (salaryType === "시급" && salaryAmount) {
+      apiPatch.hourly_rate = Number(salaryAmount.replace(/,/g, ""));
+    } else if (salaryType === "월급 (연봉 포함)" && salaryAmount) {
+      apiPatch.monthly_salary = Number(salaryAmount.replace(/,/g, ""));
+    }
+    const ok = await staffStore.saveToApi(staffId, storeId, apiPatch);
+    if (!ok) {
+      toast({ description: "저장에 실패했습니다.", variant: "destructive", duration: 2000 });
+      setSaveOpen(false);
+      return;
+    }
     const taxDone = initial.incomeTax.some(t => t.active) || initial.socialInsurance.some(t => t.active);
     const shouldClearNew = initial.isNew && !!salaryType && taxDone;
     staffStore.update(staffId, {
@@ -1083,7 +1103,27 @@ function SectionTax({ staffId, initial, onBack, onRequestCancel }: { staffId: st
     setSaveOpen(true);
   };
 
-  const doSave = () => {
+  const doSave = async () => {
+    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
+    const findVal = (items: TaxItem[], key: string) => {
+      const item = items.find(t => t.key === key);
+      return item?.active ? parseFloat(item.value) || null : null;
+    };
+    const apiPatch = {
+      income_tax: findVal(incomeTax, "income"),
+      local_income_tax: findVal(incomeTax, "local"),
+      national_pension: findVal(socialInsurance, "national"),
+      health_insurance: findVal(socialInsurance, "health"),
+      long_term_care: findVal(socialInsurance, "longterm"),
+      employment_insurance: findVal(socialInsurance, "employment"),
+      industrial_accident: findVal(socialInsurance, "industrial"),
+    };
+    const ok = await staffStore.saveToApi(staffId, storeId, apiPatch);
+    if (!ok) {
+      toast({ description: "저장에 실패했습니다.", variant: "destructive", duration: 2000 });
+      setSaveOpen(false);
+      return;
+    }
     const contractDone = !!initial.salaryType;
     const taxDone = [...incomeTax, ...socialInsurance].some(t => t.active);
     const shouldClearNew = initial.isNew && contractDone && taxDone;
@@ -1247,7 +1287,17 @@ function SectionPersonal({ staffId, initial, onBack, onRequestCancel }: { staffI
     setErrorField(""); setErrorMsg("");
     setSaveOpen(true);
   };
-  const doSave = () => {
+  const doSave = async () => {
+    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
+    const ok = await staffStore.saveToApi(staffId, storeId, {
+      bank,
+      account_number: accountNumber,
+    });
+    if (!ok) {
+      toast({ description: "저장에 실패했습니다.", variant: "destructive", duration: 2000 });
+      setSaveOpen(false);
+      return;
+    }
     staffStore.update(staffId, { bank, accountNumber });
     setSaveOpen(false);
     toast({ description: "인적 사항이 저장되었어요.", duration: 2000 });
@@ -1263,7 +1313,7 @@ function SectionPersonal({ staffId, initial, onBack, onRequestCancel }: { staffI
         <SelectField label="은행" value={bank || "미선택"} onTap={() => { setBankOpen(true); if (errorField === "bank") { setErrorField(""); setErrorMsg(""); } }} error={errorField === "bank"} errorMsg={errorField === "bank" ? errorMsg : ""} />
         <InputField label="계좌번호" value={accountNumber || "미입력"} onTap={() => { setAccountOpen(true); if (errorField === "accountNumber") { setErrorField(""); setErrorMsg(""); } }} error={errorField === "accountNumber"} errorMsg={errorField === "accountNumber" ? errorMsg : ""} />
       </div>
-      <TextInputDrawer open={accountOpen} onOpenChange={setAccountOpen} title="계좌번호 입력하기" value={accountNumber} onConfirm={setAccountNumber} placeholder="숫자만 입력" inputMode="numeric" />
+      <TextInputDrawer open={accountOpen} onOpenChange={setAccountOpen} title="계좌번호 입력하기" value={accountNumber} onConfirm={setAccountNumber} placeholder="숫자 및 - 입력 (예: 3333-01-333333)" inputMode="tel" />
       <BankSelectionDrawer open={bankOpen} onOpenChange={setBankOpen} selected={bank} onSelect={setBank} />
       {cancelOpen && <ConfirmPopup title={`인적 사항 ${initial.isNew ? "등록" : "수정"} 취소`} desc={`${initial.isNew ? "등록" : "수정"} 중인 내용이 저장되지 않아요.\n정말 취소하시겠어요?`} cancelLabel="취소" confirmLabel="확인" onCancel={() => setCancelOpen(false)} onConfirm={() => { setCancelOpen(false); onBack(); }} />}
       {saveOpen && <ConfirmPopup title="인적 사항 저장하기" desc="인적 사항을 저장하시겠어요?" cancelLabel="취소" confirmLabel="저장하기" onCancel={() => setSaveOpen(false)} onConfirm={doSave} />}
@@ -1283,7 +1333,14 @@ function SectionMemo({ staffId, initial, onBack, onRequestCancel }: { staffId: s
   const isDirty = memo !== initial.memo;
   const handleCancel = () => { if (isDirty) setCancelOpen(true); else onBack(); };
   useEffect(() => { onRequestCancel?.(() => handleCancel()); }, [isDirty]);
-  const doSave = () => {
+  const doSave = async () => {
+    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
+    const ok = await staffStore.saveToApi(staffId, storeId, { memo });
+    if (!ok) {
+      toast({ description: "저장에 실패했습니다.", variant: "destructive", duration: 2000 });
+      setSaveOpen(false);
+      return;
+    }
     staffStore.update(staffId, { memo });
     setSaveOpen(false);
     toast({ description: "메모가 저장되었어요.", duration: 2000 });
@@ -1456,7 +1513,14 @@ function SectionWorkStatus({ staffId, initial, onBack, onRequestCancel }: { staf
   const isDirty = workStatus !== initial.workStatus;
   const handleCancel = () => { if (isDirty) setCancelOpen(true); else onBack(); };
   useEffect(() => { onRequestCancel?.(() => handleCancel()); }, [isDirty]);
-  const doSave = () => {
+  const doSave = async () => {
+    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
+    const ok = await staffStore.saveToApi(staffId, storeId, { working_status: workStatus });
+    if (!ok) {
+      toast({ description: "저장에 실패했습니다.", variant: "destructive", duration: 2000 });
+      setSaveOpen(false);
+      return;
+    }
     staffStore.update(staffId, { workStatus });
     setSaveOpen(false);
     toast({ description: "근무 상태가 저장되었어요.", duration: 2000 });
