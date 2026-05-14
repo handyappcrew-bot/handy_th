@@ -22,10 +22,11 @@ from utils.auth_utils import (
     password_encode, password_decode,
     generate_code, save_code, send_code_to_user, verify_code, check_daily_limit,
     add_token_for_cookie, encode_temp_signup_token, decode_temp_signup_token,
+    encode_temp_password_reset_token, decode_temp_password_reset_token,
     verify_token, create_access_token,
     save_oauth_state, consume_oauth_state,
 )
-from schemas.auth import ValidLogin, Signup, PhoneReq, VerifyReq, WithdrawalReq
+from schemas.auth import ValidLogin, Signup, PhoneReq, VerifyReq, WithdrawalReq, PasswordResetReq
 
 logger = logging.getLogger(__name__)
 
@@ -322,6 +323,96 @@ def verify_sms(req: VerifyReq):
     if not valid:
         raise HTTPException(400, msg)
     return {"message": msg}
+
+
+# ===== 비밀번호 찾기/재설정 =====
+@router.post(
+    "/password/reset/code/send",
+    summary="비밀번호 재설정 인증번호 발송",
+    description="가입된 전화번호로 SMS 인증번호 발송. 가입되지 않은 번호면 404.",
+    responses={
+        200: {"content": {"application/json": {"example": {"message": "인증번호 발송 완료"}}}},
+        404: {"content": {"application/json": {"example": {"detail": "가입된 계정이 없어요."}}}},
+    },
+)
+def send_password_reset_sms(req: PhoneReq, db: Session = Depends(get_db)):
+    phone = normalize_phone(req.phone)
+    member = db.query(Member).filter(Member.phone == phone, Member.is_deleted == False).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="가입된 계정이 없어요.")
+
+    if os.getenv("ENV") != "production":
+        save_code(phone, "00000")
+        return {"message": "인증번호 발송 완료"}
+
+    if not check_daily_limit(phone):
+        raise HTTPException(status_code=400, detail="인증번호는 하루 최대 5번까지 발송 가능해요")
+    code = generate_code()
+    send_code_to_user(phone, code)
+    save_code(phone, code)
+    return {"message": "인증번호 발송 완료"}
+
+
+@router.post(
+    "/password/reset/code/verify",
+    summary="비밀번호 재설정 인증번호 확인",
+    description="인증번호 검증 후 10분짜리 password_reset_token 쿠키 발급. 이후 /password/reset 호출로 비밀번호 변경 가능.",
+    responses={200: {"content": {"application/json": {"example": {"message": "인증 되었습니다."}}}}},
+)
+def verify_password_reset_sms(req: VerifyReq, res: Response, db: Session = Depends(get_db)):
+    phone = normalize_phone(req.phone)
+    valid, msg = verify_code(phone, req.code)
+    if not valid:
+        raise HTTPException(400, msg)
+
+    member = db.query(Member).filter(Member.phone == phone, Member.is_deleted == False).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="가입된 계정이 없어요.")
+
+    temp_token = encode_temp_password_reset_token(member.id)
+    is_prod = os.getenv("ENV") == "production"
+    res.set_cookie(
+        key="password_reset_token", value=temp_token, max_age=600,
+        httponly=True, secure=is_prod, samesite="none" if is_prod else "lax",
+    )
+    return {"message": msg}
+
+
+@router.post(
+    "/password/reset",
+    summary="비밀번호 재설정",
+    description="password_reset_token 쿠키와 새 비밀번호로 비밀번호 변경. 쿠키 없거나 만료 시 401.",
+    responses={
+        200: {"content": {"application/json": {"example": {"message": "비밀번호가 변경되었어요."}}}},
+        401: {"content": {"application/json": {"example": {"detail": "인증 정보가 만료됐어요. 다시 인증해주세요."}}}},
+    },
+)
+def reset_password(
+    req: PasswordResetReq,
+    res: Response,
+    db: Session = Depends(get_db),
+    reset_info: tuple = Depends(decode_temp_password_reset_token),
+):
+    member_id, error = reset_info
+    if error == "expired" or not member_id:
+        raise HTTPException(status_code=401, detail="인증 정보가 만료됐어요. 다시 인증해주세요.")
+    if error:
+        raise HTTPException(status_code=401, detail="유효하지 않은 인증 정보예요.")
+
+    phone = normalize_phone(req.phone)
+    member = db.query(Member).filter(
+        Member.id == member_id, Member.phone == phone, Member.is_deleted == False
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없어요.")
+
+    member.password = password_encode(req.new_password)
+    db.commit()
+
+    is_prod = os.getenv("ENV") == "production"
+    cookie_opts = dict(httponly=True, secure=is_prod, samesite="none" if is_prod else "lax")
+    res.delete_cookie(key="password_reset_token", **cookie_opts)
+    return {"message": "비밀번호가 변경되었어요."}
 
 
 # ===== 회원가입 =====

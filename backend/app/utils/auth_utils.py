@@ -145,6 +145,30 @@ def decode_temp_signup_token(signup_token: str | None = Cookie(None)):
         return None, "invalid"
 
 
+# ===== 임시 비밀번호 재설정 토큰 =====
+def encode_temp_password_reset_token(member_id: int):
+    payload = {
+        "member_id": member_id,
+        "type": "password_reset",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_temp_password_reset_token(password_reset_token: str | None = Cookie(None)):
+    if password_reset_token is None:
+        return None, None
+    try:
+        payload = jwt.decode(password_reset_token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "password_reset":
+            return None, "invalid"
+        return payload.get("member_id"), None
+    except ExpiredSignatureError:
+        return None, "expired"
+    except JWTError:
+        return None, "invalid"
+
+
 # ===== JWT 토큰 =====
 ACCESS_TOKEN_EXPIRE = timedelta(hours=24)
 REFRESH_TOKEN_EXPIRE = timedelta(days=7)

@@ -48,3 +48,19 @@ class AppleCallbackRequest(BaseModel):
 
 class WithdrawalReq(BaseModel):
     reason: Optional[str] = None
+
+
+class PasswordResetReq(BaseModel):
+    phone: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v):
+        if not v:
+            raise ValueError("새 비밀번호를 입력해주세요.")
+        if len(v) < 8 or len(v) > 16:
+            raise ValueError("비밀번호는 8~16자여야 합니다.")
+        if not re.search(r"[A-Za-z]", v) or not re.search(r"\d", v):
+            raise ValueError("비밀번호는 영문과 숫자를 모두 포함해야 합니다.")
+        return v
