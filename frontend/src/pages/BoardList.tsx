@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { useIsPresent } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Search, MessageSquare, Plus } from "lucide-react";
-import BottomNav from "@/components/home/employee/BottomNav";
 import { Post, fetchBoardList } from "@/api/board";
 import { moveToHome } from "@/utils/function";
 
@@ -38,13 +39,14 @@ export default function BoardList() {
 
   useEffect(() => {
     const getBoardList = async () => {
+      const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
+      if (!storeId) { setLoading(false); return; }
       try {
-        const data = await fetchBoardList(Number(localStorage.getItem("currentStoreId") ?? 1));
+        const data = await fetchBoardList(storeId);
         setPosts(data);
       } catch (err) {
         console.log("화면 로드 실패:", err);
       } finally {
-        // 로딩 상태 종료
         setLoading(false);
       }
     }
@@ -52,11 +54,12 @@ export default function BoardList() {
   }, []);
 
   const [currentRole] = useState(() => localStorage.getItem("currentRole") ?? "employee");
+  const isPresent = useIsPresent();
 
   return (
     <div className="min-h-screen max-w-lg mx-auto" style={{ backgroundColor: '#F7F7F8' }}>
       <div className="sticky top-0 z-10 flex items-center gap-2 px-2 pt-4 pb-2" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => navigate(moveToHome(currentRole))} className="p-1">
+        <button onClick={() => navigate(moveToHome(currentRole))} className="pressable p-1">
           <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>게시판</h1>
@@ -111,13 +114,17 @@ export default function BoardList() {
         )}
       </div>
 
-      <button onClick={() => navigate("/board/write")}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full flex items-center justify-center z-50"
-        style={{ backgroundColor: '#4261FF', boxShadow: '2px 4px 16px rgba(66,97,255,0.4)' }}>
-        <Plus className="h-6 w-6 text-white" />
-      </button>
+      {isPresent && createPortal(
+        <div style={{ position: 'fixed', bottom: 'calc(74px + env(safe-area-inset-bottom) + 16px)', right: 'clamp(14px, 4vw, 20px)', zIndex: 50 }}>
+          <button onClick={() => navigate("/board/write")}
+            className="pressable"
+            style={{ width: 'clamp(52px, 14.9vw, 56px)', height: 'clamp(52px, 14.9vw, 56px)', borderRadius: '50%', backgroundColor: '#4261FF', boxShadow: '2px 4px 16px rgba(66,97,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>
+            <Plus className="h-6 w-6 text-white" />
+          </button>
+        </div>,
+        document.body
+      )}
 
-      <BottomNav activeTab="board" onTabChange={() => { }} />
     </div>
   );
 }

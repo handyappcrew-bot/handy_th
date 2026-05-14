@@ -9,7 +9,7 @@ type Screen = "empty" | "preview" | "submitted";
 
 const BusinessVerifyUpload = () => {
   const location = useLocation();
-  const { rawDigits, storeName, address, businessType, ownerName, ownerPhone } = location.state || {};
+  const { rawDigits, storeName, address, addressDetail, businessType, ownerName, ownerPhone } = location.state || {};
   const [screen, setScreen] = useState<Screen>("empty");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -45,17 +45,19 @@ const BusinessVerifyUpload = () => {
     console.log(file);
 
     const formData = new FormData();
-    formData.append("rawDigits", rawDigits);
+    formData.append("raw_digits", rawDigits);
     formData.append("image", file);
-    formData.append("storeName", storeName);
+    formData.append("store_name", storeName);
     formData.append("address", address);
-    formData.append("businessType", businessType);
-    formData.append("ownerName", ownerName);
-    formData.append("ownerPhone", ownerPhone);
+    if (addressDetail) formData.append("address_detail", addressDetail);
+    formData.append("business_type", businessType);
+    formData.append("owner_name", ownerName);
+    formData.append("owner_phone", ownerPhone);
 
     const res = await fetch("/api/owner/stores", {
       method: "POST",
-      body: formData
+      body: formData,
+      credentials: "include",
     });
 
     if (res.ok) {

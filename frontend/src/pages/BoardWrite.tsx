@@ -5,12 +5,13 @@ import { useToast } from "@/hooks/use-toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { addBoard, modifyBoard } from "@/api/board";
 
-const role = localStorage.getItem("currentRole");
-const categoryOptions = role === "owner"
-  ? ["공지사항", "건의사항", "비품관리", "대타요청", "일반 게시글"]
-  : ["건의사항", "비품관리", "대타요청", "일반 게시글"];
+const BASE_CATEGORIES = ["건의사항", "비품관리", "대타요청", "일반 게시글"];
+const OWNER_CATEGORIES = ["공지사항", ...BASE_CATEGORIES];
 
 export default function BoardWrite() {
+  const currentRole = localStorage.getItem("currentRole") ?? "employee";
+  const currentStoreId = Number(localStorage.getItem("currentStoreId") ?? 0);
+  const categoryOptions = currentRole === "owner" ? OWNER_CATEGORIES : BASE_CATEGORIES;
   const navigate = useNavigate();
   const { toast } = useToast();
   const location = useLocation();
@@ -75,12 +76,13 @@ export default function BoardWrite() {
       if (isEdit) {
         await modifyBoard(editData!.post!.id, category, title, content, photos);
       } else {
-        await addBoard(Number(localStorage.getItem("currentStoreId") ?? 1), category, title, content, photos);
+        await addBoard(currentStoreId || 1, category, title, content, photos);
       }
       toast({ description: isEdit ? "게시글이 수정되었어요" : "게시글이 등록되었어요", duration: 2000 });
       setTimeout(() => navigate(-1), 500);
-    } catch {
-      toast({ description: "등록에 실패했습니다.", variant: "destructive", duration: 2000 });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "등록에 실패했습니다.";
+      toast({ description: msg, variant: "destructive", duration: 3000 });
     }
   };
 
@@ -90,7 +92,7 @@ export default function BoardWrite() {
     <div className="min-h-screen bg-white max-w-lg mx-auto flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-10 flex items-center gap-2 px-2 pt-4 pb-2 border-b border-border" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => { if (title.trim() || content.trim() || photos.length > 0) { setExitDialog(true); } else { navigate(-1); } }} className="p-1">
+        <button onClick={() => { if (title.trim() || content.trim() || photos.length > 0) { setExitDialog(true); } else { navigate(-1); } }} className="pressable p-1">
           <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>
@@ -101,7 +103,7 @@ export default function BoardWrite() {
       <div className="flex-1 flex flex-col px-5 pt-4">
         {/* 카테고리 선택 */}
         <button onClick={() => setShowCategorySheet(true)}
-          className="w-full flex items-center justify-between rounded-xl border border-border px-4 mb-4"
+          className="pressable w-full flex items-center justify-between rounded-xl border border-border px-4 mb-4"
           style={{ height: '48px' }}>
           <span style={{ fontSize: '15px', letterSpacing: '-0.02em', color: category ? '#19191B' : '#AAB4BF' }}>
             {category || "카테고리 선택하기"}
@@ -112,12 +114,14 @@ export default function BoardWrite() {
         {/* 제목 */}
         <input type="text" placeholder="제목을 입력해주세요 (최대 20자)" maxLength={20}
           value={title} onChange={(e) => setTitle(e.target.value)}
+          data-no-focus
           className="w-full border-b border-border pb-3 mb-3 bg-transparent focus:outline-none"
           style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }} />
 
         {/* 내용 */}
         <textarea placeholder="내용을 입력하세요. (최대 1000자)" maxLength={1000}
           value={content} onChange={(e) => setContent(e.target.value)}
+          data-no-focus
           className="flex-1 w-full bg-transparent focus:outline-none resize-none min-h-[200px]"
           style={{ fontSize: '14px', letterSpacing: '-0.02em', color: '#19191B' }} />
       </div>
@@ -143,7 +147,7 @@ export default function BoardWrite() {
             <div key={idx} className="relative flex-shrink-0 rounded-xl overflow-hidden" style={{ width: '120px', height: '120px' }}>
               <img src={(photo.startsWith('/uploads') ? `http://localhost:8000${photo}` : photo)} alt="" className="w-full h-full object-cover" />
               <button onClick={() => { setDeletePhotoIdx(idx); setDeletePhotoDialog(true); }}
-                className="absolute top-1.5 right-1.5 flex items-center justify-center rounded-full"
+                className="pressable absolute top-1.5 right-1.5 flex items-center justify-center rounded-full"
                 style={{ width: '24px', height: '24px', backgroundColor: 'rgba(0,0,0,0.5)' }}>
                 <X className="h-4 w-4 text-white" />
               </button>
@@ -153,7 +157,7 @@ export default function BoardWrite() {
 
         <button onClick={() => canSubmit && setRegisterDialog(true)} disabled={!canSubmit}
           className="w-full rounded-2xl py-4 font-semibold"
-          style={{ backgroundColor: canSubmit ? '#4261FF' : '#E5E7EB', color: canSubmit ? '#FFFFFF' : '#9CA3AF', fontSize: '16px' }}>
+          style={{ backgroundColor: canSubmit ? '#4261FF' : '#DBDCDF', color: '#FFFFFF', fontSize: '16px' }}>
           {isEdit ? "수정하기" : "등록하기"}
         </button>
       </div>
@@ -163,18 +167,18 @@ export default function BoardWrite() {
 
       {/* 카테고리 바텀시트 */}
       {showCategorySheet && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={() => setShowCategorySheet(false)}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowCategorySheet(false)}>
           <div className="w-full max-w-lg bg-white" style={{ borderRadius: '20px 20px 0 0' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-6 pb-2">
               <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>카테고리 선택하기</h2>
-              <button onClick={() => setShowCategorySheet(false)}>
+              <button className="pressable" onClick={() => setShowCategorySheet(false)}>
                 <X style={{ width: '20px', height: '20px', color: '#19191B' }} strokeWidth={2.5} />
               </button>
             </div>
             <div className="px-5 pb-8">
               {categoryOptions.map((opt) => (
                 <button key={opt} onClick={() => { setCategory(opt); setShowCategorySheet(false); }}
-                  className="w-full flex items-center justify-between py-4 border-b border-border last:border-0"
+                  className="pressable w-full flex items-center justify-between py-4 border-b border-border last:border-0"
                   style={{ fontSize: '16px', fontWeight: category === opt ? 700 : 400, letterSpacing: '-0.02em', color: category === opt ? '#4261FF' : '#19191B' }}>
                   <span>{opt}</span>
                   {category === opt && (
@@ -191,22 +195,22 @@ export default function BoardWrite() {
 
       {/* 사진 업로드 바텀시트 */}
       {showPhotoSheet && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={() => setShowPhotoSheet(false)}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowPhotoSheet(false)}>
           <div className="w-full max-w-lg bg-white" style={{ borderRadius: '20px 20px 0 0' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-6 pb-2">
               <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>사진 업로드하기</h2>
-              <button onClick={() => setShowPhotoSheet(false)}>
+              <button className="pressable" onClick={() => setShowPhotoSheet(false)}>
                 <X style={{ width: '20px', height: '20px', color: '#19191B' }} strokeWidth={2.5} />
               </button>
             </div>
             <div className="flex flex-col px-5 pb-8" style={{ gap: '4px' }}>
               <button onClick={() => handlePhotoUpload(false)}
-                className="w-full flex items-center rounded-xl px-4"
+                className="pressable w-full flex items-center rounded-xl px-4"
                 style={{ height: '48px', fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#19191B' }}>
                 앨범에서 선택하기
               </button>
               <button onClick={() => handlePhotoUpload(true)}
-                className="w-full flex items-center rounded-xl px-4"
+                className="pressable w-full flex items-center rounded-xl px-4"
                 style={{ height: '48px', fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#19191B' }}>
                 카메라 촬영하기
               </button>

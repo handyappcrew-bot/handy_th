@@ -12,6 +12,10 @@ export default defineConfig(({ mode }) => ({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/uploads': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
       '/app': {
         target: 'http://10.0.2.2:8000',
         changeOrigin: true,

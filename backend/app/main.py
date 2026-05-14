@@ -61,7 +61,32 @@ async def lifespan(app: FastAPI):
     print("서버 종료 중...")
 
 
-app = FastAPI(title="handy_v2", lifespan=lifespan, redirect_slashes=False)
+app = FastAPI(
+    title="Handy API",
+    version="2.0.0",
+    description="""
+## Handy 백엔드 API 문서
+
+### 인증 방법
+이 API는 **쿠키 기반 JWT 인증**을 사용합니다.
+
+1. `/api/auth/login` (또는 개발 환경: `/api/auth/dev/login`) 호출
+2. 응답으로 `access_token` / `refresh_token` 쿠키가 자동 저장됨
+3. 이후 모든 API 요청에 쿠키가 자동 포함됨 (Swagger에서도 동일하게 동작)
+
+> **개발 환경 빠른 로그인**: `POST /api/auth/dev/login` → `{ "phone": "01012345678" }`
+
+---
+
+### 태그별 분류
+- **인증**: 로그인, 회원가입, 소셜 로그인
+- **공통**: 게시판, 비밀번호 변경, 알림
+- **직원**: 근무, 스케줄, 급여, 마이페이지
+- **사장**: 매장 관리, 직원 관리, 급여명세서, 마이페이지
+""",
+    lifespan=lifespan,
+    redirect_slashes=False,
+)
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 

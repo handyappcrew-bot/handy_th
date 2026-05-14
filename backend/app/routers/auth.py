@@ -97,7 +97,18 @@ def get_current_member_with_refresh(
 
 
 # ===== 내 정보 =====
-@router.get("/me")
+@router.get("/me",
+    summary="내 정보 조회",
+    description="현재 로그인된 회원의 기본 정보를 반환합니다.",
+    responses={200: {"content": {"application/json": {"example": {
+        "id": 1,
+        "name": "홍길동",
+        "phone": "01012345678",
+        "birth": "1995-03-15",
+        "gender": "male",
+        "image_url": "/uploads/profile/abc.jpg"
+    }}}}},
+)
 def get_me(access_token: str = Cookie(None), db: Session = Depends(get_db)):
     if not access_token:
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
@@ -122,7 +133,14 @@ def get_me(access_token: str = Cookie(None), db: Session = Depends(get_db)):
     }
 
 
-@router.get("/my/stores")
+@router.get("/my/stores",
+    summary="내 소속 매장 목록",
+    description="현재 로그인 회원이 속한 모든 매장 목록을 반환합니다.",
+    responses={200: {"content": {"application/json": {"example": [
+        {"store_member_id": 10, "store_id": 5, "store_name": "노량물산", "role": "employee", "employee_type": "정직원"},
+        {"store_member_id": 11, "store_id": 6, "store_name": "노량전자", "role": "employee", "employee_type": "알바생"}
+    ]}}}},
+)
 def get_my_stores(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
@@ -150,7 +168,23 @@ def get_my_stores(
 
 
 # ===== 온보딩 상태 조회 =====
-@router.get("/onboarding/status")
+@router.get("/onboarding/status",
+    summary="온보딩 상태 확인",
+    description="""로그인 후 회원의 온보딩 상태를 반환합니다.
+
+**status 값**:
+- `ready`: 매장 소속 완료 (홈으로 이동)
+- `owner_pending`: 사장 매장 등록 승인 대기
+- `employee_pending`: 직원 가입 승인 대기
+- `employee_rejected`: 가입 거절됨
+- `no_store`: 매장 없음 (매장 등록/가입 화면으로)""",
+    responses={200: {"content": {"application/json": {"examples": {
+        "ready": {"value": {"status": "ready"}},
+        "owner_pending": {"value": {"status": "owner_pending", "store_name": "내 카페"}},
+        "employee_pending": {"value": {"status": "employee_pending", "store_name": "노량물산"}},
+        "no_store": {"value": {"status": "no_store"}},
+    }}}}},
+)
 def get_onboarding_status(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
@@ -188,7 +222,19 @@ def get_onboarding_status(
 
 
 # ===== 일반 로그인 =====
-@router.post("/login")
+@router.post("/login",
+    summary="일반 로그인",
+    description="전화번호 + 비밀번호로 로그인합니다. 성공 시 access_token/refresh_token 쿠키가 자동 발급됩니다.",
+    responses={
+        200: {"content": {"application/json": {"example": {
+            "stores": [
+                {"store_member_id": 10, "store_id": 5, "role": "employee"},
+                {"store_member_id": 11, "store_id": 6, "role": "owner"}
+            ]
+        }}}},
+        401: {"content": {"application/json": {"example": {"detail": "전화번호 또는 비밀번호가 올바르지 않아요."}}}},
+    },
+)
 def login(req: ValidLogin, response: Response, db: Session = Depends(get_db)):
     user = db.query(Member).filter(Member.phone == req.phone, Member.is_deleted == False).first()
     if not user:
@@ -204,7 +250,17 @@ def login(req: ValidLogin, response: Response, db: Session = Depends(get_db)):
 
 
 # ===== 개발 전용 빠른 로그인 =====
-@router.post("/dev/login")
+@router.post("/dev/login",
+    summary="[개발전용] 빠른 로그인",
+    description="개발/테스트 환경 전용. phone만으로 로그인(계정 없으면 자동 생성). 프로덕션 환경에서는 404 반환.",
+    responses={200: {"content": {"application/json": {"example": {
+        "id": 1,
+        "name": "테스트유저",
+        "stores": [
+            {"store_member_id": 10, "store_id": 5, "role": "owner"}
+        ]
+    }}}}},
+)
 def dev_login(
     req: dict,
     response: Response,
@@ -240,7 +296,7 @@ def dev_login(
 
 
 # ===== 인증번호 =====
-@router.post("/signup/code/send")
+@router.post("/signup/code/send", summary="회원가입 인증번호 발송", description="전화번호로 SMS 인증번호를 발송합니다. 개발환경에서는 실제 발송 없이 고정 코드 '00000' 사용. 요청: { phone: '01012345678' }")
 def send_sms(req: PhoneReq, db: Session = Depends(get_db)):
     import os as _os
     phone = normalize_phone(req.phone)
@@ -259,7 +315,7 @@ def send_sms(req: PhoneReq, db: Session = Depends(get_db)):
     return {"message": "인증번호 발송 완료"}
 
 
-@router.post("/signup/code/verify")
+@router.post("/signup/code/verify", summary="회원가입 인증번호 확인", description="발송된 인증번호를 검증합니다. 요청: { phone, code }")
 def verify_sms(req: VerifyReq):
     phone = normalize_phone(req.phone)
     valid, msg = verify_code(phone, req.code)
@@ -269,7 +325,7 @@ def verify_sms(req: VerifyReq):
 
 
 # ===== 회원가입 =====
-@router.post("/signup")
+@router.post("/signup", summary="회원가입", description="최종 회원가입 처리. 인증번호 검증 후 호출. 요청: { phone, name, birth, gender, password, imageUrl?, type('normal'|'social') }")
 def signup(
     req: Signup,
     res: Response,
@@ -314,7 +370,7 @@ def signup(
 
 
 # ===== 로그아웃 =====
-@router.post("/logout")
+@router.post("/logout", summary="로그아웃", description="access_token/refresh_token 쿠키를 삭제하고 DB의 토큰을 revoke 처리합니다.")
 def logout(
     res: Response,
     refresh_token: str = Cookie(None),
@@ -351,7 +407,7 @@ def save_fcm_token(
 
 
 # ===== 회원탈퇴 =====
-@router.delete("/withdrawal")
+@router.delete("/withdrawal", summary="회원탈퇴", description="소프트 삭제(is_deleted=True) 처리. 30일 후 영구 삭제. 요청: { reason: string }")
 def delete_user(
     body: WithdrawalReq,
     res: Response,

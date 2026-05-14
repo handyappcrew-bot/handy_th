@@ -58,7 +58,7 @@ export const EmployeeCard = ({ employee, onClick }: EmployeeCardProps) => {
               </span>
               <span>
                 <span className="text-foreground/70">급여일</span>{' '}
-                <span className="font-medium text-foreground">{employee.payDay}일</span>
+                <span className="font-medium text-foreground">{employee.payDay}</span>
               </span>
             </div>
             <div>

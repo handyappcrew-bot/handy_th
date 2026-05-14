@@ -50,7 +50,7 @@ async def save_upload(file: UploadFile, upload_dir: str) -> str:
 
 
 # ===== 매장 위치 =====
-@router.post("/store/map")
+@router.post("/store/map", summary="매장 위치 정보 조회", description="매장의 위도/경도/출근 인정 반경을 반환합니다. 요청: { store_id }")
 async def get_store_map(req: StoreIdReq, db: Session = Depends(get_db)):
     store_map = db.query(StoreMap).filter(StoreMap.store_id == req.store_id).first()
     if not store_map:
@@ -62,7 +62,24 @@ async def get_store_map(req: StoreIdReq, db: Session = Depends(get_db)):
 
 
 # ===== 게시글 목록 =====
-@router.post("/board")
+@router.post("/board",
+    summary="게시판 목록 조회",
+    description="매장 게시판 전체 글 목록을 최신순으로 반환합니다.",
+    responses={200: {"content": {"application/json": {"example": [
+        {
+            "id": 1, "category": "공지사항", "title": "이번주 공지",
+            "content": "이번 주는 휴무 없이 정상 운영합니다.",
+            "created_at": "2025-05-14T10:00:00",
+            "writer": "김사장", "role": "owner", "comments": 3
+        },
+        {
+            "id": 2, "category": "자유게시판", "title": "건의사항",
+            "content": "음악 볼륨 좀 줄여주세요",
+            "created_at": "2025-05-13T18:30:00",
+            "writer": "홍길동", "role": "employee", "comments": 1
+        }
+    ]}}}},
+)
 async def get_board_list(req: BoardListReq, db: Session = Depends(get_db)):
     results = (
         db.query(
@@ -92,7 +109,7 @@ async def get_board_list(req: BoardListReq, db: Session = Depends(get_db)):
 
 
 # ===== 게시글 상세 =====
-@router.get("/board/{id}")
+@router.get("/board/{id}", summary="게시글 상세 조회", description="게시글 상세 + 댓글 목록을 반환합니다. 로그인 상태면 조회 기록이 저장됩니다. 응답: { ..., comments[], photos[], view_count }")
 async def get_board_detail(id: int, access_token: str = Cookie(None), db: Session = Depends(get_db)):
     result = (
         db.query(
@@ -165,7 +182,7 @@ async def get_board_detail(id: int, access_token: str = Cookie(None), db: Sessio
 
 
 # ===== 게시글 조회자 목록 (사장 전용) =====
-@router.get("/board/{id}/viewers")
+@router.get("/board/{id}/viewers", summary="게시글 조회자 목록 (사장 전용)", description="해당 게시글을 읽은 직원 목록을 반환합니다. 사장만 접근 가능.")
 async def get_board_viewers(
     id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -200,7 +217,7 @@ async def get_board_viewers(
 
 
 # ===== 게시글 작성 =====
-@router.post("/board/add")
+@router.post("/board/add", summary="게시글 작성", description="multipart/form-data. 필드: store_id, category('공지사항'|'자유게시판'), title, content, images?(파일 배열). 공지사항은 사장만 작성 가능.")
 async def add_board(
     store_id: int = Form(...),
     category: str = Form(...),
@@ -255,7 +272,7 @@ async def add_board(
 
 
 # ===== 게시글 수정 =====
-@router.post("/board/modify")
+@router.post("/board/modify", summary="게시글 수정", description="본인이 작성한 게시글만 수정 가능. multipart/form-data. 필드: board_id, category, title, content, images?, existing_images?(JSON 배열), clear_images?")
 async def modify_board(
     board_id: int = Form(...),
     category: str = Form(...),
@@ -291,7 +308,7 @@ async def modify_board(
 
 
 # ===== 게시글 삭제 =====
-@router.delete("/board/{id}")
+@router.delete("/board/{id}", summary="게시글 삭제", description="작성자 본인 또는 사장이 삭제 가능합니다. 소프트 삭제.")
 async def delete_board(
     id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -317,7 +334,7 @@ async def delete_board(
 
 
 # ===== 댓글 =====
-@router.post("/board/{id}/comment")
+@router.post("/board/{id}/comment", summary="댓글 작성", description="게시글에 댓글을 작성합니다. 요청: { content, parent_id?(대댓글) }")
 async def add_comment(
     id: int,
     body: CommentCreateReq,
@@ -346,7 +363,7 @@ async def add_comment(
     return {"id": comment.id, "message": "댓글이 등록되었습니다."}
 
 
-@router.delete("/board/comment/{comment_id}")
+@router.delete("/board/comment/{comment_id}", summary="댓글 삭제", description="작성자 본인 또는 사장이 삭제 가능. 부모 댓글 삭제 시 대댓글도 함께 삭제.")
 async def delete_comment(
     comment_id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -379,7 +396,7 @@ async def delete_comment(
 
 
 # ===== 비밀번호 변경 =====
-@router.post("/password/change")
+@router.post("/password/change", summary="비밀번호 변경", description="기존 비밀번호 확인 후 새 비밀번호로 변경합니다. 요청: { old_password, new_password }")
 async def change_password(
     req: PasswordChangeReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -396,12 +413,12 @@ async def change_password(
 
 
 # ===== 서비스 공지 / FAQ =====
-@router.get("/notice")
+@router.get("/notice", summary="서비스 공지 목록", description="Handy 서비스 공지사항 전체 목록을 반환합니다.")
 async def get_notices(db: Session = Depends(get_db)):
     return db.query(Notice).filter(Notice.is_deleted == False).order_by(desc(Notice.created_at)).all()
 
 
-@router.get("/notice/{id}")
+@router.get("/notice/{id}", summary="서비스 공지 상세 조회", description="특정 공지사항의 상세 내용을 반환합니다.")
 async def get_notice_detail(id: int, db: Session = Depends(get_db)):
     notice = db.query(Notice).filter(Notice.id == id, Notice.is_deleted == False).first()
     if not notice:
@@ -409,13 +426,13 @@ async def get_notice_detail(id: int, db: Session = Depends(get_db)):
     return notice
 
 
-@router.get("/faq")
+@router.get("/faq", summary="FAQ 목록 조회", description="자주 묻는 질문 전체 목록을 반환합니다.")
 async def get_faq(db: Session = Depends(get_db)):
     return db.query(Faq).filter(Faq.is_deleted == False).order_by(Faq.id).all()
 
 
 # ===== 건의함 =====
-@router.post("/feedback")
+@router.post("/feedback", summary="건의함 제출", description="앱 사용 중 불편사항이나 건의사항을 제출합니다. multipart/form-data. 필드: title, content, images?(파일 배열)")
 async def post_feedback(
     title: str = Form(...),
     content: str = Form(...),
@@ -436,7 +453,7 @@ async def post_feedback(
     return feedback
 
 
-@router.get("/feedback")
+@router.get("/feedback", summary="내 건의함 목록", description="내가 제출한 건의사항 목록을 반환합니다.")
 async def get_my_feedback(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
@@ -447,7 +464,22 @@ async def get_my_feedback(
 
 
 # ===== 알림 =====
-@router.get("/notification")
+@router.get("/notification",
+    summary="알림 목록 조회",
+    description="해당 매장의 내 알림 목록을 반환합니다. query: store_id 필수, unread_only(bool, 기본값 false)",
+    responses={200: {"content": {"application/json": {"example": [
+        {
+            "id": 5, "type": "notice", "message": "사장님이 공지를 작성했어요",
+            "is_read": False, "reference_id": 12,
+            "created_at": "2025-05-14T09:30:00"
+        },
+        {
+            "id": 4, "type": "schedule_change", "message": "스케줄 변경 요청이 승인됐어요",
+            "is_read": True, "reference_id": 7,
+            "created_at": "2025-05-13T15:20:00"
+        }
+    ]}}}},
+)
 async def get_notifications(
     store_id: int,
     unread_only: bool = False,
@@ -469,7 +501,7 @@ async def get_notifications(
     return q.order_by(desc(Notification.created_at)).all()
 
 
-@router.patch("/notification/{id}/read")
+@router.patch("/notification/{id}/read", summary="알림 읽음 처리", description="특정 알림을 읽음 상태로 변경합니다.")
 async def mark_notification_read(id: int, db: Session = Depends(get_db)):
     notif = db.query(Notification).filter(Notification.id == id).first()
     if not notif:
@@ -480,7 +512,7 @@ async def mark_notification_read(id: int, db: Session = Depends(get_db)):
 
 
 # ===== 탈퇴 사유 =====
-@router.post("/withdrawal")
+@router.post("/withdrawal", summary="탈퇴 사유 저장", description="회원탈퇴 시 사유를 저장합니다. 요청: { member_id, reason }")
 async def save_withdrawal_reason(req: WithdrawalReq, db: Session = Depends(get_db)):
     db.add(Withdrawal(member_id=req.member_id, reason=req.reason))
     db.commit()

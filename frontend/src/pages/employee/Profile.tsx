@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, CheckCircle2, Copy, Pencil } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import BottomNav from "@/components/home/employee/BottomNav";
+import { ChevronLeft, CheckCircle2, Pencil } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -9,23 +8,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import {
-  Drawer,
-  DrawerContent,
-} from "@/components/ui/drawer";
 import { getMyInfo } from "@/api/employee";
 import { logout } from "@/api/public";
 import { getPhotoUrl } from "@/utils/function";
+import { onProfileImageChange } from "@/utils/profileImageEvents";
+import { useToast } from "@/hooks/use-toast";
+import AdBanner from "@/components/AdBanner";
 
-
-const adBanners = [
-  { id: 1, bgColor: "bg-[hsl(200,60%,50%)]", title: "전국 스키장\n리프트권 특가 모음", subtitle: "25/26 NOL 스키 시즌" },
-  { id: 2, bgColor: "bg-[hsl(340,60%,50%)]", title: "겨울 특가\n이벤트 진행중", subtitle: "지금 바로 확인하세요" },
-  { id: 3, bgColor: "bg-[hsl(160,50%,45%)]", title: "신규 회원\n특별 혜택", subtitle: "가입만 해도 쿠폰 지급" },
-  { id: 4, bgColor: "bg-[hsl(40,70%,50%)]", title: "봄맞이\n할인 이벤트", subtitle: "최대 50% 할인" },
-];
-
-const Divider = () => <div className="w-full h-[12px]" style={{ backgroundColor: '#F7F7F8' }} />;
+const Divider = () => <div className="w-full h-[12px] bg-[#F7F7F8]" />;
 
 interface ProfileData {
   name: string;
@@ -60,15 +50,15 @@ interface ProfileData {
 
 const Profile = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<{ label: string; url: string } | null>(null);
-  const [currentAd, setCurrentAd] = useState(0);
-  const [accountSheetOpen, setAccountSheetOpen] = useState(false);
 
   const handleCopyAccount = () => {
     navigator.clipboard.writeText(profileData.account_number?.replace(/-/g, "") ?? "");
-    setAccountSheetOpen(true);
+    toast({ description: "계좌번호가 복사되었어요", duration: 2000 });
   };
 
   const handleLogout = async () => {
@@ -78,20 +68,36 @@ const Profile = () => {
     } catch (err) {
       console.error(err);
     } finally {
-      navigate("/", { replace: true });
+      navigate("/");
     }
   };
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const data = await getMyInfo(Number(localStorage.getItem("currentStoreId") ?? 1));
+        const storeId = Number(localStorage.getItem("currentStoreId") ?? 1);
+        const data = await getMyInfo(storeId);
         setProfileData(data);
       } catch (err) {
         console.error(err);
+        // 로컬 개발: 백엔드 없을 때 빈 프로필로 화면 표시
+        if (import.meta.env.DEV) {
+          setProfileData({} as any);
+        }
       }
     };
     fetchProfile();
+  }, [location.key]);
+
+  // ProfileEdit에서 사진 변경 시 즉시 반영 (서버 URL이 없으면 로컬 미리보기 사용)
+  useEffect(() => {
+    return onProfileImageChange(({ imageUrl, previewUrl }) => {
+      setProfileData((prev) => {
+        if (!prev) return prev;
+        const next = previewUrl ?? imageUrl ?? null;
+        return { ...prev, image_url: next };
+      });
+    });
   }, []);
 
   if (!profileData) {
@@ -145,12 +151,12 @@ const Profile = () => {
               <span className="text-[16px] tracking-[-0.02em] font-normal text-[hsl(223,5%,46%)]">{profileData.employee_type}</span>
             </div>
             <div className="mt-1">
-              <span className="inline-flex items-center justify-center w-[199px] h-[28px] rounded-[4px] bg-primary/10 text-primary text-[14px] tracking-[-0.02em] font-medium">
+              <span className="inline-flex items-center justify-center h-[28px] px-[10px] rounded-[4px] bg-primary/10 text-primary text-[14px] tracking-[-0.02em] font-medium whitespace-nowrap w-auto">
                 {profileData.store_name} 입사 +{profileData.days_since_joined}일
               </span>
             </div>
           </div>
-          <button className="pressable p-2 self-start mt-1" onClick={() => navigate("/employee/profile/edit")}>
+          <button className="pressable p-2 self-start mt-1" onClick={() => navigate("/employee/profile/edit", { state: { profileData, storeId: Number(localStorage.getItem("currentStoreId") ?? 1) } })}>
             <Pencil className="w-6 h-6 text-muted-foreground" />
           </button>
         </div>
@@ -186,7 +192,7 @@ const Profile = () => {
             <InfoRow label="수습" value={profileData.is_probation ? "수습 적용" : "수습 미적용"} />
             <InfoRow label="급여주기" value={profileData.salary_cycle ?? "-"} />
             <InfoRow label="시급" value={profileData.hourly_rate ? `${profileData.hourly_rate.toLocaleString()}원` : "-"} />
-            <InfoRow label="급여일" value={`${profileData.salary_day}일`} />
+            <InfoRow label="급여일" value={profileData.salary_day ?? "-"} />
             {/* 근무일 */}
             <div className="flex items-start">
               <span className="text-[16px] tracking-[-0.02em] font-medium text-[hsl(223,5%,46%)] w-[100px] flex-shrink-0 pt-0.5">근무일</span>
@@ -218,34 +224,8 @@ const Profile = () => {
 
         <Divider />
         {/* 광고 배너 */}
-        <section className="py-4 px-[20px]">
-          <div className="relative rounded-2xl overflow-hidden">
-            <div
-              className="flex transition-transform duration-300"
-              style={{ transform: `translateX(-${currentAd * 100}%)` }}
-            >
-              {adBanners.map((ad) => (
-                <div
-                  key={ad.id}
-                  className={`${ad.bgColor} w-full flex-shrink-0 p-5 h-[140px] flex flex-col justify-end text-white`}
-                >
-                  <p className="text-lg font-bold whitespace-pre-line leading-tight">{ad.title}</p>
-                  <p className="text-xs mt-1 opacity-80">{ad.subtitle}</p>
-                </div>
-              ))}
-            </div>
-            {/* Dots */}
-            <div className="absolute bottom-3 right-4 flex gap-1.5">
-              {adBanners.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentAd(i)}
-                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentAd ? "bg-white" : "bg-white/40"
-                    }`}
-                />
-              ))}
-            </div>
-          </div>
+        <section className="py-4">
+          <AdBanner />
         </section>
 
         <Divider />
@@ -296,7 +276,7 @@ const Profile = () => {
                     onClick={() => setViewingDoc({ label, url })}
                     className="pressable text-[16px] tracking-[-0.02em] text-primary font-medium underline underline-offset-2"
                   >
-                    {url.split('/').pop()}
+                    {label} 보기
                   </button>
                 ) : (
                   <span className="text-[16px] tracking-[-0.02em] text-[hsl(223,5%,46%)]">미제출</span>
@@ -312,29 +292,12 @@ const Profile = () => {
         <div className="py-8 flex justify-center px-[20px]">
           <button
             onClick={() => setLogoutOpen(true)}
-            className="text-sm text-muted-foreground underline underline-offset-2"
+            className="pressable text-sm text-muted-foreground underline underline-offset-2"
           >
             로그아웃
           </button>
         </div>
       </div>
-
-      {/* 계좌번호 복사 바텀시트 */}
-      <Drawer open={accountSheetOpen} onOpenChange={setAccountSheetOpen}>
-        <DrawerContent className="max-w-[430px] mx-auto">
-          <div className="px-6 py-8 flex flex-col items-center gap-3">
-            <Copy className="w-8 h-8 text-primary" />
-            <p className="text-[16px] font-semibold text-[hsl(210,5%,16%)]">계좌번호가 복사되었습니다</p>
-            <p className="text-[14px] text-[hsl(223,5%,46%)]">{profileData.bank ?? "-"} {profileData.account_number ?? "-"}</p>
-            <button
-              onClick={() => setAccountSheetOpen(false)}
-              className="pressable mt-3 w-full py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-semibold"
-            >
-              확인
-            </button>
-          </div>
-        </DrawerContent>
-      </Drawer>
 
       <ConfirmDialog open={logoutOpen} onOpenChange={setLogoutOpen} title="로그아웃"
         description="로그아웃 하시겠어요?"
@@ -342,11 +305,26 @@ const Profile = () => {
 
       {/* 계약서 보기 팝업 */}
       <Dialog open={!!viewingDoc} onOpenChange={() => setViewingDoc(null)}>
-        <DialogContent className="max-w-[380px] rounded-2xl">
-          <DialogTitle className="text-lg font-bold text-foreground">{viewingDoc?.label}</DialogTitle>
-          <DialogDescription className="sr-only">계약서 이미지</DialogDescription>
-          <div className="w-full h-[400px] bg-muted rounded-lg flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">계약서 이미지 영역</p>
+        <DialogContent className="max-w-[380px] rounded-2xl p-0 overflow-hidden">
+          <DialogTitle className="text-lg font-bold text-foreground px-5 pt-5 pb-3">{viewingDoc?.label}</DialogTitle>
+          <DialogDescription className="sr-only">계약서 파일</DialogDescription>
+          <div className="w-full overflow-auto" style={{ maxHeight: '70vh' }}>
+            {viewingDoc?.url && (
+              viewingDoc.url.toLowerCase().endsWith('.pdf') ? (
+                <iframe
+                  src={getPhotoUrl(viewingDoc.url)}
+                  className="w-full"
+                  style={{ height: '60vh', border: 'none' }}
+                  title={viewingDoc.label}
+                />
+              ) : (
+                <img
+                  src={getPhotoUrl(viewingDoc.url)}
+                  alt={viewingDoc.label}
+                  className="w-full h-auto object-contain"
+                />
+              )
+            )}
           </div>
         </DialogContent>
       </Dialog>

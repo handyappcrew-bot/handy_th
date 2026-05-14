@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, date
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from sqlalchemy import extract
 from sqlalchemy.orm import Session, joinedload
 
@@ -68,7 +68,18 @@ async def save_file(file: UploadFile, upload_dir: str) -> str:
 
 
 # ======= 매장코드 조회 =======
-@router.post("/verify-code")
+@router.post("/verify-code",
+    summary="매장코드 확인",
+    description="매장 코드를 검색해 매장 정보를 반환합니다.",
+    responses={200: {"content": {"application/json": {"example": {
+        "id": 5,
+        "name": "노량물산",
+        "address": "서울 동작구 노량진로 100 2층",
+        "phone": "02-1234-5678",
+        "lat": 37.513,
+        "lng": 126.942
+    }}}}},
+)
 async def verify_store_code(req: VerifyCode, db: Session = Depends(get_db)):
     store = db.query(Store).filter(Store.code == req.code).first()
     if not store:
@@ -95,7 +106,7 @@ async def verify_store_code(req: VerifyCode, db: Session = Depends(get_db)):
 
 
 # ======= 가입신청 =======
-@router.post("/member/request")
+@router.post("/member/request", summary="매장 가입 신청", description="직원이 매장 코드로 가입을 신청합니다. 요청: { store_id, bank, account_name, account_number }")
 async def add_member_request(
     req: MemberRequestSchema,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -116,7 +127,14 @@ async def add_member_request(
 
 
 # ======= 오늘 근무일정 =======
-@router.post("/work/today")
+@router.post("/work/today",
+    summary="오늘 근무 일정 조회",
+    description="오늘 날짜의 근무 시작/종료 시간을 반환합니다.",
+    responses={200: {"content": {"application/json": {"example": {
+        "work_start": "17:00",
+        "work_end": "22:00"
+    }}}}},
+)
 async def get_today_work(
     req: StoreIdReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -140,7 +158,17 @@ async def get_today_work(
 
 
 # ======= 근무 상태 =======
-@router.post("/work/status")
+@router.post("/work/status",
+    summary="오늘 근무 상태 조회",
+    description="""오늘 근무 기록 상태를 반환합니다.
+
+**status 값**:
+- `working`: 근무 중 (출근 후)
+- `on_break`: 휴게 중
+- `off_work`: 퇴근 완료
+- `null`: 출근 전""",
+    responses={200: {"content": {"application/json": {"example": {"status": "working"}}}}},
+)
 async def get_work_status(
     req: StoreIdReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -158,7 +186,7 @@ async def get_work_status(
 
 
 # ======= 체크리스트 조회 =======
-@router.post("/todo")
+@router.post("/todo", summary="체크리스트 조회", description="공용 체크리스트 + 개인 체크리스트를 합쳐 반환. 요청: { store_id }. 응답: [{ id, content, is_achieved }]")
 async def get_todo_list(
     req: StoreIdReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -183,7 +211,7 @@ async def get_todo_list(
 
 
 # ======= 체크리스트 상태변경 =======
-@router.post("/todo/modify")
+@router.post("/todo/modify", summary="체크리스트 완료 토글", description="체크리스트 항목의 완료 상태를 토글합니다. 요청: { store_id, id }")
 async def modify_todo(
     req: TodoModifyReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -216,7 +244,7 @@ async def modify_todo(
 
 
 # ======= 공지사항 =======
-@router.post("/notice")
+@router.post("/notice", summary="공지사항 목록 조회 (홈용)", description="홈 화면용 최근 공지 2개 반환. 요청: { store_id }. 응답: [{ id, writer, title, created_at }]")
 async def get_notice_list(
     req: StoreIdReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -237,7 +265,7 @@ async def get_notice_list(
 
 
 # ======= 이번주 근무일정 =======
-@router.post("/work")
+@router.post("/work", summary="이번 주 근무 일정 조회", description="이번 주 월~일 근무 스케줄을 반환합니다. 요청: { store_id }")
 async def get_weekly_work(
     req: StoreIdReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -279,7 +307,7 @@ async def get_weekly_work(
 
 
 # ======= 이번달 급여 미리보기 =======
-@router.post("/salary/preview")
+@router.post("/salary/preview", summary="이번 달 급여 미리보기", description="이번 달 근무 기록 기반 예상 급여를 반환합니다. 요청: { store_id }")
 async def get_salary_preview(
     req: StoreIdReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -334,7 +362,7 @@ async def get_salary_preview(
 
 
 # ======= 특정 스케줄 변경 요청 조회 (알림 클릭용) =======
-@router.get("/schedule-change/{id}")
+@router.get("/schedule-change/{id}", summary="스케줄 변경 요청 단건 조회", description="알림 클릭 시 특정 스케줄 변경 요청 상세 조회. 응답: id, type, status, origin_date, desired_date 등")
 def get_schedule_change_by_id(
     id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -359,7 +387,7 @@ def get_schedule_change_by_id(
 
 
 # ======= 특정 추가 스케줄 조회 (알림 클릭용) =======
-@router.get("/schedule-work/{id}")
+@router.get("/schedule-work/{id}", summary="스케줄 단건 조회", description="알림 클릭용. 스케줄 id로 특정 근무 일정을 조회합니다.")
 def get_schedule_work_by_id(
     id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -380,7 +408,7 @@ def get_schedule_work_by_id(
 
 
 # ======= 일정변경 요청 내역 =======
-@router.get("/schedule/change")
+@router.get("/schedule/change", summary="스케줄 변경 요청 목록 조회", description="내 스케줄 변경 요청 전체 이력을 반환합니다. query: store_id")
 def get_schedule_changes(
     store_id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -408,7 +436,7 @@ def get_schedule_changes(
     } for r in requests]
 
 
-@router.post("/schedule/change")
+@router.post("/schedule/change", summary="스케줄 변경 요청 생성", description="직원이 스케줄 변경/추가/삭제를 사장에게 요청합니다. 요청: { store_id, type, origin_date?, desired_date, reason }")
 async def create_schedule_change(
     req: ScheduleChangeReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -436,7 +464,7 @@ async def create_schedule_change(
     return {"id": change.id}
 
 
-@router.delete("/schedule/change/{id}")
+@router.delete("/schedule/change/{id}", summary="스케줄 변경 요청 취소", description="pending 상태인 내 스케줄 변경 요청을 취소(소프트 삭제)합니다.")
 def delete_schedule_change(
     id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -459,7 +487,7 @@ def delete_schedule_change(
 
 
 # ======= 월별 개인 스케줄 =======
-@router.get("/schedule/{store_id}")
+@router.get("/schedule/{store_id}", summary="월별 내 스케줄 조회", description="해당 월의 내 근무 일정을 날짜별로 반환합니다. query: year, month. 응답: { '2025-5-1': { work_start, work_end, is_holiday, shift_name } }")
 async def get_schedule(
     store_id: int,
     year: int,
@@ -490,7 +518,7 @@ async def get_schedule(
 
 
 # ======= 날짜별 전체 직원 스케줄 =======
-@router.get("/schedule/{store_id}/detail")
+@router.get("/schedule/{store_id}/detail", summary="특정 날짜 전체 직원 스케줄 (shift별)", description="특정 날짜에 해당 매장의 모든 직원 스케줄을 shift별로 그룹핑해 반환합니다. query: year, month, day")
 def get_schedule_detail(
     store_id: int, year: int, month: int, day: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -527,7 +555,7 @@ def get_schedule_detail(
 
 
 # ======= 월별 전체 직원 스케줄 요약 =======
-@router.get("/schedule/{store_id}/all")
+@router.get("/schedule/{store_id}/all", summary="월별 전체 직원 스케줄 요약", description="달력용. 날짜별로 shift_name: 인원수 형태로 반환. query: year, month")
 def get_all_schedule(
     store_id: int, year: int, month: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -556,7 +584,7 @@ def get_all_schedule(
 
 
 # ======= 마감 보고 =======
-@router.post("/closing-report")
+@router.post("/closing-report", summary="마감 보고 제출", description="직원이 마감 보고를 제출합니다. 카드/현금/이체/상품권 매출, 할인/환불/실시갈, 영수증 이미지, 메모 포함.")
 def add_closing_report(
     req: ClosingReportReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -594,7 +622,7 @@ def add_closing_report(
     return {"message": "마감 보고가 완료되었습니다."}
 
 
-@router.get("/closing-report/check")
+@router.get("/closing-report/check", summary="오늘 마감 보고 여부 확인", description="오늘 날짜 마감 보고가 이미 제출됐는지 확인. query: store_id. 응답: { is_completed: bool }")
 def check_closing_status(
     store_id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -609,7 +637,40 @@ def check_closing_status(
 
 
 # ======= 마이페이지 =======
-@router.get("/mypage")
+@router.get("/mypage",
+    summary="직원 내 정보 조회",
+    description="직원 마이페이지 정보. query: store_id 필수.",
+    responses={200: {"content": {"application/json": {"example": {
+        "name": "홍길동",
+        "birth": "1995.03.15",
+        "age": 30,
+        "gender": "남자",
+        "phone": "01012345678",
+        "image_url": "/uploads/profile/abc.jpg",
+        "bank": "국민은행",
+        "account_number": "123-456-789012",
+        "joined_at": "2025.01.10",
+        "days_since_joined": 125,
+        "store_name": "노량물산",
+        "role": "employee",
+        "employee_type": "정직원",
+        "salary_cycle": "월 1회 (월급)",
+        "salary_day": "25일",
+        "hourly_rate": 11000,
+        "is_probation": False,
+        "deduction_type": "percent",
+        "income_tax": 3.3,
+        "national_pension": 4.5,
+        "health_insurance": 3.545,
+        "resume": "/uploads/documents/resume.pdf",
+        "employment_contract": None,
+        "health_certificate": None,
+        "schedule": [
+            {"day": "화", "time": "17:00 ~ 22:00", "tags": ["마감"]},
+            {"day": "목", "time": "08:00 ~ 14:00", "tags": ["오픈"]}
+        ]
+    }}}}},
+)
 def get_my_info(
     store_id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -707,7 +768,14 @@ def get_my_info(
     }
 
 
-@router.post("/mypage/edit")
+@router.post("/mypage/edit",
+    summary="직원 내 정보 수정",
+    description="multipart/form-data. 필드: bank, account_number, store_id(필수-겸직대응), name?, image?(파일), original_image_url?, resume?, employment_contract?, health_certificate?",
+    responses={200: {"content": {"application/json": {"examples": {
+        "이미지 포함": {"value": {"message": "수정되었습니다.", "image_url": "/uploads/profile/abc.jpg"}},
+        "이미지 없음": {"value": {"message": "수정되었습니다."}},
+    }}}}},
+)
 async def edit_my_info(
     bank: str = Form(...),
     account_number: str = Form(...),
@@ -721,14 +789,15 @@ async def edit_my_info(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
-    if store_id:
+    if store_id is not None:
         employee = db.query(StoreMembers).filter(
             StoreMembers.member_id == current_member.id,
             StoreMembers.store_id == store_id,
         ).first()
     else:
         all_employees = db.query(StoreMembers).filter(
-            StoreMembers.member_id == current_member.id
+            StoreMembers.member_id == current_member.id,
+            StoreMembers.is_deleted == False,
         ).all()
         if len(all_employees) > 1:
             raise HTTPException(status_code=400, detail="가게가 여러 개인 경우 store_id를 전달해주세요.")
@@ -761,13 +830,55 @@ async def edit_my_info(
 
     try:
         db.commit()
-        return {"message": "수정되었습니다."}
+        result: dict = {"message": "수정되었습니다."}
+        if image:
+            result["image_url"] = employee.image_url
+        return result
     except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="서버 오류로 인해 정보 수정에 실패했습니다.")
 
 
-@router.delete("/profile/document")
+@router.delete("/mypage/profile-image", summary="직원 프로필 이미지 삭제", description="직원의 프로필 이미지를 기본 이미지로 초기화합니다. query: store_id(겸직 시 필수). 기존 파일도 서버에서 삭제됩니다.")
+async def delete_employee_profile_image(
+    store_id: Optional[int] = Query(None),
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    if store_id is not None:
+        employee = db.query(StoreMembers).filter(
+            StoreMembers.member_id == current_member.id,
+            StoreMembers.store_id == store_id,
+        ).first()
+    else:
+        all_employees = db.query(StoreMembers).filter(
+            StoreMembers.member_id == current_member.id,
+            StoreMembers.is_deleted == False,
+        ).all()
+        if len(all_employees) > 1:
+            raise HTTPException(status_code=400, detail="가게가 여러 개인 경우 store_id를 전달해주세요.")
+        employee = all_employees[0] if all_employees else None
+    if not employee:
+        raise HTTPException(status_code=404, detail="사용자 정보를 찾을 수 없습니다.")
+
+    if employee.image_url:
+        old_path = employee.image_url.lstrip("/")
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+        employee.image_url = None
+
+    try:
+        db.commit()
+        return {"message": "프로필 이미지가 삭제되었습니다."}
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+
+@router.delete("/profile/document", summary="직원 서류 삭제", description="이력서/근로계약서/보건증 중 하나를 삭제합니다. body: { field: 'resume'|'employment_contract'|'health_certificate', store_id? }")
 async def delete_document(
     data: dict,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -814,7 +925,7 @@ def _get_active_worklog(db: Session, employee_id: int, status: str = None):
 
 
 # ======= 출근 =======
-@router.post("/work/clock-in")
+@router.post("/work/clock-in", summary="출근 처리", description="현재 시각으로 출근 처리합니다. 오늘 이미 출근한 경우 409. 요청: { store_id }")
 def clock_in(
     body: WorkTimeReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -841,7 +952,7 @@ def clock_in(
 
 
 # ======= 퇴근 =======
-@router.post("/work/clock-out")
+@router.post("/work/clock-out", summary="퇴근 처리", description="현재 시각으로 퇴근 처리합니다. 휴게 중인 경우 자동으로 휴게 종료 처리됩니다. 요청: { store_id }")
 def clock_out(
     body: WorkTimeReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -861,7 +972,7 @@ def clock_out(
 
 
 # ======= 휴게 시작 =======
-@router.post("/work/break-start")
+@router.post("/work/break-start", summary="휴게 시작", description="출근 중인 직원의 휴게 시간을 시작합니다. 요청: { store_id }")
 def break_start(
     body: WorkTimeReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -878,7 +989,7 @@ def break_start(
 
 
 # ======= 휴게 종료 =======
-@router.post("/work/break-end")
+@router.post("/work/break-end", summary="휴게 종료", description="휴게 중인 직원의 휴게 시간을 종료합니다. 요청: { store_id }")
 def break_end(
     body: WorkTimeReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -903,7 +1014,7 @@ def break_end(
 
 
 # ======= 출근 기록 조회 =======
-@router.post("/work/logs")
+@router.post("/work/logs", summary="월별 출근 기록 조회", description="해당 월의 출퇴근 기록을 스케줄과 함께 반환합니다. 요청: { store_id, year, month }. 응답: [{ work_date, start_time, end_time, status, sched_start, sched_end, tags[], is_holiday }]")
 async def get_work_logs(
     req: WorkLogsReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -987,7 +1098,7 @@ async def get_work_logs(
 
 
 # ======= 출근기록 수정 요청 =======
-@router.post("/worklog/request")
+@router.post("/worklog/request", summary="출근 기록 수정 요청", description="직원이 출근 기록 수정을 사장에게 요청합니다. 요청: { store_id, type('출퇴근 시간 변경'|'휴게 시간 변경'|'근무 누락'), date, reason, origin_start?, origin_end?, desired_start?, desired_end?, desired_break_minutes? }")
 async def worklog_change_request(
     req: WorkLogChangeReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -1028,7 +1139,7 @@ async def worklog_change_request(
     db.commit()
 
 
-@router.get("/worklog/request")
+@router.get("/worklog/request", summary="출근 기록 수정 요청 목록", description="내 출근 기록 수정 요청 전체 이력을 반환합니다. query: store_id")
 async def get_worklog_requests(
     store_id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -1041,7 +1152,7 @@ async def get_worklog_requests(
     ).order_by(WorkLogChangeRequest.created_at.desc()).all()
 
 
-@router.get("/payslips/{payslip_id}")
+@router.get("/payslips/{payslip_id}", summary="급여명세서 단건 조회", description="발행된 내 급여명세서 상세 조회. query: store_id 필수. 응답: 근무일수, 총급여, 공제항목 등 전체 명세.")
 async def get_my_payslip(
     payslip_id: int,
     store_id: int,
@@ -1098,7 +1209,7 @@ async def get_my_payslip(
     }
 
 
-@router.get("/payslips")
+@router.get("/payslips", summary="내 급여명세서 목록", description="발행된 내 급여명세서 전체 목록. query: store_id 필수. 최신순 반환.")
 async def get_my_payslips(
     store_id: int,
     current_member: Member = Depends(get_current_member_with_refresh),

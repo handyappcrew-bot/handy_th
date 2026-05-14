@@ -83,6 +83,7 @@ export default function Index() {
       try {
         const [me, stores] = await Promise.all([getMe(), getMyStores()]);
         setMemberName(me.name);
+        localStorage.setItem("currentMemberId", String(me.id));
         const mapped: AccountType[] = stores.map((s: any) => ({
           id: String(s.store_member_id),
           storeId: s.store_id,

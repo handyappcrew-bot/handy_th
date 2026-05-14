@@ -30,7 +30,9 @@ BUSINESS_KEY = os.getenv("VITE_BUSINESS_API_KEY")
 router = APIRouter(prefix="/api/owner", tags=["사장"])
 
 UPLOAD_DIR = "uploads/business_registrations/"
+PROFILE_DIR = "uploads/profile/"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(PROFILE_DIR, exist_ok=True)
 
 
 def verify_owner(store_id: int, member_id: int, db: Session):
@@ -46,19 +48,70 @@ def verify_owner(store_id: int, member_id: int, db: Session):
 
 
 # ===== 사업자등록번호 조회 =====
-@router.get("/business/{bno}")
+@router.get("/business/{bno}",
+    summary="사업자등록번호 검증",
+    description="""국세청 API로 사업자등록번호 유효성을 검증합니다. path: bno=사업자번호(10자리)
+
+**중요**: `b_stt_cd === "01"` 인 경우만 정상 사업자.
+- `01`: 계속사업자 (정상)
+- `02`: 휴업자
+- `03`: 폐업자
+- 빈 값: 국세청에 등록되지 않은 번호""",
+    responses={200: {"content": {"application/json": {"examples": {
+        "정상사업자": {"value": {
+            "request_cnt": 1, "match_cnt": 1, "status_code": "OK",
+            "data": [{
+                "b_no": "1208147521",
+                "b_stt": "계속사업자",
+                "b_stt_cd": "01",
+                "tax_type": "부가가치세 일반과세자",
+                "tax_type_cd": "01"
+            }]
+        }},
+        "미등록번호": {"value": {
+            "request_cnt": 1, "status_code": "OK",
+            "data": [{
+                "b_no": "0000000000",
+                "b_stt": "",
+                "b_stt_cd": "",
+                "tax_type": "국세청에 등록되지 않은 사업자등록번호입니다."
+            }]
+        }}
+    }}}}},
+)
 async def verify_business(bno: str):
+    if not BUSINESS_KEY:
+        raise HTTPException(status_code=500, detail="VITE_BUSINESS_API_KEY 환경변수가 설정되지 않았습니다.")
+
+    digits = "".join(ch for ch in bno if ch.isdigit())
+    if len(digits) != 10:
+        raise HTTPException(status_code=400, detail=f"사업자번호는 10자리 숫자여야 합니다. (입력: {bno})")
+
+    url = f"https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey={BUSINESS_KEY}"
+    payload = {"b_no": [digits]}
+
     async with httpx.AsyncClient() as client:
-        res = await client.post(
-            "https://api.odcloud.kr/api/nts-businessman/v1/status",
-            params={"serviceKey": BUSINESS_KEY},
-            json={"b_no": [bno]},
-        )
-    return res.json()
+        res = await client.post(url, json=payload)
+
+    print(f"[business-verify] req b_no={digits} status={res.status_code}")
+    print(f"[business-verify] body={res.text[:500]}")
+
+    try:
+        return res.json()
+    except Exception:
+        raise HTTPException(status_code=502, detail=f"국세청 API 응답 파싱 실패: {res.text[:200]}")
 
 
 # ===== 매장 등록 =====
-@router.post("/stores")
+@router.post("/stores",
+    summary="매장 등록 신청",
+    description="사장이 새 매장을 등록합니다. multipart/form-data. 필드: raw_digits(사업자번호 10자리, 하이픈 없이), store_name, address, address_detail?, business_type, owner_name, owner_phone, image(사업자등록증 파일)",
+    responses={200: {"content": {"application/json": {"example": {
+        "store_id": 5,
+        "store_name": "노량물산",
+        "code": "A1B2C3"
+    }}}}},
+)
 async def add_store_request(
     raw_digits: str = Form(...),
     store_name: str = Form(...),
@@ -146,7 +199,7 @@ async def add_store_request(
 
 
 # ===== 매장 정보 조회 =====
-@router.get("/store/{store_id}")
+@router.get("/store/{store_id}", summary="매장 상세 정보 조회", description="매장 기본정보 + 설정(StoreSetting) + shift 목록을 반환합니다. 사장만 접근 가능.")
 async def get_store_info(
     store_id: int,
     db: Session = Depends(get_db),
@@ -201,7 +254,7 @@ async def get_store_info(
 
 
 # ===== 매장 정보 수정 =====
-@router.put("/store/update")
+@router.put("/store/update", summary="매장 정보 수정", description="매장 이름, 주소, 업종 등 기본 정보를 수정합니다.")
 async def update_store_info(
     req: StoreInfoUpdateReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -222,7 +275,7 @@ async def update_store_info(
 
 
 # ===== 매장 설정 수정 =====
-@router.put("/store/{store_id}/setting")
+@router.put("/store/{store_id}/setting", summary="매장 설정 수정", description="반경, 공지사항 설정 등 매장 세부 설정을 수정합니다.")
 async def update_store_setting(
     store_id: int,
     data: dict,
@@ -243,7 +296,7 @@ async def update_store_setting(
 
 
 # ===== 출퇴근 기준 수정 =====
-@router.put("/store/{store_id}/attendance-standard")
+@router.put("/store/{store_id}/attendance-standard", summary="출퇴근 기준 시간 수정", description="매장의 출근 인정 기준 시간(분)을 수정합니다.")
 async def update_attendance_standard(
     store_id: int,
     data: dict,
@@ -279,7 +332,7 @@ async def update_attendance_standard(
 
 
 # ===== 교대 슬롯 수정 =====
-@router.put("/store/{store_id}/shifts")
+@router.put("/store/{store_id}/shifts", summary="매장 근무타입(shift) 수정", description="오픈/미들/마감 등 shift 목록을 일괄 업데이트합니다. 요청: { shifts: [{ id?, name, start_time, end_time, sort_order }] }")
 async def update_store_shifts(
     store_id: int,
     data: dict,
@@ -315,7 +368,7 @@ async def update_store_shifts(
 
 
 # ===== 출근 현황 (사장 홈 / 근태 관리) =====
-@router.get("/store/{store_id}/attendance/today")
+@router.get("/store/{store_id}/attendance/today", summary="오늘 출퇴근 현황 조회", description="사장이 오늘 또는 특정 날짜의 전체 직원 출퇴근 상태를 조회합니다. query: date(선택, 기본값=오늘)")
 def get_today_attendance(
     store_id: int,
     date: str = None,
@@ -396,7 +449,26 @@ def get_today_attendance(
 
 
 # ===== 직원 목록 =====
-@router.get("/store/{store_id}/staffs")
+@router.get("/store/{store_id}/staffs",
+    summary="직원 목록 조회",
+    description="매장의 전체 직원 목록과 계약정보, 스케줄 요약을 반환합니다.",
+    responses={200: {"content": {"application/json": {"example": [
+        {
+            "id": 10, "name": "홍길동", "gender": "male",
+            "birth": "1995-03-15", "phone": "01012345678",
+            "joined_at": "2025-01-10T09:00:00",
+            "image_url": "/uploads/profile/abc.jpg",
+            "contract": {
+                "employee_type": "정직원",
+                "working_status": "재직",
+                "hourly_rate": 11000,
+                "monthly_salary": None,
+                "salary_cycle": "월 1회 (월급)",
+                "salary_day": "25일"
+            }
+        }
+    ]}}}},
+)
 async def get_staff_list(
     store_id: int,
     db: Session = Depends(get_db),
@@ -449,7 +521,7 @@ async def get_staff_list(
 
 
 # ===== 직원 상세 =====
-@router.get("/store/{store_id}/staff/{staff_id}")
+@router.get("/store/{store_id}/staff/{staff_id}", summary="직원 상세 조회", description="특정 직원의 상세 정보(계약, 스케줄, 출근기록, 급여명세서 등)를 반환합니다.")
 async def get_staff_detail(
     store_id: int,
     staff_id: int,
@@ -501,7 +573,7 @@ async def get_staff_detail(
 
 
 # ===== 직원 계약 수정 =====
-@router.put("/store/{store_id}/staff/{staff_id}/contract")
+@router.put("/store/{store_id}/staff/{staff_id}/contract", summary="직원 계약정보 수정", description="직원의 계약 정보(시급, 월급, 고용형태, 급여일, 세금 등)를 수정합니다.")
 async def update_staff_contract(
     store_id: int, staff_id: int,
     req: StaffContractUpdateReq,
@@ -535,7 +607,18 @@ async def update_staff_contract(
 
 
 # ===== 사장 마이페이지 - 내 매장 목록 =====
-@router.get("/mypage/{member_id}/stores")
+@router.get("/mypage/{member_id}/stores",
+    summary="사장 소유 매장 목록",
+    description="사장이 owner 역할로 등록된 매장 목록과 직원 수를 반환합니다.",
+    responses={200: {"content": {"application/json": {"example": [
+        {
+            "id": 5, "code": "A1B2C3", "industry": "음식점 / 카페",
+            "address": "서울 동작구 노량진로 100", "address_detail": "2층",
+            "name": "노량물산", "owner_name": "김사장", "phone": "02-1234-5678",
+            "employee_count": 7, "created_at": "2024-12-01T10:30:00"
+        }
+    ]}}}},
+)
 async def get_my_stores(
     member_id: int,
     store_id: int = None,
@@ -580,7 +663,21 @@ async def get_my_stores(
 
 
 # ===== 사장 마이페이지 - 인적사항 =====
-@router.get("/mypage/{member_id}/info")
+@router.get("/mypage/{member_id}/info",
+    summary="사장 내 정보 조회",
+    description="사장 마이페이지 정보. query: store_id 필수.",
+    responses={200: {"content": {"application/json": {"example": {
+        "id": 11,
+        "name": "김사장",
+        "nickname": "노량물산 대표",
+        "birth": "1980-05-20",
+        "gender": "남자",
+        "phone": "01098765432",
+        "joined_at": "2024-12-01 10:30:00",
+        "store_name": "노량물산",
+        "image": "/uploads/profile/owner.jpg"
+    }}}}},
+)
 async def get_owner_info(
     member_id: int,
     store_id: int,
@@ -602,6 +699,7 @@ async def get_owner_info(
     sm, member, store = result
     return {
         "id": sm.id,
+        "name": member.name,
         "nickname": sm.nickname,
         "birth": str(member.birth) if member.birth else None,
         "gender": "여자" if member.gender == "female" else "남자",
@@ -612,8 +710,77 @@ async def get_owner_info(
     }
 
 
+# ===== 사장 프로필 이미지 업로드/변경 =====
+@router.post("/mypage/{store_id}/profile-image", summary="사장 프로필 이미지 업로드", description="multipart/form-data. 필드: store_member_id(int), image(파일). 기존 이미지 자동 삭제. 응답: { image_url }")
+async def update_owner_profile_image(
+    store_id: int,
+    store_member_id: int = Form(...),
+    image: UploadFile = File(...),
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    verify_owner(store_id, current_member.id, db)
+
+    sm = db.query(StoreMembers).filter(
+        StoreMembers.store_id == store_id,
+        StoreMembers.id == store_member_id,
+    ).first()
+    if not sm:
+        raise HTTPException(status_code=404, detail="매장 멤버 정보를 찾을 수 없습니다.")
+
+    if sm.image_url:
+        old_path = sm.image_url.lstrip("/")
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    raw_name = image.filename or ""
+    ext = os.path.splitext(raw_name)[1].lower() or ".jpg"
+    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+        ext = ".jpg"
+    filename = f"{uuid.uuid4()}{ext}"
+    data = await image.read()
+    with open(os.path.join(PROFILE_DIR, filename), "wb") as f:
+        f.write(data)
+
+    sm.image_url = f"/{PROFILE_DIR}{filename}"
+    db.commit()
+    return {"image_url": sm.image_url}
+
+
+# ===== 사장 프로필 이미지 삭제 =====
+@router.delete("/mypage/{store_id}/profile-image", summary="사장 프로필 이미지 삭제", description="사장의 프로필 이미지를 기본 이미지로 초기화합니다. query: store_member_id 필수.")
+async def delete_owner_profile_image(
+    store_id: int,
+    store_member_id: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    verify_owner(store_id, current_member.id, db)
+
+    sm = db.query(StoreMembers).filter(
+        StoreMembers.store_id == store_id,
+        StoreMembers.id == store_member_id,
+    ).first()
+    if not sm:
+        raise HTTPException(status_code=404, detail="매장 멤버 정보를 찾을 수 없습니다.")
+
+    if sm.image_url:
+        old_path = sm.image_url.lstrip("/")
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+    sm.image_url = None
+    db.commit()
+    return {"image_url": None}
+
+
 # ===== 사장 닉네임 수정 =====
-@router.put("/mypage/{store_id}/nickname")
+@router.put("/mypage/{store_id}/nickname", summary="사장 닉네임 변경", description="매장별 닉네임을 변경합니다. 요청: { member_id, nickname }")
 async def update_nickname(
     store_id: int,
     body: NicknameUpdateReq,
@@ -633,7 +800,7 @@ async def update_nickname(
 
 
 # ===== 매장 삭제 =====
-@router.delete("/store/delete")
+@router.delete("/store/delete", summary="매장 삭제", description="매장을 소프트 삭제합니다. 요청: { store_id }")
 async def delete_store(
     body: DeleteStoreReq,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -649,7 +816,7 @@ async def delete_store(
 
 
 # ===== 마감 보고 조회 (사장) =====
-@router.get("/store/{store_id}/closing-reports")
+@router.get("/store/{store_id}/closing-reports", summary="마감 보고 목록 조회", description="query: year, month(선택). 해당 월의 마감 보고 목록을 반환합니다.")
 def get_closing_reports(
     store_id: int,
     year: int = None,
@@ -692,7 +859,7 @@ def get_closing_reports(
 
 
 # ===== 마감 보고 수정 (사장) =====
-@router.put("/store/{store_id}/closing-reports/{report_id}")
+@router.put("/store/{store_id}/closing-reports/{report_id}", summary="마감 보고 수정", description="사장이 직원의 마감 보고 내용을 수정합니다.")
 def update_closing_report(
     store_id: int,
     report_id: int,
@@ -723,7 +890,7 @@ def update_closing_report(
 
 
 # ===== 출근기록 수정 요청 목록 (사장) =====
-@router.get("/store/{store_id}/worklog-requests")
+@router.get("/store/{store_id}/worklog-requests", summary="출근기록 수정 요청 목록 (사장용)", description="직원들이 신청한 출퇴근 수정 요청 목록을 반환합니다.")
 def get_worklog_requests(
     store_id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -759,7 +926,7 @@ def get_worklog_requests(
     } for req, member in rows]
 
 
-@router.put("/store/{store_id}/worklog-requests/{req_id}")
+@router.put("/store/{store_id}/worklog-requests/{req_id}", summary="출근기록 수정 요청 처리 (사장용)", description="사장이 요청을 승인/거절합니다. 요청: { status: 'approved'|'rejected' }")
 def handle_worklog_request(
     store_id: int, req_id: int,
     data: dict,
@@ -783,7 +950,7 @@ def handle_worklog_request(
 
 
 # ===== 스케줄 변경 요청 목록 (사장) =====
-@router.get("/store/{store_id}/schedule-requests")
+@router.get("/store/{store_id}/schedule-requests", summary="스케줄 변경 요청 목록 (사장용)", description="직원들이 신청한 스케줄 변경 요청 목록을 반환합니다.")
 def get_schedule_requests(
     store_id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -820,7 +987,7 @@ def get_schedule_requests(
     } for req, member in rows]
 
 
-@router.put("/store/{store_id}/schedule-requests/{req_id}")
+@router.put("/store/{store_id}/schedule-requests/{req_id}", summary="스케줄 변경 요청 처리 (사장용)", description="사장이 요청을 승인/거절합니다. 요청: { status: 'approved'|'rejected' }")
 def handle_schedule_request(
     store_id: int, req_id: int,
     data: dict,
@@ -845,7 +1012,7 @@ def handle_schedule_request(
 
 # ===== 급여명세서 =====
 
-@router.get("/store/{store_id}/payslips")
+@router.get("/store/{store_id}/payslips", summary="급여명세서 목록 (사장용)", description="해당 월의 전체 직원 급여명세서 목록을 반환합니다. query: year, month 필수.")
 def get_payslips(
     store_id: int,
     year: int,
@@ -907,7 +1074,7 @@ def get_payslips(
     return result
 
 
-@router.post("/store/{store_id}/payslips/{payslip_id}/publish")
+@router.post("/store/{store_id}/payslips/{payslip_id}/publish", summary="급여명세서 발행", description="급여명세서를 직원에게 발행합니다(is_published=True). 발행 후 직원 앱에 노출됩니다.")
 def publish_payslip(
     store_id: int,
     payslip_id: int,
@@ -926,7 +1093,7 @@ def publish_payslip(
     return {"ok": True}
 
 
-@router.post("/store/{store_id}/payslips/{payslip_id}/transfer")
+@router.post("/store/{store_id}/payslips/{payslip_id}/transfer", summary="급여 이체 완료 처리", description="급여 이체 완료로 표시합니다(is_transferred=True).")
 def transfer_payslip(
     store_id: int,
     payslip_id: int,
@@ -945,7 +1112,7 @@ def transfer_payslip(
     return {"ok": True}
 
 
-@router.get("/store/{store_id}/payslips/months")
+@router.get("/store/{store_id}/payslips/months", summary="급여명세서 보유 월 목록", description="급여명세서가 존재하는 연월 목록을 반환합니다. 응답: [{ year, month }]")
 def get_payslip_months(
     store_id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -963,7 +1130,7 @@ def get_payslip_months(
     return [{"year": r[0], "month": r[1]} for r in rows]
 
 
-@router.get("/store/{store_id}/payslips/{payslip_id}")
+@router.get("/store/{store_id}/payslips/{payslip_id}", summary="급여명세서 단건 조회 (사장용)", description="특정 직원의 급여명세서 상세 정보를 반환합니다.")
 def get_payslip(
     store_id: int,
     payslip_id: int,
@@ -1027,7 +1194,7 @@ def get_payslip(
     }
 
 
-@router.patch("/store/{store_id}/payslips/{payslip_id}")
+@router.patch("/store/{store_id}/payslips/{payslip_id}", summary="급여명세서 수정", description="급여 항목(수당, 공제 등)을 수정합니다. body에 변경할 필드만 전달하면 됩니다.")
 def update_payslip(
     store_id: int,
     payslip_id: int,
@@ -1054,7 +1221,7 @@ def update_payslip(
 
 
 # ===== 스케줄 조회 (사장) =====
-@router.get("/store/{store_id}/schedules")
+@router.get("/store/{store_id}/schedules", summary="월별 스케줄 조회 (사장용)", description="전체 직원의 월별 스케줄을 반환합니다. query: year, month 필수.")
 def get_schedules(
     store_id: int,
     year: int,
@@ -1098,7 +1265,7 @@ def get_schedules(
 
 
 # ===== 스케줄 단건 추가 =====
-@router.post("/store/{store_id}/schedules")
+@router.post("/store/{store_id}/schedules", summary="스케줄 단건 생성 (사장용)", description="직원 한 명의 특정 날짜 스케줄을 생성합니다.")
 def create_schedule(
     store_id: int,
     req: ScheduleCreateReq,
@@ -1128,7 +1295,7 @@ def create_schedule(
 
 
 # ===== 스케줄 일괄 추가 =====
-@router.post("/store/{store_id}/schedules/bulk")
+@router.post("/store/{store_id}/schedules/bulk", summary="스케줄 일괄 생성 (사장용)", description="여러 직원의 스케줄을 한번에 생성합니다. 월간 스케줄 등록 시 사용.")
 def create_schedules_bulk(
     store_id: int,
     req: ScheduleBulkCreateReq,
@@ -1162,7 +1329,7 @@ def create_schedules_bulk(
 
 
 # ===== 스케줄 수정 =====
-@router.put("/store/{store_id}/schedules/{schedule_id}")
+@router.put("/store/{store_id}/schedules/{schedule_id}", summary="스케줄 수정 (사장용)", description="특정 스케줄의 날짜/시간/shift를 수정합니다.")
 def update_schedule(
     store_id: int,
     schedule_id: int,
@@ -1199,7 +1366,7 @@ def update_schedule(
 
 
 # ===== 스케줄 삭제 =====
-@router.delete("/store/{store_id}/schedules/{schedule_id}")
+@router.delete("/store/{store_id}/schedules/{schedule_id}", summary="스케줄 삭제 (사장용)", description="특정 스케줄을 삭제합니다.")
 def delete_schedule(
     store_id: int,
     schedule_id: int,
@@ -1221,7 +1388,7 @@ def delete_schedule(
 
 
 # ===== 직원 가입신청 목록 조회 =====
-@router.get("/store/{store_id}/member-requests")
+@router.get("/store/{store_id}/member-requests", summary="직원 가입 요청 목록 (사장용)", description="매장 가입을 신청한 직원 목록을 반환합니다. 대기(pending) 상태 위주.")
 def get_member_requests(
     store_id: int,
     current_member: Member = Depends(get_current_member_with_refresh),
@@ -1254,7 +1421,7 @@ def get_member_requests(
 
 
 # ===== 직원 가입신청 승인/거절 =====
-@router.put("/store/{store_id}/member-requests/{req_id}")
+@router.put("/store/{store_id}/member-requests/{req_id}", summary="직원 가입 요청 승인/거절 (사장용)", description="직원 가입 신청을 승인 또는 거절합니다. 요청: { status: 'approved'|'rejected' }")
 def handle_member_request(
     store_id: int,
     req_id: int,

@@ -13,6 +13,7 @@ const BusinessVerify = () => {
     const isValidFormat = /^\d{10}$/.test(rawDigits);
     const [isVerified, setIsVerified] = useState(false);
     const [isError, setIsError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     // 매장정보 다루는 변수들
     const [storeName, setStoreName] = useState("");
@@ -42,13 +43,19 @@ const BusinessVerify = () => {
             if (!res.ok) throw new Error("Network response was not ok");
             const data = await res.json();
 
-            // 조회 성공
-            if (data.match_cnt === 1) {
+            const biz = data?.data?.[0];
+            const code = biz?.b_stt_cd;
+
+            if (code === "01") {
                 setIsError(false);
                 setIsVerified(true);
+                setErrorMessage("");
             } else {
                 setIsVerified(false);
                 setIsError(true);
+                if (code === "02") setErrorMessage("휴업 중인 사업자 번호에요");
+                else if (code === "03") setErrorMessage("폐업한 사업자 번호에요");
+                else setErrorMessage(biz?.tax_type || "국세청에 등록되지 않은 사업자 번호에요");
             }
 
         } catch (e) {
@@ -68,7 +75,7 @@ const BusinessVerify = () => {
     const handleSubmit = () => {
         if (storeName && address && businessType && ownerName && ownerPhone) {
             navigate("/owner/business/upload", {
-                state: { rawDigits: formatBusinessNumber(rawDigits), storeName, address, businessType, ownerName, ownerPhone }
+                state: { rawDigits: formatBusinessNumber(rawDigits), storeName, address, addressDetail, businessType, ownerName, ownerPhone }
             });
         } else {
             alert("모든 필수 정보를 입력해주세요.");
@@ -124,7 +131,7 @@ const BusinessVerify = () => {
                 {isError && (
                     <div className="flex items-center gap-1.5 mt-2">
                         <CircleAlert className="h-5 w-5 text-destructive" />
-                        <span className="text-sm text-destructive font-medium">올바르지 않은 사업자 번호 형식이에요</span>
+                        <span className="text-sm text-destructive font-medium">{errorMessage || "올바르지 않은 사업자 번호 형식이에요"}</span>
                     </div>
                 )}
 
@@ -193,12 +200,12 @@ const BusinessVerify = () => {
                                         <SelectValue placeholder="업종 선택" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="food">음식점 / 카페</SelectItem>
-                                        <SelectItem value="cafe">편의점</SelectItem>
-                                        <SelectItem value="retail">판매 / 매장</SelectItem>
-                                        <SelectItem value="service">서비스업</SelectItem>
-                                        <SelectItem value="education">교육</SelectItem>
-                                        <SelectItem value="other">기타</SelectItem>
+                                        <SelectItem value="음식점 / 카페">음식점 / 카페</SelectItem>
+                                        <SelectItem value="편의점">편의점</SelectItem>
+                                        <SelectItem value="판매 / 매장">판매 / 매장</SelectItem>
+                                        <SelectItem value="서비스업">서비스업</SelectItem>
+                                        <SelectItem value="교육">교육</SelectItem>
+                                        <SelectItem value="기타">기타</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

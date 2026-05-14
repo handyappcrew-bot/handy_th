@@ -13,3 +13,6 @@ backend/*.pyc
 backend/app/uploads/
 backend/app/.env
 backend/app/firebase-service-account.json
+
+# 기획자 레포 (비교용 클론)
+planner/

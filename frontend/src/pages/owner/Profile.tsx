@@ -1,47 +1,101 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, Pencil } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { getMe, logout } from "@/api/public";
+import AdBanner from "@/components/AdBanner";
+import { logout, getMyStores } from "@/api/public";
+import { getOwnerInfo, getOwnerStores, OwnerInfo, OwnerStore } from "@/api/ownerApi";
+import { onProfileImageChange } from "@/utils/profileImageEvents";
 
-interface StoreInfo {
-  id: number; name: string; code: string; industry: string;
-  address: string; owner_name: string; phone: string;
-  employee_count: number; created_at: string;
-}
+const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 const Divider = () => <div className="w-full h-[12px] bg-[#F7F7F8]" />;
 
+function formatBirth(birth: string | null): string {
+  if (!birth) return "-";
+  const d = new Date(birth);
+  const today = new Date();
+  let age = today.getFullYear() - d.getFullYear();
+  const m = today.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+  const ymd = birth.replace(/-/g, '.');
+  return `${ymd} (${age}세)`;
+}
+
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 11) return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  return raw;
+}
+
+function daysSince(dateStr: string): number {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export default function Profile() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  const memberId = Number(localStorage.getItem("currentMemberId") ?? 0);
+  const currentStoreId = Number(localStorage.getItem("currentStoreId") ?? 0);
+
+  const [info, setInfo] = useState<OwnerInfo | null>(null);
+  const [stores, setStores] = useState<OwnerStore[]>([]);
+  const [storeOrder, setStoreOrder] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+  // store.id → store_member_id 매핑 (매장 전환 시 currentStoreMemberId 갱신용)
+  const [memberIdByStoreId, setMemberIdByStoreId] = useState<Record<number, number>>({});
+
   const [editDialog, setEditDialog] = useState<number | null>(null);
   const [switchDialog, setSwitchDialog] = useState<number | null>(null);
   const [logoutDialog, setLogoutDialog] = useState(false);
 
-  const [memberName, setMemberName] = useState("");
-  const [memberInfo, setMemberInfo] = useState<{ birth: string; gender: string; phone: string } | null>(null);
-  const [stores, setStores] = useState<StoreInfo[]>([]);
-  const [primaryStoreId, setPrimaryStoreId] = useState(() => Number(localStorage.getItem("currentStoreId") ?? 0));
-
   useEffect(() => {
+    if (!memberId || !currentStoreId) { setLoading(false); return; }
     const load = async () => {
       try {
-        const me = await getMe();
-        setMemberName(me.name ?? "");
-        setMemberInfo({
-          birth: me.birth ? String(me.birth).replace(/-/g, ".") : "-",
-          gender: me.gender === "female" ? "여자" : "남자",
-          phone: me.phone ?? "-",
+        const [ownerInfo, ownerStores, myStores] = await Promise.all([
+          getOwnerInfo(memberId, currentStoreId),
+          getOwnerStores(memberId),
+          getMyStores(),
+        ]);
+        setInfo(ownerInfo);
+        setStores(ownerStores);
+
+        // store.id → store_member_id 매핑 (owner 역할만)
+        const map: Record<number, number> = {};
+        (myStores as any[]).forEach((s) => {
+          if (s.role === "owner") map[s.store_id] = s.store_member_id;
         });
-        if (me.id) {
-          const res = await fetch(`/api/owner/mypage/${me.id}/stores`, { credentials: "include" });
-          if (res.ok) setStores(await res.json());
+        setMemberIdByStoreId(map);
+
+        // 현재 선택된 매장을 첫 자리에 배치
+        const currentIdx = ownerStores.findIndex(s => s.id === currentStoreId);
+        const base = ownerStores.map((_, i) => i);
+        if (currentIdx > 0) {
+          setStoreOrder([currentIdx, ...base.filter(i => i !== currentIdx)]);
+        } else {
+          setStoreOrder(base);
         }
-      } catch {}
+      } catch {
+        toast({ description: "정보를 불러오지 못했습니다.", variant: "destructive", duration: 2000 });
+      } finally {
+        setLoading(false);
+      }
     };
     load();
+  }, [memberId, currentStoreId, location.key]);
+
+  // ProfileEdit에서 사진 변경 시 즉시 반영
+  useEffect(() => {
+    return onProfileImageChange(({ imageUrl }) => {
+      setInfo((prev) => (prev ? { ...prev, image: imageUrl ?? null } : prev));
+    });
   }, []);
 
   const handleCopyCode = (code: string) => {
@@ -56,29 +110,54 @@ export default function Profile() {
 
   const handleSwitchConfirm = (storeIdx: number) => {
     setSwitchDialog(null);
-    const targetStore = stores[storeIdx];
-    if (!targetStore) return;
-    localStorage.setItem("currentStoreId", String(targetStore.id));
-    setPrimaryStoreId(targetStore.id);
-    toast({ description: `${targetStore.name}으로 전환되었어요`, duration: 2000 });
-    navigate("/owner/home", { replace: true });
+    setStoreOrder((prev) => {
+      const newOrder = prev.filter((i) => i !== storeIdx);
+      return [storeIdx, ...newOrder];
+    });
+    // 전환된 매장을 localStorage에 저장 (storeId + storeMemberId 한쌍으로)
+    const newStore = stores[storeIdx];
+    if (newStore) {
+      localStorage.setItem("currentStoreId", String(newStore.id));
+      const newStoreMemberId = memberIdByStoreId[newStore.id];
+      if (newStoreMemberId != null) {
+        localStorage.setItem("currentStoreMemberId", String(newStoreMemberId));
+      }
+      localStorage.setItem("currentRole", "owner");
+    }
+    toast({ description: "매장이 전환되었어요", duration: 2000 });
   };
 
   const handleLogout = async () => {
     setLogoutDialog(false);
     try {
       await logout();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      navigate("/", { replace: true });
-    }
+    } catch { /* 실패해도 로컬 정리 후 이동 */ }
+    localStorage.removeItem("currentRole");
+    localStorage.removeItem("currentStoreId");
+    localStorage.removeItem("currentStoreMemberId");
+    localStorage.removeItem("currentMemberId");
+    toast({ description: "로그아웃 되었어요", duration: 2000 });
+    navigate("/");
   };
+
+  const displayName = info?.nickname ?? info?.name ?? "-";
+  const primaryStore = stores[storeOrder[0]];
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div style={{ display: 'flex', gap: '9px', alignItems: 'center' }}>
+        {[0, 1, 2].map((i) => (
+          <div key={i} style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'linear-gradient(135deg, #4261FF, #6b8cff)', animation: `navDotBounce 0.72s ease-in-out ${i * 0.12}s infinite` }} />
+        ))}
+      </div>
+      <style>{`@keyframes navDotBounce { 0%, 80%, 100% { transform: scale(0.6) translateY(0); opacity: 0.3; } 40% { transform: scale(1.1) translateY(-4px); opacity: 1; } }`}</style>
+    </div>
+  );
 
   return (
     <div className="min-h-screen max-w-[430px] mx-auto relative font-[Pretendard]" style={{ backgroundColor: '#FFFFFF' }}>
       <div className="pb-24">
-        {/* Header - 직원 화면과 높이/여백 통일 */}
+        {/* Header */}
         <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
           <button onClick={() => navigate('/owner/home')} className="pressable p-1">
             <ChevronLeft className="h-6 w-6 text-foreground" />
@@ -87,20 +166,24 @@ export default function Profile() {
         </div>
         <div className="border-b border-border" />
 
-        {/* Profile Card - 직원 화면 스타일 통일 */}
+        {/* Profile Card */}
         <div className="flex items-center gap-4 py-4 px-[20px]">
           <div className="w-[80px] h-[80px] rounded-full overflow-hidden flex-shrink-0 bg-[hsl(240,4.8%,95.9%)]">
-            <img src="https://i.pravatar.cc/150?img=11" alt="프로필" className="w-full h-full object-cover" />
+            {info?.image ? (
+              <img src={info.image.startsWith('/uploads') ? `${BASE_URL}${info.image}` : info.image} alt="프로필" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-3xl">👤</div>
+            )}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-[10px]">
-              <span className="text-[20px] tracking-[-0.02em] font-bold text-[hsl(240,7%,10%)]">{memberName}</span>
+              <span className="text-[20px] tracking-[-0.02em] font-bold text-[hsl(240,7%,10%)]">{displayName}</span>
               <span className="text-[16px] tracking-[-0.02em] font-normal text-[hsl(223,5%,46%)]">사장님</span>
             </div>
-            {stores[0] && (
+            {info && primaryStore && (
               <div className="mt-1 flex">
                 <span className="inline-flex items-center justify-center h-[28px] px-[10px] rounded-[4px] bg-primary/10 text-primary text-[14px] tracking-[-0.02em] font-medium whitespace-nowrap w-auto">
-                  {stores[0].name} 가입
+                  {primaryStore.name} 가입 +{daysSince(info.joined_at)}일
                 </span>
               </div>
             )}
@@ -116,56 +199,40 @@ export default function Profile() {
         <section className="py-5 px-[20px]">
           <h2 className="text-[20px] tracking-[-0.02em] font-bold text-[hsl(210,5%,16%)] mb-4">인적 사항</h2>
           <div className="space-y-3">
-            <InfoRow label="생년월일" value={memberInfo?.birth ?? "-"} />
-            <InfoRow label="성별" value={memberInfo?.gender ?? "-"} />
-            <InfoRow label="전화번호" value={memberInfo?.phone ?? "-"} />
+            <InfoRow label="생년월일" value={info ? formatBirth(info.birth) : "-"} />
+            <InfoRow label="성별" value={info?.gender ?? "-"} />
+            <InfoRow label="전화번호" value={info ? formatPhone(info.phone) : "-"} />
           </div>
         </section>
 
         <Divider />
 
-        {/* 광고 배너 - 직원 화면과 100% 동일 규격 */}
-        <div className="py-5 px-[20px]">
-          <div className="h-[120px] rounded-[16px] bg-[#3DA8D5] flex items-center justify-center px-6 relative overflow-hidden shadow-sm">
-            <div className="text-white text-center">
-              <p className="text-[18px] font-bold leading-tight tracking-[-0.02em]">
-                전국 스키장<br />리프트권 특가 모음
-              </p>
-              <p className="text-[12px] mt-2 opacity-80 font-medium tracking-[-0.01em]">
-                25/26 NOL 스키 시즌
-              </p>
-            </div>
-
-            {/* 우측 하단 인디케이터 - 직원 화면과 동일한 opacity-20 및 gap-1.5 적용 */}
-            <div className="absolute bottom-3 right-6 flex gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-white opacity-20"></div>
-              <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
-              <div className="w-1.5 h-1.5 rounded-full bg-white opacity-20"></div>
-              <div className="w-1.5 h-1.5 rounded-full bg-white opacity-20"></div>
-            </div>
-          </div>
+        {/* 광고 배너 */}
+        <div className="py-4">
+          <AdBanner />
         </div>
 
         <Divider />
 
-        {/* 매장 정보 - px-[20px] 통일 */}
+        {/* 매장 정보 */}
         <section className="py-5 px-[20px]">
           <h2 className="text-[20px] tracking-[-0.02em] font-bold text-[hsl(210,5%,16%)] mb-4">매장 정보</h2>
           <div className="space-y-4">
-            {stores.map((store, idx) => {
-              const isPrimary = store.id === primaryStoreId;
-              const openDate = store.created_at ? store.created_at.slice(0, 10).replace(/-/g, ".") : "-";
+            {storeOrder.map((storeIdx, orderPos) => {
+              const store = stores[storeIdx];
+              if (!store) return null;
+              const isFirst = orderPos === 0;
               return (
                 <div key={store.id} className="border border-border rounded-xl p-4 bg-white">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-[15px] font-bold text-[#19191B]">{store.name}</h3>
-                    {isPrimary ? (
-                      <button onClick={() => setEditDialog(idx)}
+                    {isFirst ? (
+                      <button onClick={() => setEditDialog(storeIdx)}
                         className="pressable text-[12px] text-primary border border-primary rounded-full px-3 py-1 font-medium">
                         수정하기
                       </button>
                     ) : (
-                      <button onClick={() => setSwitchDialog(idx)}
+                      <button onClick={() => setSwitchDialog(storeIdx)}
                         className="pressable text-[12px] text-muted-foreground border border-border rounded-full px-3 py-1 font-medium">
                         매장 전환 ↔
                       </button>
@@ -174,18 +241,15 @@ export default function Profile() {
                   <div className="space-y-2">
                     <StoreInfoRow label="매장 코드" value={String(store.code)} isLink onCopy={() => handleCopyCode(String(store.code))} />
                     <StoreInfoRow label="업종" value={store.industry} />
-                    <StoreInfoRow label="주소" value={store.address} />
+                    <StoreInfoRow label="주소" value={store.address + (store.address_detail ? ` ${store.address_detail}` : '')} />
                     <StoreInfoRow label="대표자명" value={store.owner_name} />
                     <StoreInfoRow label="대표 번호" value={store.phone} />
                     <StoreInfoRow label="총 직원 수" value={`${store.employee_count}명`} />
-                    <StoreInfoRow label="개업일" value={openDate} />
+                    <StoreInfoRow label="개업일" value={store.created_at.split('T')[0].replace(/-/g, '.')} />
                   </div>
                 </div>
               );
             })}
-            {stores.length === 0 && (
-              <p style={{ fontSize: '14px', color: '#9EA3AD', textAlign: 'center', padding: '20px 0' }}>매장 정보를 불러오는 중...</p>
-            )}
           </div>
         </section>
 
@@ -198,13 +262,6 @@ export default function Profile() {
             로그아웃
           </button>
         </div>
-
-        <div className="pb-6 flex justify-center px-5">
-          <button onClick={() => navigate("/account/withdrawal")}
-            className="pressable text-center text-[13px] text-muted-foreground underline">
-            회원 탈퇴
-          </button>
-        </div>
       </div>
 
       {/* Confirm Dialogs */}
@@ -212,7 +269,7 @@ export default function Profile() {
         open={editDialog !== null}
         onOpenChange={(open) => !open && setEditDialog(null)}
         title="매장 정보 수정하기"
-        description={editDialog !== null ? `${stores[editDialog]?.name ?? ""}\n매장 정보를 수정하시겠어요?` : ""}
+        description={editDialog !== null && stores[editDialog] ? `${stores[editDialog].name}\n매장 정보를 수정하시겠어요?` : ""}
         buttons={[
           { label: "취소", variant: "cancel", onClick: () => setEditDialog(null) },
           { label: "수정하기", variant: "confirm", onClick: handleEditConfirm },
@@ -222,7 +279,7 @@ export default function Profile() {
         open={switchDialog !== null}
         onOpenChange={(open) => !open && setSwitchDialog(null)}
         title="매장 전환하기"
-        description={switchDialog !== null ? `${stores[switchDialog]?.name ?? ""}으로\n매장을 전환하시겠어요?` : ""}
+        description={switchDialog !== null && stores[switchDialog] ? `${stores[switchDialog].name}으로\n매장을 전환하시겠어요?` : ""}
         buttons={[
           { label: "취소", variant: "cancel", onClick: () => setSwitchDialog(null) },
           { label: "전환하기", variant: "confirm", onClick: () => switchDialog !== null && handleSwitchConfirm(switchDialog) },
@@ -242,7 +299,6 @@ export default function Profile() {
   );
 }
 
-/* InfoRow - 직원 화면 InfoRow와 텍스트 스타일/간격 통일 */
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start">
