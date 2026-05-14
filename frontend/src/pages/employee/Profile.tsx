@@ -156,7 +156,7 @@ const Profile = () => {
               </span>
             </div>
           </div>
-          <button className="pressable p-2 self-start mt-1" onClick={() => navigate("/employee/profile/edit", { state: { profileData, storeId: Number(localStorage.getItem("currentStoreId") ?? 1) } })}>
+          <button className="pressable p-2 self-start mt-1" onClick={() => navigate("/employee/profile/edit", { state: { profileData } })}>
             <Pencil className="w-6 h-6 text-muted-foreground" />
           </button>
         </div>
@@ -192,7 +192,7 @@ const Profile = () => {
             <InfoRow label="수습" value={profileData.is_probation ? "수습 적용" : "수습 미적용"} />
             <InfoRow label="급여주기" value={profileData.salary_cycle ?? "-"} />
             <InfoRow label="시급" value={profileData.hourly_rate ? `${profileData.hourly_rate.toLocaleString()}원` : "-"} />
-            <InfoRow label="급여일" value={profileData.salary_day ?? "-"} />
+            <InfoRow label="급여일" value={`${profileData.salary_day}일`} />
             {/* 근무일 */}
             <div className="flex items-start">
               <span className="text-[16px] tracking-[-0.02em] font-medium text-[hsl(223,5%,46%)] w-[100px] flex-shrink-0 pt-0.5">근무일</span>

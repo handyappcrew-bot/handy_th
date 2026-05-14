@@ -160,7 +160,7 @@ export default function DailyScheduleAdd({ onClose }: { onClose: () => void }) {
                 <button
                   key={s.id}
                   onClick={() => setSelectedStaff(isSelected ? null : s.id)}
-                  className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl"
+                  className="pressable flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl"
                   style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
                 >
                   <div
@@ -217,7 +217,7 @@ export default function DailyScheduleAdd({ onClose }: { onClose: () => void }) {
           <p style={{ fontSize: '16px', fontWeight: 500, color: '#70737B', marginBottom: '16px' }}>근무일</p>
           <button
             onClick={() => setShowDatePicker(true)}
-            className="w-full flex items-center justify-between"
+            className="pressable w-full flex items-center justify-between"
             style={{ minHeight: '52px', padding: '12px 16px', border: '1px solid #DBDCDF', borderRadius: '10px', marginBottom: '4px', backgroundColor: '#FFFFFF', alignItems: 'flex-start' }}
           >
             <span style={{ fontSize: '15px', color: calendarDates.length > 0 ? '#19191B' : '#9EA3AD', textAlign: 'left', flex: 1, lineHeight: '1.5' }}>
@@ -231,7 +231,7 @@ export default function DailyScheduleAdd({ onClose }: { onClose: () => void }) {
           <div style={{ marginBottom: '30px' }}>
             <button
               onClick={() => setActiveTimePicker('start')}
-              className="w-full flex items-center justify-between"
+              className="pressable w-full flex items-center justify-between"
               style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
             >
               <span style={{ fontSize: '15px', color: startTime ? '#19191B' : '#9EA3AD' }}>
@@ -245,7 +245,7 @@ export default function DailyScheduleAdd({ onClose }: { onClose: () => void }) {
           <div style={{ marginBottom: '30px' }}>
             <button
               onClick={() => setActiveTimePicker('end')}
-              className="w-full flex items-center justify-between"
+              className="pressable w-full flex items-center justify-between"
               style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
             >
               <span style={{ fontSize: '15px', color: endTime ? '#19191B' : '#9EA3AD' }}>
@@ -280,6 +280,7 @@ export default function DailyScheduleAdd({ onClose }: { onClose: () => void }) {
         <div style={{ padding: '16px 20px 32px', display: 'flex', gap: '12px' }}>
           <button
             onClick={() => setStep(1)}
+            className="pressable"
             style={{ flex: 1, height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', backgroundColor: '#DEEBFF', color: '#4261FF', border: 'none', cursor: 'pointer' }}
           >
             이전
@@ -376,6 +377,7 @@ export default function DailyScheduleAdd({ onClose }: { onClose: () => void }) {
           <div style={{ padding: '16px 20px 32px' }}>
             <button
               onClick={() => setShowDatePicker(false)}
+              className="pressable"
               style={{ width: '100%', height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, border: 'none', cursor: 'pointer', backgroundColor: '#4261FF', color: '#FFFFFF' }}
             >
               확인
@@ -387,7 +389,7 @@ export default function DailyScheduleAdd({ onClose }: { onClose: () => void }) {
 
       {/* 시간 선택 바텀시트 */}
       {activeTimePicker && createPortal(
-        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/50" onClick={() => setActiveTimePicker(null)}>
+        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setActiveTimePicker(null)}>
           <div className="w-full max-w-lg rounded-t-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 12px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>
@@ -428,7 +430,7 @@ export default function DailyScheduleAdd({ onClose }: { onClose: () => void }) {
 
       {/* 확인 팝업 */}
       {showConfirm && createPortal(
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80" onClick={() => setShowConfirm(false)}>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowConfirm(false)}>
           <div className="animate-in zoom-in-95" style={{ maxWidth: '320px', width: 'calc(100% - 48px)', backgroundColor: '#FFFFFF', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 16px' }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B', textAlign: 'center', marginBottom: '8px' }}>일일 일정 추가하기</h3>
             <p style={{ fontSize: '14px', fontWeight: 400, letterSpacing: '-0.02em', color: '#70737B', textAlign: 'center', marginBottom: '12px', lineHeight: '1.5' }}>

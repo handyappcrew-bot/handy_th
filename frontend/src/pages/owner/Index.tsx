@@ -3,9 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { subDays, addDays, isToday, format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
+import { createPortal } from "react-dom";
 import Header from "@/components/home/owner/Header";
 import SideMenu from "@/components/home/SideMenu";
 import AccountBottomSheet from "@/components/home/owner/AccountBottomSheet";
@@ -17,40 +15,107 @@ import RecentPostsSection from "@/components/home/owner/RecentPostsSection";
 import StoreManagementSection from "@/components/home/owner/StoreManagementSection";
 import HomeHeader from "@/components/home/HomeHeader";
 import { getMe, getMyStores, getNotification, markNotificationRead } from "@/api/public";
+import { getTodayAttendance } from "@/api/owner/attendance";
 import AccountSelector, { type AccountType } from "@/components/home/AccountSelector";
 import { NotificationItem, setRoleLabel } from "@/utils/function";
 import NoticeCards from "@/components/home/NoticeCards";
 
-const AVATAR_COLORS = ["#5C4033","#C0392B","#1ABC9C","#2C3E50","#8E44AD","#E67E22","#4261FF","#E74C3C","#27AE60","#F39C12"];
-const getAvatarColor = (id: number) => AVATAR_COLORS[id % AVATAR_COLORS.length];
+const AVATAR_COLORS = [
+  "#5C4033", "#C0392B", "#1ABC9C", "#2C3E50", "#8E44AD",
+  "#E67E22", "#E91E63", "#FF9800", "#4261FF", "#D4A574",
+  "#27AE60", "#2980B9",
+];
 
-type AttendanceEmployee = { id: string; name: string; time: string; status: string; badgeType: "오픈" | "미들" | "마감" | "오픈,미들"; avatarColor: string; attendanceStatus: "normal" | "late" | "absent" };
-type AttendanceCardType = { type: "working" | "checkin" | "checkout" | "absent"; label: string; description: string; count: number; totalCount: number; employees: AttendanceEmployee[] };
-
-function buildAttendanceCards(data: any[]): AttendanceCardType[] {
-  const total = data.length;
-  const toEmp = (e: any): AttendanceEmployee => ({
-    id: String(e.id),
-    name: e.name,
-    time: e.clock_in ?? "",
-    status: e.status === "off_work" ? "퇴근" : "출근",
-    badgeType: (e.shift as any) ?? "오픈",
-    avatarColor: getAvatarColor(e.id),
-    attendanceStatus: "normal",
-  });
-  const working = data.filter(e => e.status === "working" || e.status === "on_break");
-  const checkin = data.filter(e => e.status === "working" || e.status === "on_break" || e.status === "off_work");
-  const checkout = data.filter(e => e.status === "off_work");
-  const absent = data.filter(e => e.status === "absent");
-  return [
-    { type: "working", label: "근무중", description: "현재 근무중이에요", count: working.length, totalCount: total, employees: working.map(toEmp) },
-    { type: "checkin", label: "출근", description: "오늘 출근했어요", count: checkin.length, totalCount: total, employees: checkin.map(toEmp) },
-    { type: "checkout", label: "퇴근", description: "퇴근했어요", count: checkout.length, totalCount: total, employees: checkout.map(toEmp) },
-    { type: "absent", label: "결근", description: "출근하지 않았어요", count: absent.length, totalCount: total, employees: absent.map(toEmp) },
-  ];
+function getAvatarColor(id: number): string {
+  return AVATAR_COLORS[Math.abs(id) % AVATAR_COLORS.length];
 }
 
+function toBadgeType(shift: string | null): "오픈" | "미들" | "마감" | "오픈,미들" {
+  if (shift === "오픈" || shift === "미들" || shift === "마감" || shift === "오픈,미들") return shift;
+  return "오픈";
+}
 
+interface AttendanceRecord {
+  id: number;
+  name: string;
+  shift: string | null;
+  status: "working" | "on_break" | "off_work" | "absent";
+  clock_in: string | null;
+  clock_out: string | null;
+  work_start: string | null;
+  work_end: string | null;
+}
+
+function buildAttendanceCards(records: AttendanceRecord[]) {
+  const total = records.length;
+
+  const toEmp = (r: AttendanceRecord, time: string | null, statusLabel: string) => ({
+    id: String(r.id),
+    name: r.name,
+    time: time ?? "",
+    status: statusLabel,
+    badgeType: toBadgeType(r.shift),
+    avatarColor: getAvatarColor(r.id),
+    attendanceStatus: r.status === "absent"
+      ? "absent" as const
+      : r.clock_in && r.work_start && r.clock_in > r.work_start
+        ? "late" as const
+        : "normal" as const,
+  });
+
+  const working = records.filter(r => r.status === "working" || r.status === "on_break");
+  const checkin = records.filter(r => r.status !== "absent");
+  const checkout = records.filter(r => r.status === "off_work");
+  const absent = records.filter(r => r.status === "absent");
+  const lateCount = checkin.filter(r => r.clock_in && r.work_start && r.clock_in > r.work_start).length;
+
+  return {
+    cards: [
+      { type: "working" as const, label: "근무중", description: "근무중이에요", count: working.length, totalCount: total, employees: working.map(r => toEmp(r, r.clock_in, "출근")) },
+      { type: "checkin" as const, label: "출근", description: "출근 했어요", count: checkin.length, totalCount: total, employees: checkin.map(r => toEmp(r, r.clock_in, "출근")) },
+      { type: "checkout" as const, label: "퇴근", description: "퇴근 했어요", count: checkout.length, totalCount: total, employees: checkout.map(r => toEmp(r, r.clock_out, "퇴근")) },
+      { type: "absent" as const, label: "결근", description: "결근 했어요", count: absent.length, totalCount: total, employees: absent.map(r => toEmp(r, null, "결근")) },
+    ],
+    stats: { checkin: checkin.length, late: lateCount, checkout: checkout.length, absent: absent.length },
+  };
+}
+
+const CHECKLIST_COMMON_AVATAR = "#A0AEC0";
+const CHECKLIST_CARDS = [
+  {
+    type: "오픈" as const, totalPeople: 3, timeRange: "08:00 ~ 14:00",
+    tabs: [
+      { id: "common", name: "공통", avatarColor: CHECKLIST_COMMON_AVATAR, items: [{ id: "1", text: "테이블 청소" }, { id: "2", text: "와플베이스 만들기" }, { id: "3", text: "물류 정리" }] },
+      { id: "kim", name: "김정민", avatarColor: "#5C4033", items: [{ id: "4", text: "손님한테 인사 잘하기" }, { id: "5", text: "퇴근할때 티비 끄기" }] },
+      { id: "moon", name: "문자영", avatarColor: "#C0392B", items: [{ id: "6", text: "재고 확인" }] },
+      { id: "jung", name: "정수민", avatarColor: "#1ABC9C", items: [{ id: "7", text: "음료 준비" }] },
+    ],
+  },
+  {
+    type: "미들" as const, totalPeople: 3, timeRange: "14:00 ~ 18:00",
+    tabs: [
+      { id: "common2", name: "공통", avatarColor: CHECKLIST_COMMON_AVATAR, items: [{ id: "8", text: "테이블 청소" }, { id: "9", text: "와플베이스 만들기" }, { id: "10", text: "물류 정리" }] },
+      { id: "kim2", name: "김정민", avatarColor: "#5C4033", items: [{ id: "11", text: "매장 점검" }] },
+      { id: "moon2", name: "문자영", avatarColor: "#C0392B", items: [{ id: "12", text: "시럽 리필" }] },
+      { id: "jung2", name: "정수민", avatarColor: "#1ABC9C", items: [{ id: "13", text: "컵 정리" }] },
+    ],
+  },
+  {
+    type: "마감" as const, totalPeople: 3, timeRange: "18:00 ~ 22:00",
+    tabs: [
+      { id: "common3", name: "공통", avatarColor: CHECKLIST_COMMON_AVATAR, items: [{ id: "14", text: "테이블 청소" }, { id: "15", text: "와플베이스 만들기" }, { id: "16", text: "물류 정리" }] },
+      { id: "kim3", name: "김정민", avatarColor: "#5C4033", items: [{ id: "17", text: "정산 확인" }] },
+      { id: "moon3", name: "문자영", avatarColor: "#C0392B", items: [{ id: "18", text: "냉장고 정리" }] },
+      { id: "jung3", name: "정수민", avatarColor: "#1ABC9C", items: [{ id: "19", text: "문 잠금 확인" }] },
+    ],
+  },
+];
+
+const POSTS = [
+  { id: "1", authorName: "정수민", avatarColor: "#1ABC9C", timeAgo: "1시간 전", content: "11월 15일 08:00 ~ 15:00 대타 요청합니다 ㅜㅜ" },
+  { id: "2", authorName: "김다현", avatarColor: "#E91E63", timeAgo: "9시간 전", content: "밤 베이스 발주 필요합니당" },
+  { id: "3", authorName: "최지혁", avatarColor: "#FF9800", timeAgo: "9시간 전", content: "사다리 부러졌습니다..." },
+];
 
 export default function Index() {
   const navigate = useNavigate();
@@ -61,6 +126,7 @@ export default function Index() {
   const [activeMainTab, setActiveMainTab] = useState<"현황" | "관리">("현황");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
   const [memberName, setMemberName] = useState<string>("");
 
@@ -74,16 +140,15 @@ export default function Index() {
   const [authLoaded, setAuthLoaded] = useState(false);
 
   const [storeNotices, setStoreNotices] = useState<any[]>([]);
-  const [attendanceCards, setAttendanceCards] = useState<AttendanceCardType[]>([]);
-
   const [notices, setNotices] = useState<NotificationItem[]>([]);
+  const [attendanceCards, setAttendanceCards] = useState<ReturnType<typeof buildAttendanceCards>["cards"]>([]);
+  const [attendanceStats, setAttendanceStats] = useState({ checkin: 0, late: 0, checkout: 0, absent: 0 });
 
   useEffect(() => {
     const initAuth = async () => {
       try {
         const [me, stores] = await Promise.all([getMe(), getMyStores()]);
         setMemberName(me.name);
-        localStorage.setItem("currentMemberId", String(me.id));
         const mapped: AccountType[] = stores.map((s: any) => ({
           id: String(s.store_member_id),
           storeId: s.store_id,
@@ -93,16 +158,42 @@ export default function Index() {
         }));
         setAccounts(mapped);
 
-        const targetId = location.state?.storeMemberId;
-        const target = targetId
-          ? mapped.find(a => a.id === String(targetId))
-          : mapped.find(a => a.role === "owner");
-        const finalAccount = target ?? mapped[0] ?? null;
+        // 세션 유지 우선순위:
+        //  1) 명시적 location.state.storeMemberId (다른 화면에서 의도적으로 넘긴 경우)
+        //  2) localStorage.currentStoreMemberId (사용자가 마지막에 선택했던 매장)
+        //  3) localStorage.currentStoreId 매칭 + owner role
+        //  4) 첫 owner 매장
+        const navStateId = location.state?.storeMemberId;
+        const savedStoreMemberId = localStorage.getItem("currentStoreMemberId");
+        const savedStoreId = localStorage.getItem("currentStoreId");
+
+        const targetIdStr = navStateId != null ? String(navStateId) : savedStoreMemberId;
+        let target = targetIdStr ? mapped.find(a => a.id === targetIdStr) : undefined;
+        if (!target && savedStoreId) {
+          target = mapped.find(
+            a => String(a.storeId) === savedStoreId && a.role === "owner",
+          );
+        }
+        const fallback = mapped.find(a => a.role === "owner") ?? mapped[0];
+        const finalAccount = target ?? fallback ?? null;
+
         setSelectedAccount(finalAccount);
         localStorage.setItem("currentRole", finalAccount?.role ?? "owner");
         localStorage.setItem("currentStoreId", String(finalAccount?.storeId ?? ""));
+        localStorage.setItem("currentStoreMemberId", String(finalAccount?.id ?? ""));
+        localStorage.setItem("currentMemberId", String(me.id));
       } catch (err) {
-        navigate("/");
+        if (import.meta.env.PROD) {
+          navigate("/");
+        } else {
+          // 로컬 개발: 백엔드 없이 화면 렌더링용 임시 계정
+          const mockOwner: AccountType = { id: "1", storeId: 1, storeName: "테스트 매장", role: "owner", employeeType: "" };
+          const mockEmployee: AccountType = { id: "2", storeId: 1, storeName: "테스트 매장", role: "employee", employeeType: "알바생" };
+          setSelectedAccount(mockOwner);
+          setAccounts([mockOwner, mockEmployee]);
+          localStorage.setItem("currentRole", "owner");
+          localStorage.setItem("currentStoreId", "1");
+        }
       } finally {
         setAuthLoaded(true);
       }
@@ -115,18 +206,29 @@ export default function Index() {
     const storeId = selectedAccount.storeId;
 
     const fetchAll = async () => {
-      const [notifications, todayAttendance] = await Promise.allSettled([
-        getNotification(true, storeId),
-        fetch(`/api/owner/store/${storeId}/attendance/today`, { credentials: 'include' }).then(r => r.ok ? r.json() : []),
-      ]);
+      const [notifications] = await Promise.allSettled([
+        getNotification(true, storeId)
+      ])
 
-      if (notifications.status === 'fulfilled') setNotices(notifications.value);
-      if (todayAttendance.status === 'fulfilled') setAttendanceCards(buildAttendanceCards(todayAttendance.value));
-    };
+  if (notifications.status === 'fulfilled') setNotices(notifications.value);
+}
 
-    fetchAll();
+
+fetchAll();
 
   }, [authLoaded, selectedAccount]);
+
+  useEffect(() => {
+    if (!authLoaded || !selectedAccount || activeMainTab !== "현황") return;
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    getTodayAttendance(selectedAccount.storeId, dateStr)
+      .then(records => {
+        const { cards, stats } = buildAttendanceCards(records);
+        setAttendanceCards(cards);
+        setAttendanceStats(stats);
+      })
+      .catch(() => {});
+  }, [authLoaded, selectedAccount, selectedDate, activeMainTab]);
 
 const formatDate = (d: Date) => {
   const yy = String(d.getFullYear()).slice(-2);
@@ -139,6 +241,7 @@ const formatDate = (d: Date) => {
 const handleAccountSelect = (account: AccountType) => {
   localStorage.setItem("currentRole", account.role);
   localStorage.setItem("currentStoreId", String(account.storeId));
+  localStorage.setItem("currentStoreMemberId", account.id);
   if (account.role === "employee") {
     navigate("/employee/home");
   } else {
@@ -181,6 +284,7 @@ return (
           hasNotifications={storeNotices.length > 0}
           onStoreClick={() => setBottomSheetOpen(true)}
           onMenuClick={() => setSideMenuOpen(true)}
+          bgColor="#FFFFFF"
         />
         {/* 탭 */}
         <div className="flex" style={{ paddingLeft: '20px', gap: '20px' }}>
@@ -217,23 +321,73 @@ return (
           <button onClick={() => setSelectedDate(prev => subDays(prev, 1))} className="pressable" style={{ padding: '4px 8px' }}>
             <ChevronLeft className="w-[18px] h-[18px] text-muted-foreground" />
           </button>
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <button className="pressable flex items-center gap-1" style={{ fontSize: '16px', fontWeight: 600, letterSpacing: '-0.02em', color: '#19191B' }}>
-                {isToday(selectedDate) && <span style={{ color: '#4261FF' }}>[오늘]</span>}
-                {formatDate(selectedDate)}
-                <ChevronDown className="w-[18px] h-[18px] text-muted-foreground" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="center">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(d) => { if (d) { setSelectedDate(d); setCalendarOpen(false); } }}
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
+          <button
+            className="pressable flex items-center gap-1"
+            style={{ fontSize: '16px', fontWeight: 600, letterSpacing: '-0.02em', color: '#19191B' }}
+            onClick={() => { setPickerMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)); setCalendarOpen(true); }}
+          >
+            {isToday(selectedDate) && <span style={{ color: '#4261FF' }}>[오늘]</span>}
+            {formatDate(selectedDate)}
+            <ChevronDown className="w-[18px] h-[18px] text-muted-foreground" />
+          </button>
+          {calendarOpen && createPortal(
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setCalendarOpen(false)}>
+              <div className="rounded-2xl p-5 w-[320px] shadow-lg" style={{ backgroundColor: '#FFFFFF' }} onClick={e => e.stopPropagation()}>
+                {/* 월 네비게이터 */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <button onClick={() => setPickerMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() - 1, 1))} className="pressable p-1">
+                    <ChevronLeft style={{ width: '20px', height: '20px', color: '#19191B' }} />
+                  </button>
+                  <span style={{ fontSize: '17px', fontWeight: 700, color: '#19191B' }}>{pickerMonth.getFullYear()}년 {pickerMonth.getMonth() + 1}월</span>
+                  <button onClick={() => setPickerMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1, 1))} className="pressable p-1">
+                    <ChevronRight style={{ width: '20px', height: '20px', color: '#19191B' }} />
+                  </button>
+                </div>
+                {/* 요일 헤더 */}
+                <div className="grid grid-cols-7 mb-2">
+                  {['일','월','화','수','목','금','토'].map((d, i) => (
+                    <div key={d} className="text-center py-1" style={{ fontSize: '13px', fontWeight: 500, color: i === 0 ? '#FF5959' : i === 6 ? '#5DB1FF' : '#70737B' }}>{d}</div>
+                  ))}
+                </div>
+                {/* 날짜 그리드 */}
+                {(() => {
+                  const py = pickerMonth.getFullYear(), pm = pickerMonth.getMonth();
+                  const firstDay = new Date(py, pm, 1).getDay();
+                  const daysInMonth = new Date(py, pm + 1, 0).getDate();
+                  const prevDays = new Date(py, pm, 0).getDate();
+                  const cells: { y: number; m: number; d: number; outside: boolean }[] = [];
+                  for (let i = firstDay - 1; i >= 0; i--) { const dt = new Date(py, pm - 1, prevDays - i); cells.push({ y: dt.getFullYear(), m: dt.getMonth(), d: dt.getDate(), outside: true }); }
+                  for (let d = 1; d <= daysInMonth; d++) cells.push({ y: py, m: pm, d, outside: false });
+                  const rem = 7 - (cells.length % 7); if (rem < 7) for (let i = 1; i <= rem; i++) { const dt = new Date(py, pm + 1, i); cells.push({ y: dt.getFullYear(), m: dt.getMonth(), d: dt.getDate(), outside: true }); }
+                  const weeks: typeof cells[] = [];
+                  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+                  const today = new Date();
+                  return weeks.map((week, wi) => (
+                    <div key={wi} className="grid grid-cols-7 mb-1">
+                      {week.map((cell, di) => {
+                        const isSel = !cell.outside && selectedDate.getFullYear() === cell.y && selectedDate.getMonth() === cell.m && selectedDate.getDate() === cell.d;
+                        const isTodayCell = !cell.outside && today.getFullYear() === cell.y && today.getMonth() === cell.m && today.getDate() === cell.d;
+                        const isSun = di === 0, isSat = di === 6;
+                        const textColor = cell.outside ? '#AAB4BF' : isSel ? '#FFFFFF' : isTodayCell ? '#FFFFFF' : isSun ? '#FF5959' : isSat ? '#5DB1FF' : '#19191B';
+                        return (
+                          <button key={di} disabled={cell.outside}
+                            className={cell.outside ? '' : 'pressable'}
+                            onClick={() => { if (!cell.outside) { setSelectedDate(new Date(cell.y, cell.m, cell.d)); setCalendarOpen(false); } }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px' }}
+                          >
+                            <span style={{ fontSize: '14px', fontWeight: 500, color: textColor, ...(isSel ? { backgroundColor: '#4261FF', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' } : isTodayCell ? { backgroundColor: '#4261FF', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.45 } : {}) }}>
+                              {cell.d}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>,
+            document.body
+          )}
           <button onClick={() => setSelectedDate(prev => addDays(prev, 1))} className="pressable" style={{ padding: '4px 8px' }}>
             <ChevronRight className="w-[18px] h-[18px] text-muted-foreground" />
           </button>
@@ -245,24 +399,19 @@ return (
         {activeMainTab === "현황" ? (
           <>
             <AttendanceSection
-              stats={{
-                checkin: attendanceCards.find(c => c.type === "checkin")?.count ?? 0,
-                late: 0,
-                checkout: attendanceCards.find(c => c.type === "checkout")?.count ?? 0,
-                absent: attendanceCards.find(c => c.type === "absent")?.count ?? 0,
-              }}
+              stats={attendanceStats}
               cards={attendanceCards}
-              date={formatDate(selectedDate)}
+              date={format(selectedDate, 'yy.MM.dd')}
               hideDateSelector
             />
             <div style={{ height: '20px' }} />
             <BannerCarousel />
             <div style={{ height: '20px' }} />
-            <ChecklistSection cards={[]} />
+            <ChecklistSection cards={CHECKLIST_CARDS} />
             <div style={{ height: '20px' }} />
             <SalesSection date="11월 5일" totalSales={418000} salesAmount={418000} laborCost={185303} />
             <div style={{ height: '20px' }} />
-            <RecentPostsSection posts={[]} />
+            <RecentPostsSection posts={POSTS} />
             <div style={{ height: '20px' }} />
           </>
         ) : (

@@ -17,7 +17,7 @@ const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
 ];
 
 const TAB_PATHS: Record<TabId, string> = {
-  home: "/",
+  home: "/employee/home",
   salary: "/employee/salary",
   attendance: "/attendance",
   board: "/board",
@@ -39,7 +39,7 @@ const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
               onClick={() => {
                 if (isActive) return;
                 if (tab.id === "home") {
-                  navigate("/");
+                  navigate("/employee/home");
                 } else if (tab.id === "salary") {
                   navigate("/employee/salary");
                 } else if (tab.id === "attendance") {

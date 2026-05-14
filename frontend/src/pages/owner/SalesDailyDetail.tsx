@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, X, Pencil } from "lucide-react";
@@ -25,60 +25,30 @@ function Divider({ thick }: { thick?: boolean }) {
 export default function SalesDailyDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const dateStr = searchParams.get("date") || new Date().toISOString().slice(0, 10);
+  const dateStr = searchParams.get("date") || "2025-10-02";
   const [receiptOpen, setReceiptOpen] = useState(false);
 
   const date = new Date(dateStr);
   const dateLabel = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${DAY_LABELS[date.getDay()]})`;
 
-  const [grossSales, setGrossSales] = useState(0);
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [refundAmount, setRefundAmount] = useState(0);
-  const [netSales, setNetSales] = useState(0);
-  const [salesItems, setSalesItems] = useState<{ label: string; value: number }[]>([]);
-  const [cashOnHand, setCashOnHand] = useState(0);
-  const [cashExpected, setCashExpected] = useState(0);
-  const [cashDifference, setCashDifference] = useState(0);
-  const [note, setNote] = useState("");
-  const [receiptImgUrl, setReceiptImgUrl] = useState<string | null>(null);
+  const grossSales: number = 420000;
+  const discountAmount: number = 15000;
+  const refundAmount: number = 0;
+  const netSales: number = grossSales - discountAmount - refundAmount;
+  const closingStaff: string = "김정민";
 
-  useEffect(() => {
-    const storeId = localStorage.getItem("currentStoreId");
-    if (!storeId) return;
-    const d = new Date(dateStr);
-    const year = d.getFullYear();
-    const month = d.getMonth() + 1;
-    fetch(`/api/owner/store/${storeId}/closing-reports?year=${year}&month=${month}`, { credentials: "include" })
-      .then(r => r.ok ? r.json() : [])
-      .then((reports: any[]) => {
-        const report = reports.find((r: any) => r.report_date === dateStr);
-        if (!report) return;
-        const card = report.card_sales || 0;
-        const cash = report.cash_sales || 0;
-        const transfer = report.transfer_sales || 0;
-        const gift = report.gift_sales || 0;
-        const gross = card + cash + transfer + gift;
-        const discount = report.discount_amount || 0;
-        const refund = report.refund_amount || 0;
-        setGrossSales(gross);
-        setDiscountAmount(discount);
-        setRefundAmount(refund);
-        setNetSales(gross - discount - refund);
-        setSalesItems([
-          { label: '카드 매출', value: card },
-          { label: '현금 매출', value: cash },
-          { label: '계좌이체', value: transfer },
-          { label: '상품권', value: gift },
-        ]);
-        const cashAmt = report.cash_on_hand || 0;
-        setCashOnHand(cashAmt);
-        setCashExpected(cash);
-        setCashDifference(cashAmt - cash);
-        setNote(report.manager_note || "");
-        setReceiptImgUrl(report.receipt_image_url || null);
-      })
-      .catch(() => {});
-  }, [dateStr]);
+  const salesItems = [
+    { label: '카드 매출', value: 200000 },
+    { label: '현금 매출', value: 200000 },
+    { label: '계좌이체', value: 10000 },
+    { label: '상품권', value: 10000 },
+  ];
+
+  const cashOnHand: number = 50000;
+  const cashExpected: number = 200000;
+  const cashDifference: number = cashOnHand - cashExpected;
+  const note: string = "현금 과부족이 3만원 발생했습니다.";
+  const receiptImgUrl: string | null = null;
 
   return (
     <div className="min-h-screen max-w-lg mx-auto" style={{ backgroundColor: '#FFFFFF' }}>
@@ -103,6 +73,7 @@ export default function SalesDailyDetail() {
         {/* 날짜 + 담당자 */}
         <div style={{ padding: '16px 20px 12px' }}>
           <p style={{ fontSize: '20px', fontWeight: 700, color: '#19191B', letterSpacing: '-0.02em', marginBottom: '8px' }}>{dateLabel}</p>
+          <InfoRow label="마감 담당자">{closingStaff}</InfoRow>
         </div>
 
         {/* 순매출 카드 */}
@@ -208,18 +179,16 @@ export default function SalesDailyDetail() {
         <Divider thick />
 
         {/* 전달 사항 */}
-        {note && (
-          <div style={{ padding: '16px 20px' }}>
-            <SectionTitle>전달 사항</SectionTitle>
-            <p style={{ fontSize: '16px', fontWeight: 500, color: '#19191B', lineHeight: '1.6' }}>{note}</p>
-          </div>
-        )}
+        <div style={{ padding: '16px 20px' }}>
+          <SectionTitle>전달 사항</SectionTitle>
+          <p style={{ fontSize: '16px', fontWeight: 500, color: '#19191B', lineHeight: '1.6' }}>{note}</p>
+        </div>
 
       </div>
 
       {/* 영수증 이미지 팝업 */}
       {receiptOpen && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 touch-none" onClick={() => setReceiptOpen(false)}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setReceiptOpen(false)}>
           <div style={{ width: 'calc(100% - 48px)', maxWidth: '420px', backgroundColor: '#FFFFFF', borderRadius: '20px', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #F0F0F0' }}>
               <span style={{ fontSize: '16px', fontWeight: 700, color: '#19191B', letterSpacing: '-0.02em' }}>마감 영수증</span>

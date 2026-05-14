@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { NavToastProvider } from "@/hooks/use-nav-toast";
-import Test from "@/pages/Test";
-
 import ScrollToTop from "@/utils/scrollToTop"
 
 // 전역 페이지 로딩 fallback
@@ -46,9 +45,10 @@ const PasswordPage = lazy(() => import("@/pages/signup/PasswordPage"));
 const ProfileInfoPage = lazy(() => import("@/pages/signup/ProfileInfoPage"));
 const ProfilePhotoPage = lazy(() => import("@/pages/signup/ProfilePhotoPage"));
 const SignupCompletePage = lazy(() => import("@/pages/signup/SignupCompletePage"));
+const TermsDetail = lazy(() => import("@/pages/signup/TermsDetail"));
+const MemberTypePage = lazy(() => import("@/pages/onboarding/MemberType"));
 
 const PublicIndex = lazy(() => import("@/pages/Index"));
-const MemberTypePage = lazy(() => import("@/pages/onboarding/MemberTypePage"));
 const EmployeeHome = lazy(() => import("@/pages/employee/Index"));
 const OwnerHome = lazy(() => import("./pages/owner/Index"));
 
@@ -108,7 +108,6 @@ const OwnerAttendanceManagement = lazy(() => import("./pages/owner/AttendanceMan
 const OwnerAttendanceEdit = lazy(() => import("./pages/owner/AttendanceEdit"));
 const OwnerAttendanceDetail = lazy(() => import("./pages/owner/AttendanceDetail"));
 const OwnerScheduleManagement = lazy(() => import("./pages/owner/ScheduleManagement"));
-const SelectRole = lazy(() => import("./pages/SelectRole"));
 
 const queryClient = new QueryClient();
 
@@ -168,32 +167,40 @@ const GlobalBottomNav = () => {
   );
 };
 
+// 모든 페이지 전환을 단일 fade로 통합. 이전엔 mode="sync" + slide 변형으로
+// 두 페이지가 동시에 위치해 잔상처럼 보이는 버그가 있었음.
+const PAGE_VARIANTS = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.14, ease: "easeOut" } },
+  exit:    { opacity: 0, transition: { duration: 0.08, ease: "easeIn" } },
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
-  const prevPath = useRef(location.pathname);
-  const currentPath = location.pathname;
-  const from = prevPath.current;
-
-  useEffect(() => { prevPath.current = currentPath; });
-
-  const getAnimClass = () => {
-    if (isFadeRoot(currentPath) && isFadeRoot(from)) return "page-fade-enter";
-    return "page-enter";
-  };
-
-  const [animDone, setAnimDone] = useState(false);
-  useEffect(() => {
-    setAnimDone(false);
-    const t = setTimeout(() => setAnimDone(true), 290);
-    return () => clearTimeout(t);
-  }, [location.key]);
 
   return (
-    <>
-      <div key={location.key} className={`${getAnimClass()}${animDone ? " page-enter-done" : ""}`}>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={location.key}
+        variants={PAGE_VARIANTS}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          backgroundColor: 'var(--background)',
+          // willChange 영구 적용은 GPU 레이어를 계속 합성 상태로 유지시켜
+          //   페이지 전체 텍스트/버튼에 서브픽셀 시머링(아지랑이)을 유발.
+          //   framer-motion이 애니메이션 동안 자동으로 레이어 힌트를 관리하므로 수동 지정 불필요.
+        }}
+      >
+        {/* Suspense를 motion.div 안으로 이동 — 바깥에 있으면 lazy 로딩/에러 시
+            AnimatePresence 전체가 언마운트되어 슬라이드 중이던 페이지가 중간 위치에 고정됨 */}
+        <Suspense fallback={<PageLoader />}>
       <Routes location={location}>
-        <Route path="/test" element={<Test />} />
-
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify" element={<CodeVerifyPage />} />
@@ -201,8 +208,8 @@ const AnimatedRoutes = () => {
         <Route path="/profile-info" element={<ProfileInfoPage />} />
         <Route path="/profile-photo" element={<ProfilePhotoPage />} />
         <Route path="/signup-complete" element={<SignupCompletePage />} />
+        <Route path="/signup/terms/:id" element={<TermsDetail />} />
         <Route path="/onboarding/member-type" element={<MemberTypePage />} />
-        <Route path="/select-role" element={<SelectRole />} />
 
         {/* ===== 공통 기능 ===== */}
         <Route path="/board" element={<AuthGuard><BoardList /></AuthGuard>} />
@@ -265,8 +272,9 @@ const AnimatedRoutes = () => {
         <Route path="/employee/profile/edit" element={<AuthGuard><EmployeeProfileEdit /></AuthGuard>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </div>
-    </>
+        </Suspense>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
@@ -278,10 +286,8 @@ const App = () => (
       <HashRouter>
         <NavToastProvider>
           <ScrollToTop />
-          <div className="max-w-lg mx-auto bg-background min-h-screen relative app-root">
-            <Suspense fallback={<PageLoader />}>
+          <div className="max-w-lg mx-auto bg-background min-h-screen relative overflow-hidden app-root">
             <AnimatedRoutes />
-          </Suspense>
           </div>
           <GlobalBottomNav />
         </NavToastProvider>

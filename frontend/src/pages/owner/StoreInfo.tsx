@@ -15,8 +15,8 @@ export interface StoreData {
   owner: string;
   number: string;
   rawDigits: string;
-  radius: number;
-  setting: StoreSetting;
+  radius: number | null;
+  setting: StoreSetting | null;
 }
 
 interface StoreSetting {
@@ -73,14 +73,16 @@ export default function StoreInfo() {
   useEffect(() => {
     if (!storeInfo) return;
 
-    const noHours = !storeInfo.setting.open_time || !storeInfo.setting.close_time || storeInfo.setting.is_holiday === null;
-    const noStandard = storeInfo.radius === null || storeInfo.setting.late_minutes === null;
+    const setting = storeInfo.setting;
+    const noHours = !setting || !setting.open_time || !setting.close_time || setting.is_holiday === null;
+    const noStandard = storeInfo.radius === null || !setting || setting.late_minutes === null;
 
     // if (noHours) {
     //   navigate("/owner/store/hours", { state: { storeInfo } });
     // } else if (noStandard) {
     //   navigate("/owner/store/attendance-standard", { state: { storeInfo } });
     // }
+    void noHours; void noStandard;
   }, [storeInfo]);
 
   // 영업 파트 문자열 생성 (오후 미사용이면 제외)
@@ -103,8 +105,6 @@ export default function StoreInfo() {
       : "-";
 
   const cardStyle = { boxShadow: '2px 2px 12px rgba(0,0,0,0.06)' };
-
-  console.log(storeInfo);
 
   if (!storeInfo) {
     return (
@@ -148,7 +148,7 @@ export default function StoreInfo() {
             <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', boxShadow: '2px 2px 12px rgba(0,0,0,0.06)', border: '1px solid #EBEBEB' }}>
               {/* 헤더 */}
               <div style={{ background: 'linear-gradient(135deg, #4261FF 0%, #6B84FF 100%)', padding: '14px 16px 16px', position: 'relative' }}>
-                <button onClick={() => setBannerVisible(false)} style={{ position: 'absolute', top: '10px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <button className="pressable" onClick={() => setBannerVisible(false)} style={{ position: 'absolute', top: '10px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <X style={{ width: '16px', height: '16px', color: 'rgba(255,255,255,0.7)' }} />
                 </button>
                 <p style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 2px' }}>매장 관리</p>
@@ -181,7 +181,7 @@ export default function StoreInfo() {
           {/* 매장 정보 */}
           <div className="bg-card rounded-2xl p-5" style={cardStyle}>
             <button onClick={() => navigate("/owner/store/edit", { state: { storeInfo } })}
-              className="flex items-center justify-between w-full mb-3" >
+              className="pressable flex items-center justify-between w-full mb-3" >
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5" style={{ color: '#4261FF' }} />
                 <h2 className="text-[18px] font-bold text-foreground">매장 정보</h2>
@@ -201,7 +201,7 @@ export default function StoreInfo() {
                 </>
               )}
             </div>
-            <button onClick={() => setExpanded(!expanded)} className="flex items-center justify-center gap-1 w-full mt-3 text-[13px] text-muted-foreground">
+            <button onClick={() => setExpanded(!expanded)} className="pressable flex items-center justify-center gap-1 w-full mt-3 text-[13px] text-muted-foreground">
               {expanded ? "접기" : "더보기"}
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -209,7 +209,7 @@ export default function StoreInfo() {
 
           {/* 운영 시간 설정 */}
           <div className="bg-card rounded-2xl p-5" style={cardStyle}>
-            <button onClick={() => navigate("/owner/store/hours", { state: { storeInfo } })} className="flex items-center justify-between w-full mb-3">
+            <button onClick={() => navigate("/owner/store/hours", { state: { storeInfo } })} className="pressable flex items-center justify-between w-full mb-3">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5" style={{ color: '#4261FF' }} />
                 <h2 className="text-[18px] font-bold text-foreground">운영 시간 설정</h2>
@@ -218,7 +218,7 @@ export default function StoreInfo() {
             </button>
             <div className="border-t border-border pt-3 space-y-2.5">
               <InfoRow label="영업 시간" value={
-                storeInfo.setting.open_time && storeInfo.setting.close_time
+                storeInfo.setting?.open_time && storeInfo.setting?.close_time
                   ? `${storeInfo.setting.open_time.slice(0, 5)} ~ ${storeInfo.setting.close_time.slice(0, 5)}`
                   : "-"
               } />
@@ -229,7 +229,7 @@ export default function StoreInfo() {
 
           {/* 근태 기준 설정 */}
           <div className="bg-card rounded-2xl p-5" style={cardStyle}>
-            <button onClick={() => navigate("/owner/store/attendance-standard", { state: { storeInfo } })} className="flex items-center justify-between w-full mb-3">
+            <button onClick={() => navigate("/owner/store/attendance-standard", { state: { storeInfo } })} className="pressable flex items-center justify-between w-full mb-3">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5" style={{ color: '#4261FF' }} />
                 <h2 className="text-[18px] font-bold text-foreground">근태 기준 설정</h2>
@@ -237,7 +237,7 @@ export default function StoreInfo() {
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
             <div className="border-t border-border pt-3 space-y-2.5">
-              <InfoRow label="출퇴근 거리" value={`${storeInfo.radius}M`} />
+              <InfoRow label="출퇴근 거리" value={storeInfo.radius != null ? `${storeInfo.radius}M` : "-"} />
               <InfoRow label="지각 기준" value="출근시간+5분 부터" />
               <InfoRow label="추가 수당" value={`연장 수당 : 미적용\n야간 수당 : 미적용\n휴일 수당 : 미적용`} />
             </div>

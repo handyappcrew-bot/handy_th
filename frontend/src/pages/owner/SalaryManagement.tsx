@@ -2,35 +2,25 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, Info } from "lucide-react";
-import { staffStore } from "@/lib/staffStore";
+import { getPayslips, getPayslipMonths, transferPayslip } from "@/api/owner/payslip";
 
 type PayslipStatus = "지급 전" | "지급 완료";
 interface PayslipRecord {
-  id: number;
+  id?: number;
   name: string; shifts: string[]; type: string; amount: number;
   avatarColor: string; status: PayslipStatus; payDay: string;
   period: string; transferred: boolean; year: number; month: number;
 }
 
-const PAYSLIP_HISTORY: PayslipRecord[] = [];
-const CALENDAR_PAYDAY_DATA: { payDay: string; transferred: boolean }[] = [];
+const PAYSLIP_AVATAR_COLORS = ["#5C4033","#C0392B","#1ABC9C","#2C3E50","#8E44AD","#E67E22","#E91E63","#FF9800","#4261FF","#D4A574"];
 
-interface StaffSalaryDeductions {
-  incomeTax: number; localTax: number; nationalPension: number;
-  healthInsurance: number; longTermCare: number; employmentInsurance: number;
-}
-interface StaffSalaryData {
-  workHours: string; overtime: string | null; basePay: number;
-  overtimePay: number; weeklyPay: number; nightPay: number;
-  holidayPay: number; incentive: number; totalPay: number;
-  deductions: StaffSalaryDeductions;
-}
-interface StaffSalaryEntry {
-  name: string; shifts: string[]; type: string; workDays: string;
-  salaryType: "시급" | "월급" | "연봉"; hourlyWage?: number;
-  monthlyWage?: number; annualWage?: number; avatarColor: string;
-  salary: StaffSalaryData;
-}
+const PAYSLIP_HISTORY: PayslipRecord[] = [];
+const PAYSLIP_STAFF_LIST: PayslipRecord[] = [];
+
+const CALENDAR_PAYDAY_DATA = [
+  { payDay: "10일", transferred: true },
+  { payDay: "31일", transferred: false },
+];
 
 function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
   const now = new Date();
@@ -47,55 +37,68 @@ function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
   });
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(currentYear);
-  const [monthList, setMonthList] = useState<PayslipRecord[]>([]);
-  const [availableMonths, setAvailableMonths] = useState<{ year: number; month: number }[]>([]);
+
+  const storeId = parseInt(localStorage.getItem("currentStoreId") || "0");
+  const [availableMonths, setAvailableMonths] = useState<{year: number; month: number}[]>([]);
+  const [payslipListData, setPayslipListData] = useState<PayslipRecord[]>([]);
+
+  const monthList = payslipListData;
+
+  const getKey = (s: PayslipRecord) => `${s.year}-${s.month}-${s.name}`;
+
   const [publishedSet, setPublishedSet] = useState<Set<string>>(new Set());
   const [transferredMap, setTransferredMap] = useState<Record<string, string>>({});
   const [transferTarget, setTransferTarget] = useState<PayslipRecord | null>(null);
 
-  const storeId = localStorage.getItem("currentStoreId");
-  const allStaff = staffStore.getAll();
-  const getKey = (s: PayslipRecord) => `${s.year}-${s.month}-${s.name}`;
+  const loadPayslips = (sid: number, y: number, m: number) => {
+    getPayslips(sid, y, m)
+      .then((records: any[]) => {
+        const mapped: PayslipRecord[] = records.map(p => ({
+          id: p.id,
+          name: p.name || "",
+          shifts: [],
+          type: p.employee_type?.includes("시급") ? "알바생" : "정규직",
+          amount: Math.round(p.net_pay || 0),
+          avatarColor: PAYSLIP_AVATAR_COLORS[Math.abs(p.employee_id || 0) % PAYSLIP_AVATAR_COLORS.length],
+          status: p.is_published ? "지급 완료" as const : "지급 전" as const,
+          payDay: p.salary_day || "",
+          period: `${(p.pay_period_start || "").replace(/-/g, ".")} - ${(p.pay_period_end || "").replace(/-/g, ".")}`,
+          transferred: !!p.is_transferred,
+          year: p.year,
+          month: p.month,
+        }));
+        setPayslipListData(mapped);
+        setPublishedSet(new Set(mapped.filter(s => s.status === "지급 완료").map(s => getKey(s))));
+        setTransferredMap(Object.fromEntries(mapped.filter(s => s.transferred).map(s => [getKey(s), 'preset'])));
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     if (!storeId) return;
-    fetch(`/api/owner/store/${storeId}/payslips/months`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : [])
-      .then(setAvailableMonths)
-      .catch(() => {});
+    getPayslipMonths(storeId).then(setAvailableMonths).catch(() => {});
   }, [storeId]);
 
   useEffect(() => {
     if (!storeId) return;
-    fetch(`/api/owner/store/${storeId}/payslips?year=${selectedYear}&month=${selectedMonth}`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : [])
-      .then((data: any[]) => {
-        const records: PayslipRecord[] = data.map(p => {
-          const staffData = allStaff.find(s => s.name === p.name);
-          const period = `${p.pay_period_start} - ${p.pay_period_end}`.replace(/-/g, '.').replace(' - ', ' - ');
-          return {
-            id: p.id,
-            name: p.name,
-            shifts: staffData ? [...new Set(staffData.workSchedule.flatMap((w: any) => w.shifts))] : [],
-            type: p.employee_type || '-',
-            amount: p.net_pay,
-            avatarColor: staffData?.avatarColor ?? '#4261FF',
-            status: (p.is_published ? '지급 완료' : '지급 전') as PayslipStatus,
-            payDay: p.salary_day || '-',
-            period,
-            transferred: p.is_transferred,
-            year: p.year,
-            month: p.month,
-          };
-        });
-        setMonthList(records);
-        setPublishedSet(new Set(records.filter(r => r.status === '지급 완료').map(r => getKey(r))));
-        const tmap: Record<string, string> = {};
-        data.forEach((p, i) => { if (p.is_transferred) tmap[getKey(records[i])] = p.transferred_at || 'preset'; });
-        setTransferredMap(tmap);
-      })
-      .catch(() => {});
+    loadPayslips(storeId, selectedYear, selectedMonth);
   }, [storeId, selectedYear, selectedMonth]);
+
+  const getDaysUntilPayday = (payDay: string) => {
+    const now = new Date();
+    const todayDate = now.getDate();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const days = payDay.split(',').map(d => {
+      const t = d.trim();
+      if (t === '말일') return lastDay;
+      return parseInt(t);
+    }).filter(n => !isNaN(n));
+    if (days.length === 0) return 999;
+    const nearest = days.map(day => day >= todayDate ? day - todayDate : day + lastDay - todayDate).sort((a, b) => a - b)[0];
+    return nearest;
+  };
+  const unpaidList = monthList.filter(s => !publishedSet.has(getKey(s)));
+  const paidList = monthList.filter(s => publishedSet.has(getKey(s)));
 
   const fmtTime = (iso: string) => {
     if (iso === 'preset') return '';
@@ -103,9 +106,18 @@ function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
     return `${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 이체`;
   };
 
+  useEffect(() => {
+    const check = () => {
+      if (storeId) loadPayslips(storeId, selectedYear, selectedMonth);
+    };
+    document.addEventListener('visibilitychange', check);
+    return () => document.removeEventListener('visibilitychange', check);
+  }, [storeId, selectedYear, selectedMonth]);
+
   const isCurrentMonth = selectedYear === currentYear && selectedMonth === currentMonth;
   const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
 
+  // 이전/다음 달 이동
   const goPrev = () => {
     if (selectedMonth === 1) { setSelectedYear(y => y - 1); setSelectedMonth(12); }
     else setSelectedMonth(m => m - 1);
@@ -117,16 +129,13 @@ function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
   };
   const canGoNext = !(selectedYear === currentYear && selectedMonth >= currentMonth);
 
-  const unpaidList = monthList.filter(s => !publishedSet.has(getKey(s)));
-  const paidList = monthList.filter(s => publishedSet.has(getKey(s)));
-
   const StaffCard = ({ s, isPaid }: { s: PayslipRecord; isPaid: boolean }) => {
     const isTransferred = !!(transferredMap[getKey(s)]);
     return (
       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', marginBottom: '10px', overflow: 'hidden' }}>
         <button className="pressable w-full text-left"
           style={{ padding: '14px 16px 10px', display: 'block' }}
-          onClick={() => { if (isPaid) { navigate(`/owner/salary/payslip/publish?id=${s.id}&name=${encodeURIComponent(s.name)}&published=true&py=${selectedYear}&pm=${selectedMonth}`); } else { navigate(`/owner/salary/payslip?id=${s.id}&name=${encodeURIComponent(s.name)}&py=${selectedYear}&pm=${selectedMonth}`); } }}>
+          onClick={() => { if (isPaid) { navigate(`/owner/salary/payslip/publish?name=${encodeURIComponent(s.name)}&published=true&py=${selectedYear}&pm=${selectedMonth}`); } else { navigate(`/owner/salary/payslip?name=${encodeURIComponent(s.name)}&py=${selectedYear}&pm=${selectedMonth}`); } }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: s.avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#FFFFFF', flexShrink: 0, opacity: isPaid ? 0.6 : 1 }}>{s.name.charAt(0)}</div>
@@ -169,6 +178,7 @@ function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
           {isPaid && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
               <button
+                className="pressable"
                 onClick={() => !isTransferred && setTransferTarget(s)}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', height: '28px', padding: '0 10px', borderRadius: '8px', border: `1px solid ${isTransferred ? '#DBDCDF' : '#FFB300'}`, backgroundColor: isTransferred ? '#F7F7F8' : '#FFB300', fontSize: '12px', fontWeight: 600, color: isTransferred ? '#AAB4BF' : '#FFFFFF', cursor: isTransferred ? 'default' : 'pointer' }}>
                 {isTransferred ? '✓ 이체 완료' : '이체 확인'}
@@ -187,7 +197,7 @@ function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
         <button onClick={goPrev} className="pressable p-1">
           <ChevronLeft className="w-5 h-5 text-foreground" />
         </button>
-        <button onClick={() => { setPickerYear(selectedYear); setMonthPickerOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer' }}>
+        <button className="pressable" onClick={() => { setPickerYear(selectedYear); setMonthPickerOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer' }}>
           <span style={{ fontSize: '18px', fontWeight: 700, color: '#19191B', letterSpacing: '-0.02em' }}>{selectedYear}년 {selectedMonth}월 급여</span>
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </button>
@@ -227,7 +237,7 @@ function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
       {/* 데이터 없을 때 */}
       {monthList.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <p style={{ fontSize: '14px', color: '#9EA3AD' }}>{selectedYear}년 {selectedMonth}월 급여 명세서가 없어요</p>
+          <p style={{ fontSize: '14px', color: '#AAB4BF' }}>{selectedYear}년 {selectedMonth}월 급여 명세서가 없어요</p>
         </div>
       ) : (
         <>
@@ -261,7 +271,7 @@ function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
 
       {/* 월 선택 팝업 */}
       {monthPickerOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setMonthPickerOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setMonthPickerOpen(false)}>
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '20px', width: '300px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <button onClick={() => setPickerYear(y => y - 1)} className="pressable p-1"><ChevronLeft className="w-5 h-5" /></button>
@@ -273,9 +283,10 @@ function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
                 const m = i + 1;
                 const isFuture = pickerYear > currentYear || (pickerYear === currentYear && m > currentMonth);
                 const isSelected = pickerYear === selectedYear && m === selectedMonth;
-                const hasData = availableMonths.some(s => s.year === pickerYear && s.month === m);
+                const hasData = availableMonths.some(am => am.year === pickerYear && am.month === m);
                 return (
                   <button key={m} onClick={() => { if (!isFuture) { setSelectedYear(pickerYear); setSelectedMonth(m); setMonthPickerOpen(false); } }}
+                    className="pressable"
                     style={{ padding: '10px 4px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, backgroundColor: isSelected ? '#4261FF' : '#F7F7F8', color: isFuture ? '#DBDCDF' : isSelected ? '#FFFFFF' : '#19191B', border: 'none', cursor: isFuture ? 'default' : 'pointer', position: 'relative' }}>
                     {m}월
                     {hasData && !isSelected && !isFuture && (
@@ -291,20 +302,15 @@ function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
       )}
     {/* 이체 완료 확인 팝업 */}
       {transferTarget && createPortal(
-        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center" onClick={() => setTransferTarget(null)}>
+        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center touch-none sheet-overlay" onClick={() => setTransferTarget(null)}>
           <div style={{ width: 'calc(100% - 48px)', maxWidth: '320px', backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '28px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#19191B', textAlign: 'center', marginBottom: '8px', letterSpacing: '-0.02em' }}>이체 완료 처리</h3>
             <p style={{ fontSize: '14px', color: '#70737B', textAlign: 'center', marginBottom: '24px', lineHeight: '1.6', letterSpacing: '-0.02em' }}>
               {transferTarget.name}님 급여를 실제로<br />이체하셨나요?
             </p>
             <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-              <button onClick={() => setTransferTarget(null)} style={{ flex: 1, height: '52px', borderRadius: '14px', border: 'none', fontSize: '15px', fontWeight: 700, color: '#70737B', backgroundColor: '#F7F7F8', cursor: 'pointer', letterSpacing: '-0.02em' }}>취소</button>
-              <button onClick={() => {
-                const now = new Date().toISOString();
-                fetch(`/api/owner/store/${storeId}/payslips/${transferTarget.id}/transfer`, { method: 'POST', credentials: 'include' }).catch(() => {});
-                setTransferredMap(prev => ({ ...prev, [getKey(transferTarget)]: now }));
-                setTransferTarget(null);
-              }} style={{ flex: 1, height: '52px', borderRadius: '14px', border: 'none', fontSize: '15px', fontWeight: 700, color: '#FFFFFF', backgroundColor: '#4261FF', cursor: 'pointer', letterSpacing: '-0.02em' }}>이체 완료</button>
+              <button className="pressable" onClick={() => setTransferTarget(null)} style={{ flex: 1, height: '52px', borderRadius: '14px', border: 'none', fontSize: '15px', fontWeight: 700, color: '#70737B', backgroundColor: '#F7F7F8', cursor: 'pointer', letterSpacing: '-0.02em' }}>취소</button>
+              <button className="pressable" onClick={() => { if (storeId && transferTarget?.id) transferPayslip(storeId, transferTarget.id).catch(() => {}); const now = new Date().toISOString(); setTransferredMap(prev => ({ ...prev, [getKey(transferTarget!)]: now })); setTransferTarget(null); }} style={{ flex: 1, height: '52px', borderRadius: '14px', border: 'none', fontSize: '15px', fontWeight: 700, color: '#FFFFFF', backgroundColor: '#4261FF', cursor: 'pointer', letterSpacing: '-0.02em' }}>이체 완료</button>
             </div>
           </div>
         </div>,
@@ -315,9 +321,41 @@ function PayslipTab({ navigate }: { navigate: (path: string) => void }) {
 }
 const HAS_DATA = true;
 
-const STAFF_LIST: StaffSalaryEntry[] = [];
-const STAFF_SALARY: { name: string; status: PayslipStatus; amount: number }[] = [];
-const MONTHLY_SALARY: Record<number, number> = {};
+const STAFF_LIST = [
+  { name: "김정민", shifts: ["오픈"], type: "정규직", workDays: "월, 화, 수, 목, 금", salaryType: "시급" as const, hourlyWage: 10000, avatarColor: "#5C4033",
+    salary: { workHours: "43h", overtime: "+4h 30m", basePay: 430000, overtimePay: 15195, weeklyPay: 12196, nightPay: 0, holidayPay: 0, incentive: 0, totalPay: 457391,
+      deductions: { incomeTax: 2060, localTax: 206, nationalPension: 20610, healthInsurance: 15550, longTermCare: 2010, employmentInsurance: 7770 } } },
+  { name: "문자영", shifts: ["오픈", "미들"], type: "알바생", workDays: "월, 화", salaryType: "시급" as const, hourlyWage: 11000, avatarColor: "#C0392B",
+    salary: { workHours: "20h", overtime: null, basePay: 220000, overtimePay: 0, weeklyPay: 0, nightPay: 16500, holidayPay: 11000, incentive: 0, totalPay: 247500,
+      deductions: { incomeTax: 1060, localTax: 106, nationalPension: 0, healthInsurance: 0, longTermCare: 0, employmentInsurance: 4015 } } },
+  { name: "정수민", shifts: ["미들"], type: "알바생", workDays: "월, 화, 수", salaryType: "월급" as const, monthlyWage: 1500000, avatarColor: "#F4D03F",
+    salary: { workHours: "60h", overtime: "+2h", basePay: 1500000, overtimePay: 27500, weeklyPay: 0, nightPay: 0, holidayPay: 0, incentive: 50000, totalPay: 1577500,
+      deductions: { incomeTax: 25190, localTax: 2519, nationalPension: 71250, healthInsurance: 53925, longTermCare: 6970, employmentInsurance: 13500 } } },
+  { name: "김수민", shifts: ["미들"], type: "알바생", workDays: "화, 수", salaryType: "연봉" as const, annualWage: 36000000, avatarColor: "#2C3E50",
+    salary: { workHours: "80h", overtime: null, basePay: 3000000, overtimePay: 0, weeklyPay: 0, nightPay: 45000, holidayPay: 0, incentive: 100000, totalPay: 3145000,
+      deductions: { incomeTax: 130000, localTax: 13000, nationalPension: 135000, healthInsurance: 102060, longTermCare: 13190, employmentInsurance: 27000 } } },
+  { name: "키키치", shifts: ["미들"], type: "알바생", workDays: "목", salaryType: "시급" as const, hourlyWage: 11000, avatarColor: "#8E44AD",
+    salary: { workHours: "8h", overtime: null, basePay: 88000, overtimePay: 0, weeklyPay: 0, nightPay: 0, holidayPay: 0, incentive: 0, totalPay: 88000,
+      deductions: { incomeTax: 396, localTax: 39, nationalPension: 0, healthInsurance: 0, longTermCare: 0, employmentInsurance: 792 } } },
+];
+
+const STAFF_SALARY = [
+  { name: "정수민", status: "지급 전" as const, amount: 1200000 },
+  { name: "김수민", status: "지급 전" as const, amount: 560000 },
+  { name: "지수민", status: "지급 완료" as const, amount: 660000 },
+  { name: "강수민", status: "지급 완료" as const, amount: 660000 },
+  { name: "송수민", status: "지급 완료" as const, amount: 660000 },
+  { name: "이수민", status: "지급 완료" as const, amount: 660000 },
+  { name: "윤수민", status: "지급 완료" as const, amount: 660000 },
+];
+
+const MONTHLY_SALARY: Record<number, number> = {
+  1: 452000, 2: 558000, 3: 400000, 4: 500000, 5: 450000, 6: 250000, 7: 350000,
+  8: 450000, 9: 500000, 10: 400000, 11: 500000, 12: 450000, 13: 250000, 14: 350000,
+  15: 450000, 16: 550000, 17: 400000, 18: 500000, 19: 450000, 20: 451000, 21: 350000,
+  22: 450000, 23: 500000, 24: 400000, 25: 500000, 26: 450000, 27: 250000, 28: 350000,
+  29: 450000, 30: 500000, 31: 400000,
+};
 
 interface DailySalaryDetail {
   base: number;
@@ -327,15 +365,85 @@ interface DailySalaryDetail {
   night?: number;       // 야간수당
   holiday?: number;     // 휴일수당
 }
-const STAFF_INDIVIDUAL_SALARY_DETAIL: Record<number, DailySalaryDetail> = {};
-const STAFF_INDIVIDUAL_SALARY: Record<number, number> = {};
+const STAFF_INDIVIDUAL_SALARY_DETAIL: Record<number, DailySalaryDetail> = {
+  1:  { base: 40000 },
+  5:  { base: 40000, overtime: 5500 },
+  6:  { base: 40000, weekly: 8000 },
+  7:  { base: 45000, holiday: 6000 },
+  8:  { base: 40000, night: 3000 },
+  10: { base: 40000, incentive: 5000 },
+  13: { base: 40000, overtime: 6000, incentive: 4000 },
+  14: { base: 40000, weekly: 9000 },
+  15: { base: 40000, night: 5000 },
+  20: { base: 40000, overtime: 7000, weekly: 3000 },
+};
+const STAFF_INDIVIDUAL_SALARY: Record<number, number> = Object.fromEntries(
+  Object.entries(STAFF_INDIVIDUAL_SALARY_DETAIL).map(([k, v]) =>
+    [k, v.base + (v.overtime || 0) + (v.weekly || 0) + (v.incentive || 0) + (v.night || 0) + (v.holiday || 0)]
+  )
+);
 
-const PAYDAY: number[] = [];
+const PAYDAY = [10, 31];
 const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
-const DAILY_STAFF_BY_DATE: Record<number, { name: string; shift: string; type: string; amount: number; hours: string; avatarColor: string; payday: boolean; overtime?: string; night?: string; weekly?: string; incentive?: string; holiday?: string }[]> = {};
-const DAILY_STAFF_DEFAULT: { name: string; shift: string; type: string; amount: number; hours: string; avatarColor: string; payday: boolean }[] = [];
-const WEEKLY_STAFF: { name: string; shift: string; type: string; hours: string; amount: number }[] = [];
+const DAILY_STAFF_BY_DATE: Record<number, { name: string; shift: string; type: string; amount: number; hours: string; avatarColor: string; payday: boolean; overtime?: string; night?: string; weekly?: string; incentive?: string; holiday?: string }[]> = {
+  5: [
+    { name: "김정민", shift: "오픈", type: "정규직", amount: 45500, hours: "근무 5h", avatarColor: "#5C4033", payday: false, overtime: "연장 1h" },
+    { name: "문자영", shift: "오픈, 미들", type: "알바생", amount: 66000, hours: "근무 6h", avatarColor: "#C0392B", payday: false },
+    { name: "정수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#1ABC9C", payday: false },
+    { name: "김수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#2C3E50", payday: false },
+  ],
+  6: [
+    { name: "김정민", shift: "오픈", type: "정규직", amount: 40000, hours: "근무 5h", avatarColor: "#5C4033", payday: false },
+    { name: "문자영", shift: "오픈, 미들", type: "알바생", amount: 66000, hours: "근무 6h", avatarColor: "#C0392B", payday: false },
+    { name: "정수민", shift: "미들", type: "알바생", amount: 60000, hours: "근무 4h 30m", avatarColor: "#1ABC9C", payday: false, weekly: "주휴 발생" },
+    { name: "김수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#2C3E50", payday: false },
+  ],
+  8: [
+    { name: "김정민", shift: "오픈", type: "정규직", amount: 40000, hours: "근무 5h", avatarColor: "#5C4033", payday: false },
+    { name: "문자영", shift: "오픈, 미들", type: "알바생", amount: 69000, hours: "근무 6h", avatarColor: "#C0392B", payday: false, night: "야간 30m" },
+    { name: "정수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#1ABC9C", payday: false },
+    { name: "김수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#2C3E50", payday: false },
+  ],
+  10: [
+    { name: "김정민", shift: "오픈", type: "정규직", amount: 45000, hours: "근무 5h", avatarColor: "#5C4033", payday: true, incentive: "인센티브" },
+    { name: "문자영", shift: "오픈, 미들", type: "알바생", amount: 66000, hours: "근무 6h", avatarColor: "#C0392B", payday: false },
+    { name: "정수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#1ABC9C", payday: true },
+    { name: "김수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#2C3E50", payday: false },
+  ],
+  13: [
+    { name: "김정민", shift: "오픈", type: "정규직", amount: 50000, hours: "근무 5h", avatarColor: "#5C4033", payday: false, overtime: "연장 1h 12m", incentive: "인센티브" },
+    { name: "문자영", shift: "오픈, 미들", type: "알바생", amount: 66000, hours: "근무 6h", avatarColor: "#C0392B", payday: false },
+    { name: "정수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#1ABC9C", payday: false },
+    { name: "김수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#2C3E50", payday: false },
+  ],
+  20: [
+    { name: "김정민", shift: "오픈", type: "정규직", amount: 50000, hours: "근무 5h", avatarColor: "#5C4033", payday: false, overtime: "연장 1h 30m", weekly: "주휴 발생" },
+    { name: "문자영", shift: "오픈, 미들", type: "알바생", amount: 66000, hours: "근무 6h", avatarColor: "#C0392B", payday: false },
+    { name: "정수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#1ABC9C", payday: false },
+    { name: "김수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#2C3E50", payday: false },
+  ],
+  31: [
+    { name: "가나디", shift: "미들", type: "알바생", amount: 880000, hours: "근무 4h 30m", avatarColor: "#5C4033", payday: true },
+    { name: "김정민", shift: "오픈", type: "정규직", amount: 50000, hours: "근무 5h", avatarColor: "#5C4033", payday: false },
+    { name: "문자영", shift: "오픈, 미들", type: "알바생", amount: 66000, hours: "근무 6h", avatarColor: "#C0392B", payday: false },
+    { name: "정수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#1ABC9C", payday: false },
+  ],
+};
+const DAILY_STAFF_DEFAULT = [
+  { name: "김정민", shift: "오픈", type: "정규직", amount: 50000, hours: "근무 5h", avatarColor: "#5C4033", payday: false },
+  { name: "문자영", shift: "오픈, 미들", type: "알바생", amount: 66000, hours: "근무 6h", avatarColor: "#C0392B", payday: false },
+  { name: "정수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#1ABC9C", payday: false },
+  { name: "김수민", shift: "미들", type: "알바생", amount: 52000, hours: "근무 4h 30m", avatarColor: "#2C3E50", payday: false },
+  { name: "박지훈", shift: "마감", type: "알바생", amount: 48000, hours: "근무 4h", avatarColor: "#27AE60", payday: false },
+  { name: "이클립스", shift: "마감", type: "정규직", amount: 55000, hours: "근무 5h 30m", avatarColor: "#8E44AD", payday: false },
+];
+
+const WEEKLY_STAFF = [
+  { name: "정수민", shift: "오픈", type: "알바생", hours: "08:00 - 13:00", amount: 50195 },
+  { name: "정수민", shift: "미들", type: "알바생", hours: "08:00 - 13:00", amount: 50195 },
+  { name: "정수민", shift: "미들", type: "알바생", hours: "08:00 - 13:00", amount: 50195 },
+];
 
 function formatSalary(n: number) {
   if (n >= 10000) { const man = (n / 10000).toFixed(1).replace(/\.0$/, ""); return `${man}만`; }
@@ -354,14 +462,13 @@ export default function SalaryManagement() {
   const [dismissedBanners, setDismissedBanners] = useState<Set<number>>(new Set());
   const [salaryFilter, setSalaryFilter] = useState<"전체 직원 급여" | "직원 선택하기">("전체 직원 급여");
   const [viewMode, setViewMode] = useState<"월간" | "주간">("월간");
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentMonthPayslips, setCurrentMonthPayslips] = useState<PayslipRecord[]>([]);
+  const [currentDate, setCurrentDate] = useState(new Date(2025, 9, 22));
   const [expanded, setExpanded] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [staffPickerOpen, setStaffPickerOpen] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState<StaffSalaryEntry | null>(() => {
+  const [selectedStaff, setSelectedStaff] = useState<typeof STAFF_LIST[0] | null>(() => {
     const staffParam = searchParams.get('staff');
     return staffParam ? STAFF_LIST.find(s => s.name === staffParam) || null : null;
   });
@@ -373,24 +480,6 @@ export default function SalaryManagement() {
     if (isAnySheetOpen) { document.body.style.overflow = 'hidden'; } else { document.body.style.overflow = ''; }
     return () => { document.body.style.overflow = ''; };
   }, [isAnySheetOpen]);
-
-  useEffect(() => {
-    const storeId = localStorage.getItem("currentStoreId");
-    if (!storeId) return;
-    const now = new Date();
-    fetch(`/api/owner/store/${storeId}/payslips?year=${now.getFullYear()}&month=${now.getMonth() + 1}`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : [])
-      .then((data: any[]) => {
-        const records: PayslipRecord[] = data.map(p => ({
-          id: p.id, name: p.name, shifts: [], type: p.employee_type || '-',
-          amount: p.net_pay, avatarColor: '#4261FF',
-          status: (p.is_published ? '지급 완료' : '지급 전') as PayslipStatus,
-          payDay: p.salary_day || '-', period: '', transferred: p.is_transferred,
-          year: p.year, month: p.month,
-        }));
-        setCurrentMonthPayslips(records);
-      }).catch(() => {});
-  }, []);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -433,7 +522,7 @@ export default function SalaryManagement() {
   const prevWeek = () => { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); };
   const nextWeek = () => { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); };
 
-  const totalSalary = 0;
+  const totalSalary = 3400500;
   const displayStaff = expanded ? STAFF_SALARY : STAFF_SALARY.slice(0, 3);
   const today = new Date();
   const isToday = (d: number) => today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
@@ -464,7 +553,7 @@ export default function SalaryManagement() {
           const todayDate = today.getDate();
           const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
 
-          const unpaidStaff = currentMonthPayslips.filter(s => s.status === "지급 전");
+          const unpaidStaff = PAYSLIP_STAFF_LIST.filter(s => s.status === "지급 전");
           if (unpaidStaff.length === 0) return null;
 
           const parsedDays = unpaidStaff.flatMap(s =>
@@ -530,6 +619,7 @@ export default function SalaryManagement() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <button
+                  className="pressable"
                   onClick={() => setActiveTab("급여명세서 발급")}
                   style={{ height: '32px', padding: '0 12px', borderRadius: '8px', backgroundColor: bgColor, border: 'none', fontSize: '12px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', flexShrink: 0, letterSpacing: '-0.02em' }}>
                   명세서 보기
@@ -568,7 +658,7 @@ export default function SalaryManagement() {
             {!HAS_DATA ? (
               <div className="mx-5 bg-muted rounded-2xl py-12 flex flex-col items-center gap-3">
                 <p className="text-[14px] text-muted-foreground text-center leading-relaxed">직원을 추가하고 근무를 시작하면<br />급여가 자동으로 계산돼요</p>
-                <button className="px-5 py-2.5 rounded-full border border-primary text-primary text-[14px] font-medium">+ 직원 추가하기</button>
+                <button className="pressable px-5 py-2.5 rounded-full border border-primary text-primary text-[14px] font-medium">+ 직원 추가하기</button>
               </div>
             ) : selectedStaff ? (
               /* Individual staff salary card */
@@ -586,14 +676,14 @@ export default function SalaryManagement() {
                           <span key={sh} className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${sh === "오픈" ? "bg-shift-open-bg text-shift-open" : sh === "미들" ? "bg-shift-middle-bg text-shift-middle" : "bg-shift-close-bg text-shift-close"}`}>{sh}</span>
                         ))}
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground">{selectedStaff.type}</span>
-                        <button onClick={() => setStaffPickerOpen(true)} className="p-0.5"><ChevronDown className="w-4 h-4 text-muted-foreground" /></button>
+                        <button onClick={() => setStaffPickerOpen(true)} className="pressable p-0.5"><ChevronDown className="w-4 h-4 text-muted-foreground" /></button>
                       </div>
                       <div className="flex items-center justify-between mt-1">
                         <span style={{ fontSize: '13px', color: '#70737B' }}>근무일 {selectedStaff.workDays}</span>
                         <span style={{ fontSize: '13px', color: '#70737B' }}>
-                          {selectedStaff.salaryType === "시급" ? `시급 ${(selectedStaff.hourlyWage || 0).toLocaleString()}원`
-                            : selectedStaff.salaryType === "월급" ? `월급 ${(selectedStaff.monthlyWage || 0).toLocaleString()}원`
-                            : `연봉 ${((selectedStaff.annualWage || 0) / 10000).toFixed(0)}만원`}
+                          {selectedStaff.salaryType === "시급" ? `시급 ${(selectedStaff as any).hourlyWage.toLocaleString()}원`
+                            : selectedStaff.salaryType === "월급" ? `월급 ${(selectedStaff as any).monthlyWage.toLocaleString()}원`
+                            : `연봉 ${((selectedStaff as any).annualWage / 10000).toFixed(0)}만원`}
                         </span>
                       </div>
                     </div>
@@ -778,7 +868,7 @@ export default function SalaryManagement() {
                       <span style={{ fontSize: '14px', color: s.status === "지급 완료" ? '#AAB4BF' : '#19191B' }}>{s.amount.toLocaleString()}원</span>
                     </div>
                   ))}
-                  <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-center gap-1 text-[13px] text-muted-foreground" style={{ marginTop: '12px' }}>
+                  <button onClick={() => setExpanded(!expanded)} className="pressable w-full flex items-center justify-center gap-1 text-[13px] text-muted-foreground" style={{ marginTop: '12px' }}>
                     {expanded ? "닫기" : "더보기"}
                     {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
@@ -792,7 +882,7 @@ export default function SalaryManagement() {
               <div className="flex items-center justify-between px-5" style={{ paddingTop: '16px', paddingBottom: '16px' }}>
                 <div className="flex items-center gap-1">
                   <button onClick={viewMode === "월간" ? prevMonth : prevWeek} className="pressable p-1"><ChevronLeft className="w-5 h-5 text-foreground" /></button>
-                  <button onClick={() => { setPickerYear(year); setMonthPickerOpen(true); }} className="flex items-center gap-1">
+                  <button onClick={() => { setPickerYear(year); setMonthPickerOpen(true); }} className="pressable flex items-center gap-1">
                     <span style={{ fontSize: '17px', fontWeight: 700, color: '#19191B' }}>{year}년 {month + 1}월</span>
                     <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   </button>
@@ -801,7 +891,8 @@ export default function SalaryManagement() {
                 <div className="flex">
                   {(["월간", "주간"] as const).map((m) => (
                     <button key={m} onClick={() => setViewMode(m)}
-                      style={{ width: '36px', height: '22px', fontSize: '12px', fontWeight: 600, letterSpacing: '-0.02em', borderRadius: m === "월간" ? '4px 0 0 4px' : '0 4px 4px 0', backgroundColor: viewMode === m ? '#93989E' : '#F7F7F8', color: viewMode === m ? '#FFFFFF' : '#93989E', border: 'none', cursor: 'pointer' }}>
+                      className={`pressable px-3 py-1 text-sm font-medium rounded-full ${viewMode === m ? "bg-primary text-white" : "text-muted-foreground"}`}
+                    >
                       {m}
                     </button>
                   ))}
@@ -922,7 +1013,7 @@ export default function SalaryManagement() {
                       const dayColor = isSun ? "text-destructive" : isSat ? "text-primary" : "text-muted-foreground";
                       const dateColor = isSun ? "text-destructive" : isSat ? "text-primary" : "text-foreground";
                       return (
-                        <button key={i} className="flex flex-col items-center gap-1" onClick={() => setCurrentDate(new Date(d))}>
+                        <button key={i} className="pressable flex flex-col items-center gap-1" onClick={() => setCurrentDate(new Date(d))}>
                           <span className={`text-[13px] ${selected ? "text-muted-foreground" : dayColor}`}>{DAY_LABELS[i]}</span>
                           <div className={`flex items-center justify-center rounded-2xl ${selected ? "bg-primary" : ""}`} style={{ width: 50, height: 54 }}>
                             <span className={`text-[15px] font-medium ${selected ? "text-primary-foreground" : dateColor}`}>{d.getDate()}</span>
@@ -945,11 +1036,11 @@ export default function SalaryManagement() {
                         : dayStaff;
                       if (list.length === 0) return (
                         <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                          <p style={{ fontSize: '14px', color: '#9EA3AD' }}>이 날은 급여 내역이 없어요</p>
+                          <p style={{ fontSize: '14px', color: '#AAB4BF' }}>이 날은 급여 내역이 없어요</p>
                         </div>
                       );
                       return list.map((s, i) => (
-                        <button key={i} className="w-full flex items-center justify-between px-5 py-4"
+                        <button key={i} className="pressable w-full flex items-center justify-between px-5 py-4"
                           onClick={() => navigate(`/owner/salary/detail?name=${encodeURIComponent(s.name)}&date=${dateParam}`)}>
                           <div className="text-left">
                             <div className="flex items-center gap-1.5 mb-1">
@@ -985,7 +1076,7 @@ export default function SalaryManagement() {
 
       {/* Day detail bottom sheet */}
       {bottomSheetOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50" onClick={() => setBottomSheetOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setBottomSheetOpen(false)}>
           <div className="w-full max-w-lg rounded-t-2xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
             <div className="px-6 pt-6">
               <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
@@ -1038,7 +1129,7 @@ export default function SalaryManagement() {
               <div className="space-y-0">
                 {selectedDay && !(DAILY_STAFF_BY_DATE[selectedDay.getDate()] ?? []).length && (
                   <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                    <p style={{ fontSize: '14px', color: '#9EA3AD' }}>이 날은 급여 내역이 없어요</p>
+                    <p style={{ fontSize: '14px', color: '#AAB4BF' }}>이 날은 급여 내역이 없어요</p>
                   </div>
                 )}
                 {((() => {
@@ -1109,7 +1200,7 @@ export default function SalaryManagement() {
 
       {/* Month Picker Overlay */}
       {monthPickerOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setMonthPickerOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setMonthPickerOpen(false)}>
           <div className="relative rounded-2xl p-5 w-[320px] shadow-lg" style={{ backgroundColor: '#FFFFFF' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <button onClick={() => setPickerYear(pickerYear - 1)} className="pressable p-1"><ChevronLeft className="w-5 h-5 text-foreground" /></button>
@@ -1134,7 +1225,7 @@ export default function SalaryManagement() {
 
       {/* Staff Picker Bottom Sheet */}
       {staffPickerOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50" onClick={() => setStaffPickerOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setStaffPickerOpen(false)}>
           <div className="w-full max-w-lg rounded-t-2xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
             <div className="px-6 pt-6">
               <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
@@ -1173,7 +1264,7 @@ export default function SalaryManagement() {
 
       {/* Individual staff day detail bottom sheet */}
       {individualDaySheetOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50" onClick={() => setIndividualDaySheetOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setIndividualDaySheetOpen(false)}>
           <div className="w-full max-w-lg rounded-t-2xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
             <div className="px-6 pt-6 pb-8">
               <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
@@ -1251,6 +1342,7 @@ export default function SalaryManagement() {
                 })()}
               </div>
               <button
+                className="pressable"
                 style={{ width: '100%', marginTop: '24px', height: '52px', borderRadius: '14px', backgroundColor: '#4261FF', border: 'none', fontSize: '15px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer' }}
                 onClick={() => {
                   setIndividualDaySheetOpen(false);

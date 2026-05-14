@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import StoreCodeStep from "@/components/store-registration/StoreCodeStep";
 import StoreInfoStep from "@/components/store-registration/StoreInfoStep";
 import BankAccountStep from "@/components/store-registration/BankAccountStep";
 import RegistrationComplete from "@/components/store-registration/RegistrationComplete";
 
 const StoreRegistration = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [storeInfo, setStoreInfo] = useState<{
     id: number;
@@ -34,6 +36,9 @@ const StoreRegistration = () => {
   const handleBack = () => {
     if (step > 1) {
       setStep(step - 1);
+    } else {
+      // step 1에서는 이전 화면(/onboarding/member-type 등)으로 복귀
+      navigate(-1);
     }
   };
 
@@ -45,8 +50,10 @@ const StoreRegistration = () => {
     setStep(4);
   };
 
+  // outer wrapper(max-w-[375px]) 제거 — 각 step의 PageLayout 이 자체 max-w-lg + mx-auto + px-5 를
+  //   관리하므로 사장 사업자 인증 플로우와 동일한 좌우 마진/폭으로 렌더됨.
   return (
-    <div className="min-h-screen bg-background max-w-[375px] mx-auto">
+    <>
       {step === 1 && (
         <StoreCodeStep
           onBack={handleBack}
@@ -69,7 +76,7 @@ const StoreRegistration = () => {
         />
       )}
       {step === 4 && <RegistrationComplete />}
-    </div>
+    </>
   );
 };
 

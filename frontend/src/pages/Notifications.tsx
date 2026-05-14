@@ -59,7 +59,7 @@ const Notifications = () => {
   return (
     <div className="mx-auto min-h-screen max-w-[430px]" style={{ backgroundColor: '#FFFFFF' }}>
       <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => navigate(-1)} className="p-1 flex-shrink-0">
+        <button onClick={() => navigate(-1)} className="pressable p-1 flex-shrink-0">
           <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>알림</h1>
@@ -69,7 +69,7 @@ const Notifications = () => {
       <div style={{ backgroundColor: '#F7F7F8', minHeight: '100vh' }}>
         <div className="flex px-5 py-3 overflow-x-auto" style={{ gap: '8px' }}>
           {filters.map((filter) => (
-            <button key={filter} onClick={() => setActiveFilter(filter)}
+            <button className="pressable" key={filter} onClick={() => setActiveFilter(filter)}
               style={{
                 width: getFilterWidth(filter), height: '28px', flexShrink: 0,
                 borderRadius: '9999px', border: `1px solid ${activeFilter === filter ? '#4261FF' : '#DBDCDF'}`,
@@ -88,12 +88,12 @@ const Notifications = () => {
 
         {filteredNotifications.length === 0 ? (
           <div className="flex flex-1 items-center justify-center pt-48">
-            <p className="text-base text-muted-foreground">등록된 알림이 없어요</p>
+            <span style={{ fontSize: '14px', color: '#AAB4BF' }}>등록된 알림이 없어요</span>
           </div>
         ) : (
           <div className="flex flex-col px-5 pb-8" style={{ gap: '12px' }}>
             {filteredNotifications.map((notification) => (
-              <button key={notification.id} onClick={() => handleNotificationClick(notification)}
+              <button className="pressable" key={notification.id} onClick={() => handleNotificationClick(notification)}
                 style={{
                   width: '100%', minHeight: '74px', backgroundColor: '#FFFFFF',
                   borderRadius: '12px', boxShadow: '2px 2px 12px rgba(0,0,0,0.06)',

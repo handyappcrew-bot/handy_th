@@ -292,7 +292,7 @@ export default function DailyVacationSetting({ onClose }: { onClose: () => void 
                 <button
                   key={s.id}
                   onClick={() => setSelectedStaff(isSelected ? null : s.id)}
-                  className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl" style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
+                  className="pressable flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl" style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
                 >
                   <div
                     className="w-[44px] h-[44px] rounded-full flex items-center justify-center text-white text-[16px] font-bold flex-shrink-0"
@@ -404,7 +404,7 @@ export default function DailyVacationSetting({ onClose }: { onClose: () => void 
                 <button
                   key={s.id}
                   onClick={() => setSelectedSub(isSelected ? null : s.id)}
-                  className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl" style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
+                  className="pressable flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl" style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
                 >
                   <div
                     className="w-[44px] h-[44px] rounded-full flex items-center justify-center text-white text-[16px] font-bold flex-shrink-0"
@@ -548,12 +548,14 @@ export default function DailyVacationSetting({ onClose }: { onClose: () => void 
           <div className="flex gap-3">
             <button
               onClick={handleBack}
+              className="pressable"
               style={{ flex: 1, height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, backgroundColor: '#DEEBFF', color: '#4261FF', border: 'none', cursor: 'pointer' }}
             >
               이전
             </button>
             <button
               onClick={selectedSub ? handleSubNext : handleSkip}
+              className="pressable"
               style={{ flex: 1.5, height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, backgroundColor: '#4261FF', color: '#FFFFFF', border: 'none', cursor: 'pointer' }}
             >
               {selectedSub ? "다음" : "건너뛰기"}
@@ -564,12 +566,14 @@ export default function DailyVacationSetting({ onClose }: { onClose: () => void 
           <div className="flex gap-3">
             <button
               onClick={handleBack}
+              className="pressable"
               style={{ flex: 1, height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, backgroundColor: '#DEEBFF', color: '#4261FF', border: 'none', cursor: 'pointer' }}
             >
               이전
             </button>
             <button
               onClick={() => setShowConfirm(true)}
+              className="pressable"
               style={{ flex: 1.5, height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, backgroundColor: '#4261FF', color: '#FFFFFF', border: 'none', cursor: 'pointer' }}
             >
               설정하기
@@ -580,12 +584,14 @@ export default function DailyVacationSetting({ onClose }: { onClose: () => void 
           <div className="flex gap-3">
             <button
               onClick={handleBack}
+              className="pressable"
               style={{ flex: 1, height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, backgroundColor: '#DEEBFF', color: '#4261FF', border: 'none', cursor: 'pointer' }}
             >
               이전
             </button>
             <button
               onClick={() => setShowConfirm(true)}
+              className="pressable"
               style={{ flex: 1.5, height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, backgroundColor: '#4261FF', color: '#FFFFFF', border: 'none', cursor: 'pointer' }}
             >
               설정하기
@@ -596,7 +602,7 @@ export default function DailyVacationSetting({ onClose }: { onClose: () => void 
 
       {/* Confirmation popup - No substitute (step 4) */}
       {showConfirm && step === 4 && selectedDate && selectedSchedule && staff && createPortal(
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80" onClick={() => setShowConfirm(false)}>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowConfirm(false)}>
           <div className="animate-in zoom-in-95" style={{ maxWidth: '320px', width: 'calc(100% - 48px)', backgroundColor: '#FFFFFF', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 16px' }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B', textAlign: 'center', marginBottom: '8px' }}>휴가 설정하기</h3>
             <p style={{ fontSize: '14px', fontWeight: 400, letterSpacing: '-0.02em', color: '#70737B', textAlign: 'center', marginBottom: '20px', lineHeight: '1.5' }}>
@@ -626,7 +632,7 @@ export default function DailyVacationSetting({ onClose }: { onClose: () => void 
 
       {/* Confirmation popup - With substitute (step 5) */}
       {showConfirm && step === 5 && selectedDate && selectedSchedule && staff && subStaff && createPortal(
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80" onClick={() => setShowConfirm(false)}>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowConfirm(false)}>
           <div className="animate-in zoom-in-95" style={{ maxWidth: '320px', width: 'calc(100% - 48px)', backgroundColor: '#FFFFFF', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 16px' }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B', textAlign: 'center', marginBottom: '8px' }}>휴가 설정 및 대타 등록하기</h3>
             <p style={{ fontSize: '14px', fontWeight: 400, letterSpacing: '-0.02em', color: '#70737B', textAlign: 'center', marginBottom: '12px', lineHeight: '1.5' }}>

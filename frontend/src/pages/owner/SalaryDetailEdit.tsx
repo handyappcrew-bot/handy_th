@@ -12,15 +12,13 @@ const SHIFT_BADGE: Record<string, string> = {
   "마감": "bg-shift-close-bg text-shift-close",
 };
 
-import { staffStore } from "@/lib/staffStore";
-
-type SalaryType = "시급" | "월급" | "연봉";
-interface StaffEntry {
-  name: string; shifts: string[]; type: string; workDays: string;
-  salaryType: SalaryType; hourlyWage?: number; monthlyWage?: number; annualWage?: number;
-  avatarColor: string;
-}
-const STAFF_LIST: StaffEntry[] = [];
+const STAFF_LIST = [
+  { name: "김정민", shifts: ["오픈"], type: "정규직", workDays: "월, 화, 수, 목, 금", salaryType: "시급" as const, hourlyWage: 10000, avatarColor: "#5C4033" },
+  { name: "문자영", shifts: ["오픈", "미들"], type: "알바생", workDays: "월, 화", salaryType: "시급" as const, hourlyWage: 11000, avatarColor: "#C0392B" },
+  { name: "정수민", shifts: ["미들"], type: "알바생", workDays: "월, 화, 수", salaryType: "월급" as const, monthlyWage: 1500000, avatarColor: "#F4D03F" },
+  { name: "김수민", shifts: ["미들"], type: "알바생", workDays: "화, 수", salaryType: "연봉" as const, annualWage: 36000000, avatarColor: "#2C3E50" },
+  { name: "키키치", shifts: ["미들"], type: "알바생", workDays: "목", salaryType: "시급" as const, hourlyWage: 11000, avatarColor: "#8E44AD" },
+];
 
 interface DailySalaryDetail {
   base: number; workTime?: string; breakTime?: string; baseHours?: string;
@@ -30,7 +28,18 @@ interface DailySalaryDetail {
   holiday?: number; holidayHours?: string;
 }
 
-const STAFF_INDIVIDUAL_SALARY_DETAIL: Record<number, DailySalaryDetail> = {};
+const STAFF_INDIVIDUAL_SALARY_DETAIL: Record<number, DailySalaryDetail> = {
+  1:  { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h" },
+  5:  { base: 40000, workTime: "08:00 - 14:00", breakTime: "30분", baseHours: "4h", overtimeExtra: "+1h", overtime: 5500, overtimeHours: "13:00 - 14:00 / (1h, 시급 10,000원 × 1.5배)" },
+  6:  { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", weekly: 8000, weeklyNote: "주 15시간 이상 근무, 1일 평균 근로시간 × 주수" },
+  7:  { base: 45000, workTime: "08:00 - 13:30", breakTime: "30분", baseHours: "4h 30m", holiday: 6000, holidayHours: "08:00 - 13:30 / (4h 30m, 시급 10,000원 × 1.5배)" },
+  8:  { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", night: 3000, nightHours: "22:00 - 23:00 / (1h, 시급 10,000원 × 0.5배 추가)" },
+  10: { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", incentive: 5000 },
+  13: { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", overtimeExtra: "+1h 12m", overtime: 6000, overtimeHours: "13:00 - 14:12 / (1h 12m, 시급 10,000원 × 1.5배)", incentive: 4000 },
+  14: { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", weekly: 9000, weeklyNote: "주 15시간 이상 근무, 1일 평균 근로시간 × 주수" },
+  15: { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", night: 5000, nightHours: "22:00 - 23:00 / (1h, 시급 10,000원 × 0.5배 추가)" },
+  20: { base: 40000, workTime: "08:00 - 14:30", breakTime: "30분", baseHours: "4h", overtimeExtra: "+1h 30m", overtime: 7000, overtimeHours: "13:00 - 14:30 / (1h 30m, 시급 10,000원 × 1.5배)", weekly: 3000, weeklyNote: "주 15시간 이상 근무, 1일 평균 근로시간 × 주수" },
+};
 
 function Divider({ thick }: { thick?: boolean }) {
   return <div style={{ height: thick ? '12px' : '1px', backgroundColor: thick ? '#F7F7F8' : '#F0F0F0', margin: thick ? '0' : '4px 0' }} />;
@@ -72,7 +81,7 @@ function InputBottomSheet({ open, onClose, label, color, value, onConfirm }: {
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={onClose}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF" }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: "30px 20px 28px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
@@ -96,6 +105,7 @@ function InputBottomSheet({ open, onClose, label, color, value, onConfirm }: {
             <span style={{ fontSize: '16px', color: '#AAB4BF', marginLeft: '8px', flexShrink: 0 }}>원</span>
           </div>
           <button onClick={handleConfirm}
+            className="pressable"
             style={{ width: '100%', height: '56px', backgroundColor: '#4261FF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer' }}>
             입력 완료
           </button>
@@ -145,34 +155,15 @@ export default function SalaryDetailEdit() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const staffName = searchParams.get("name") || "";
-  const dateStr = searchParams.get("date") || new Date().toISOString().slice(0, 10);
+  const staffName = searchParams.get("name") || "정수민";
+  const dateStr = searchParams.get("date") || "2025-10-15";
   const date = new Date(dateStr);
   const dayNum = date.getDate();
 
-  const allStaffData = staffStore.getAll();
-  const staffData = allStaffData.find(s => s.name === staffName) ?? allStaffData[0];
-  const staff: StaffEntry | undefined = staffData ? {
-    name: staffData.name,
-    shifts: [...new Set(staffData.workSchedule.flatMap(w => w.shifts))],
-    type: staffData.employmentType,
-    workDays: staffData.workSchedule.map(w => w.day).join(', ') || '-',
-    salaryType: staffData.salaryType.startsWith('시급') ? '시급' : '월급',
-    hourlyWage: staffData.salaryType.startsWith('시급') ? Number(staffData.salaryAmount.replace(/,/g, '')) || 0 : undefined,
-    monthlyWage: !staffData.salaryType.startsWith('시급') ? Number(staffData.salaryAmount.replace(/,/g, '')) || 0 : undefined,
-    avatarColor: staffData.avatarColor,
-  } : undefined;
-
-  if (!staff) {
-    return (
-      <div className="min-h-screen bg-background max-w-lg mx-auto flex flex-col items-center justify-center" style={{ backgroundColor: '#FFFFFF' }}>
-        <p style={{ color: '#70737B', fontSize: '16px' }}>급여 정보를 불러오는 중...</p>
-        <button onClick={() => navigate(-1)} style={{ marginTop: '16px', color: '#4261FF', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}>돌아가기</button>
-      </div>
-    );
-  }
-
-  const detail = STAFF_INDIVIDUAL_SALARY_DETAIL[dayNum] || { base: 0 };
+  const staff = STAFF_LIST.find(s => s.name === staffName) || STAFF_LIST[0];
+  const detail = STAFF_INDIVIDUAL_SALARY_DETAIL[dayNum] || {
+    base: staff.salaryType !== "시급" ? Math.round((staff as any).monthlyWage ? (staff as any).monthlyWage / 22 : (staff as any).annualWage / 264) : 0,
+  };
 
   const monthDay = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${DAY_LABELS[date.getDay()]})`;
 
@@ -216,11 +207,11 @@ export default function SalaryDetailEdit() {
     incentive: { label: '기타 수당', color: '#10C97D' },
   };
 
-  const hourlyWage = staff.salaryType === "시급" ? (staff.hourlyWage || 0) : 0;
+  const hourlyWage = staff.salaryType === "시급" ? (staff as any).hourlyWage : 0;
   const basePayLabel = () => {
     if (staff.salaryType === "시급") return `시급 ${fmt(hourlyWage)}원 기준`;
-    if (staff.salaryType === "월급") return `월급 ${fmt(staff.monthlyWage || 0)}원 (일할 계산)`;
-    return `연봉 ${((staff.annualWage || 0) / 10000).toFixed(0)}만원 (일할 계산)`;
+    if (staff.salaryType === "월급") return `월급 ${fmt((staff as any).monthlyWage)}원 (일할 계산)`;
+    return `연봉 ${((staff as any).annualWage / 10000).toFixed(0)}만원 (일할 계산)`;
   };
 
   return (
@@ -315,10 +306,12 @@ export default function SalaryDetailEdit() {
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40, backgroundColor: '#FFFFFF', borderTop: '1px solid #F7F7F8' }}>
           <div style={{ maxWidth: '512px', margin: '0 auto', padding: '16px 20px', display: 'flex', gap: '8px' }}>
             <button onClick={handleBack}
+              className="pressable"
               style={{ width: '122px', height: '56px', flexShrink: 0, backgroundColor: '#DEEBFF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#4261FF', cursor: 'pointer', letterSpacing: '-0.02em' }}>
               취소
             </button>
             <button onClick={handleSave}
+              className="pressable"
               style={{ flex: 1, height: '56px', backgroundColor: '#4261FF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', letterSpacing: '-0.02em' }}>
               수정하기
             </button>
@@ -341,13 +334,13 @@ export default function SalaryDetailEdit() {
 
       {/* 취소 확인 팝업 */}
       {cancelConfirmOpen && createPortal(
-        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center" onClick={() => setCancelConfirmOpen(false)}>
+        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center" onClick={() => setCancelConfirmOpen(false)}>
           <div style={{ width: 'calc(100% - 48px)', maxWidth: '320px', backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '28px 16px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#19191B', textAlign: 'center', marginBottom: '8px' }}>수정 취소</h3>
             <p style={{ fontSize: '14px', color: '#70737B', textAlign: 'center', marginBottom: '20px', lineHeight: '1.6' }}>수정 중인 내용이 저장되지 않아요.<br />정말 취소하시겠어요?</p>
             <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-              <button onClick={() => setCancelConfirmOpen(false)} style={{ flex: 1, height: '56px', borderRadius: '14px', fontSize: '16px', fontWeight: 700, border: 'none', cursor: 'pointer', backgroundColor: '#F7F7F8', color: '#70737B' }}>아니요</button>
-              <button onClick={() => navigate(-1)} style={{ flex: 1, height: '56px', borderRadius: '14px', fontSize: '16px', fontWeight: 700, border: 'none', cursor: 'pointer', backgroundColor: '#4261FF', color: '#FFFFFF' }}>취소하기</button>
+              <button className="pressable" onClick={() => setCancelConfirmOpen(false)} style={{ flex: 1, height: '56px', borderRadius: '14px', fontSize: '16px', fontWeight: 700, border: 'none', cursor: 'pointer', backgroundColor: '#F7F7F8', color: '#70737B' }}>아니요</button>
+              <button className="pressable" onClick={() => navigate(-1)} style={{ flex: 1, height: '56px', borderRadius: '14px', fontSize: '16px', fontWeight: 700, border: 'none', cursor: 'pointer', backgroundColor: '#4261FF', color: '#FFFFFF' }}>취소하기</button>
             </div>
           </div>
         </div>,
@@ -356,13 +349,13 @@ export default function SalaryDetailEdit() {
 
       {/* 수정 완료 확인 팝업 */}
       {saveConfirmOpen && createPortal(
-        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center" onClick={() => setSaveConfirmOpen(false)}>
+        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center" onClick={() => setSaveConfirmOpen(false)}>
           <div style={{ width: 'calc(100% - 48px)', maxWidth: '320px', backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '28px 16px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#19191B', textAlign: 'center', marginBottom: '8px' }}>급여 수정</h3>
             <p style={{ fontSize: '14px', color: '#70737B', textAlign: 'center', marginBottom: '20px', lineHeight: '1.6' }}>입력한 내용으로 급여 정보를<br />수정하시겠어요?</p>
             <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-              <button onClick={() => setSaveConfirmOpen(false)} style={{ flex: 1, height: '56px', borderRadius: '14px', fontSize: '16px', fontWeight: 700, border: 'none', cursor: 'pointer', backgroundColor: '#F7F7F8', color: '#70737B' }}>취소</button>
-              <button onClick={handleSaveConfirm} style={{ flex: 1, height: '56px', borderRadius: '14px', fontSize: '16px', fontWeight: 700, border: 'none', cursor: 'pointer', backgroundColor: '#4261FF', color: '#FFFFFF' }}>수정하기</button>
+              <button className="pressable" onClick={() => setSaveConfirmOpen(false)} style={{ flex: 1, height: '56px', borderRadius: '14px', fontSize: '16px', fontWeight: 700, border: 'none', cursor: 'pointer', backgroundColor: '#F7F7F8', color: '#70737B' }}>취소</button>
+              <button className="pressable" onClick={handleSaveConfirm} style={{ flex: 1, height: '56px', borderRadius: '14px', fontSize: '16px', fontWeight: 700, border: 'none', cursor: 'pointer', backgroundColor: '#4261FF', color: '#FFFFFF' }}>수정하기</button>
             </div>
           </div>
         </div>,

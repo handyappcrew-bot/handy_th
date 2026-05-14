@@ -3,7 +3,7 @@ import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_REMOVE_DELAY = 300;
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -136,6 +136,7 @@ type Toast = Omit<ToasterToast, "id">;
 
 function toast({ ...props }: Toast) {
   const id = genId();
+  const duration = props.duration ?? 2000;
 
   const update = (props: ToasterToast) =>
     dispatch({
@@ -155,6 +156,9 @@ function toast({ ...props }: Toast) {
       },
     },
   });
+
+  // 자체 타이머로 항상 닫힘을 보장 (Radix 내부 타이머가 포커스/마우스오버로 멈출 수 있음)
+  setTimeout(dismiss, duration);
 
   return {
     id: id,

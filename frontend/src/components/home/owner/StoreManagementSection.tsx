@@ -11,7 +11,7 @@ function ManagementCard({ title, children, onClick }: ManagementCardProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left"
+      className="pressable w-full text-left"
       style={{
         backgroundColor: '#FFFFFF',
         borderRadius: 'clamp(14px, 4vw, 16px)',

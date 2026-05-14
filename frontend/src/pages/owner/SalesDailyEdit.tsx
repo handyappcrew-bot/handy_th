@@ -105,6 +105,7 @@ export default function SalesDailyEdit() {
               <div style={{ position: 'relative', width: '120px', height: '120px', borderRadius: '12px', overflow: 'hidden' }}>
                 <img src={receiptImage} alt="영수증" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <button
+                  className="pressable"
                   onClick={() => setReceiptImage(null)}
                   style={{ position: 'absolute', top: '4px', right: '4px', width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                 >
@@ -144,8 +145,8 @@ export default function SalesDailyEdit() {
       {createPortal(
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40, backgroundColor: '#FFFFFF', borderTop: '1px solid #F7F7F8' }}>
           <div style={{ maxWidth: '512px', margin: '0 auto', padding: '16px 20px', display: 'flex', gap: '8px' }}>
-            <button onClick={() => navigate(-1)} style={{ width: '122px', height: '56px', flexShrink: 0, backgroundColor: '#DEEBFF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#4261FF', cursor: 'pointer' }}>취소</button>
-            <button onClick={handleSave} style={{ flex: 1, height: '56px', backgroundColor: '#4261FF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer' }}>수정하기</button>
+            <button className="pressable" onClick={() => navigate(-1)} style={{ width: '122px', height: '56px', flexShrink: 0, backgroundColor: '#DEEBFF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#4261FF', cursor: 'pointer' }}>취소</button>
+            <button className="pressable" onClick={handleSave} style={{ flex: 1, height: '56px', backgroundColor: '#4261FF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer' }}>수정하기</button>
           </div>
         </div>,
         document.body

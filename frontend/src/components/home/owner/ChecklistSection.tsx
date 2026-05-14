@@ -68,7 +68,7 @@ function ChecklistRegisterSheet({
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div className="w-full max-w-lg rounded-t-3xl bg-card shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <h3 className="text-[16px] font-bold text-foreground">
@@ -136,7 +136,7 @@ function ChecklistEditSheet({
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div className="w-full max-w-lg rounded-t-3xl bg-card shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <h3 className="text-[16px] font-bold text-foreground">
@@ -164,13 +164,13 @@ function ChecklistEditSheet({
           <div className="flex gap-3 mt-6">
             <button
               onClick={handleClose}
-              className="flex-1 py-3.5 rounded-xl text-[15px] font-semibold border border-border text-destructive bg-card"
+              className="pressable flex-1 py-3.5 rounded-xl text-[15px] font-semibold border border-border text-destructive bg-card"
             >
               삭제하기
             </button>
             <button
               onClick={handleClose}
-              className="flex-1 py-3.5 rounded-xl text-[15px] font-semibold bg-primary text-primary-foreground"
+              className="pressable flex-1 py-3.5 rounded-xl text-[15px] font-semibold bg-primary text-primary-foreground"
             >
               수정하기
             </button>
@@ -227,6 +227,7 @@ function ChecklistCardView({ card }: { card: ChecklistCard }) {
             const isActive = tab.id === activeTab;
             return (
               <button
+                className="pressable"
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, gap: '4px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
@@ -295,12 +296,13 @@ function ChecklistCardView({ card }: { card: ChecklistCard }) {
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'clamp(10px, 2.9vw, 12px) clamp(12px, 3.5vw, 14px)', borderRadius: '10px', border: '1px solid #EBEBEB', backgroundColor: '#FFFFFF' }}
               >
                 <span style={{ fontSize: 'clamp(13px, 3.7vw, 14px)', color: '#19191B', letterSpacing: '-0.02em' }}>{item.text}</span>
-                <button onClick={() => handleEdit(item.text)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+                <button className="pressable" onClick={() => handleEdit(item.text)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
                   <Pencil style={{ width: '15px', height: '15px', color: '#B0B3BB' }} />
                 </button>
               </div>
             ))}
             <button
+              className="pressable"
               onClick={() => setRegisterOpen(true)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', padding: 'clamp(10px, 2.9vw, 12px)', borderRadius: '10px', border: '1.5px dashed #DBDCDF', background: 'none', cursor: 'pointer', fontSize: 'clamp(12px, 3.5vw, 13px)', color: '#9EA3AD', letterSpacing: '-0.02em', flexShrink: 0 }}
             >
@@ -365,7 +367,7 @@ export default function ChecklistSection({ cards }: ChecklistSectionProps) {
         <div className="flex items-center gap-1">
           <h2 style={{ fontSize: 'clamp(18px, 5.3vw, 20px)', fontWeight: 700, color: '#19191B', letterSpacing: '-0.02em' }}>직원 체크 리스트</h2>
           <button onClick={() => setInfoOpen(true)}>
-            <Info className="w-3.5 h-3.5 text-muted-foreground" />
+            <Info className="pressable w-3.5 h-3.5 text-muted-foreground" />
           </button>
         </div>
         <div />

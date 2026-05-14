@@ -24,7 +24,7 @@ const AccountSelector = ({ open, accounts, selectedId, onSelect, onClose }: Acco
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={onClose}>
       <div
         className="w-full max-w-lg rounded-t-3xl bg-card px-5 pb-8 pt-6 animate-in slide-in-from-bottom"
         onClick={(e) => e.stopPropagation()}

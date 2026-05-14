@@ -18,7 +18,7 @@ export default function OpenCamera() {
     <div className="p-4">
       <button
         onClick={takePhoto}
-        className="bg-primary text-white px-4 py-2 rounded-lg"
+        className="pressable bg-primary text-white px-4 py-2 rounded-lg"
       >
         사진 찍기
       </button>

@@ -45,7 +45,7 @@ const NotificationScheduleAdded = () => {
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col bg-card">
       <div className="flex items-center gap-2 px-2 pt-4 pb-2">
-        <button onClick={() => navigate(-1)} className="p-1 flex-shrink-0">
+        <button onClick={() => navigate(-1)} className="pressable p-1 flex-shrink-0">
           <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>알림 상세</h1>
@@ -67,7 +67,7 @@ const NotificationScheduleAdded = () => {
       </div>
 
       <div className="px-5 pb-8 pt-4">
-        <button onClick={() => navigateTo("/schedule", "일정 확인으로 이동했어요", { showLoading: true, forceAll: true })} className="w-full rounded-2xl bg-primary py-4 text-[16px] font-bold text-primary-foreground">
+        <button onClick={() => navigateTo("/schedule", "일정 확인으로 이동했어요", { showLoading: true, forceAll: true })} className="pressable w-full rounded-2xl bg-primary py-4 text-[16px] font-bold text-primary-foreground">
           일정 확인하기
         </button>
       </div>

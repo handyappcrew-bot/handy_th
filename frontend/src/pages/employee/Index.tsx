@@ -18,36 +18,23 @@ import AccountSelector, { type AccountType } from "@/components/home/AccountSele
 import { breakEnd, breakStart, clockIn, clockOut, getTodayWork, getWorkStatus, getWeeklyWork, getStoreNotice } from "@/api/employee";
 import { getNotification, markNotificationRead } from "@/api/public";
 import { getMe, getMyStores } from "@/api/public";
+import AdBanner from "@/components/AdBanner";
 
 
-// 구글 애드센스 광고 컴포넌트
-const AdBanner = () => {
-  useEffect(() => {
-    try {
-      // @ts-ignore
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (e) {
-      console.error("AdSense error:", e);
-    }
-  }, []);
-  return (
-    <div className="px-5 w-full">
-      <div className="overflow-hidden rounded-2xl bg-white/50 flex items-center justify-center" style={{ minHeight: '100px' }}>
-        <ins
-          className="adsbygoogle"
-          style={{ display: "block", width: "100%", borderRadius: "16px" }}
-          data-ad-client="ca-pub-2835570189350834"
-          data-ad-slot="YOUR_AD_SLOT_ID"
-          data-ad-format="horizontal"
-          data-full-width-responsive="false"
-        ></ins>
-      </div>
-    </div>
-  );
+const getMonthData = () => {
+  const now = new Date();
+  const month = `${now.getMonth() + 1}월`;
+  const firstDay = `${String(now.getMonth() + 1).padStart(2, "0")}.01`;
+  const today = `${String(now.getMonth() + 1).padStart(2, "0")}.${String(now.getDate()).padStart(2, "0")}`;
+  return {
+    userName: "",
+    month,
+    totalAmount: 0,
+    stores: [{ name: "", dateRange: `${firstDay}~${today}`, amount: 0, hours: "" }],
+  };
 };
 
-
-const getMonthLabel = () => `${new Date().getMonth() + 1}월`;
+const MOCK_SALARY = getMonthData();
 
 const formatDate = () => {
   const now = new Date();
@@ -84,7 +71,6 @@ const Index = () => {
   const [storeNotices, setStoreNotices] = useState<any[]>([]);
   const [weeklyWork, setWeeklyWork] = useState<any[]>([]);
   const [storeLocation, setStoreLocation] = useState<{ lat: number; lng: number; radius: number } | null>(null);
-  const [salaryPreview, setSalaryPreview] = useState<{ total_hours: number; estimated_salary: number } | null>(null);
 
   const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>("before_work");
   const [clockInTime, setClockInTime] = useState<string | undefined>();
@@ -99,7 +85,6 @@ const Index = () => {
       try {
         const [me, stores] = await Promise.all([getMe(), getMyStores()]);
         setMemberName(me.name);
-        localStorage.setItem("currentUserName", me.name);
         const mapped: AccountType[] = stores.map((s: any) => ({
           id: String(s.store_member_id),
           storeId: s.store_id,
@@ -107,17 +92,40 @@ const Index = () => {
           role: s.role,
           employeeType: s.employee_type ?? "",
         }));
-        setAccounts(mapped); // 여기 추가
+        setAccounts(mapped);
+
+        // 세션 유지 우선순위 — owner/Index.tsx와 동일 로직
+        const savedStoreMemberId = localStorage.getItem("currentStoreMemberId");
         const savedStoreId = localStorage.getItem("currentStoreId");
-        const savedAccount = savedStoreId ? mapped.find(a => String(a.storeId) === savedStoreId) : null;
-        const employeeAccount = mapped.find(a => a.role === "employee");
-        const firstAccount = savedAccount ?? employeeAccount ?? mapped[0] ?? null;
+
+        let target = savedStoreMemberId
+          ? mapped.find(a => a.id === savedStoreMemberId)
+          : undefined;
+        if (!target && savedStoreId) {
+          target = mapped.find(
+            a => String(a.storeId) === savedStoreId && a.role === "employee",
+          );
+        }
+        const fallback = mapped.find(a => a.role === "employee") ?? mapped[0];
+        const firstAccount = target ?? fallback ?? null;
+
         setSelectedAccount(firstAccount);
         localStorage.setItem("currentRole", firstAccount?.role ?? "employee");
         localStorage.setItem("currentStoreId", String(firstAccount?.storeId ?? ""));
-        localStorage.setItem("currentEmployeeId", String(firstAccount?.id ?? ""));
+        localStorage.setItem("currentStoreMemberId", String(firstAccount?.id ?? ""));
+        localStorage.setItem("currentMemberId", String(me.id));
       } catch (err) {
-        navigate("/");
+        if (import.meta.env.PROD) {
+          navigate("/");
+        } else {
+          // 로컬 개발: 백엔드 없이 화면 렌더링용 임시 계정
+          const mockEmployee: AccountType = { id: "1", storeId: 1, storeName: "테스트 매장", role: "employee", employeeType: "알바생" };
+          const mockOwner: AccountType = { id: "2", storeId: 1, storeName: "테스트 매장", role: "owner", employeeType: "" };
+          setSelectedAccount(mockEmployee);
+          setAccounts([mockEmployee, mockOwner]);
+          localStorage.setItem("currentRole", "employee");
+          localStorage.setItem("currentStoreId", "1");
+        }
       } finally {
         setAuthLoaded(true);
       }
@@ -131,7 +139,7 @@ const Index = () => {
     const storeId = selectedAccount.storeId;
 
     const fetchAll = async () => {
-      const [todayWork, workStatus, weeklyWork, storeNotice, storeLocation, notifications, salary] =
+      const [todayWork, workStatus, weeklyWork, storeNotice, storeLocation, notifications] =
         await Promise.allSettled([
           getTodayWork(storeId),
           getWorkStatus(storeId),
@@ -144,12 +152,6 @@ const Index = () => {
             credentials: 'include',
           }).then(r => r.json()),
           getNotification(true, storeId),
-          fetch('/api/employee/salary/preview', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ store_id: storeId }),
-            credentials: 'include',
-          }).then(r => r.ok ? r.json() : null),
         ]);
 
       // 오늘 근무일정
@@ -176,9 +178,6 @@ const Index = () => {
       // 알림
       if (notifications.status === 'fulfilled') setNotices(notifications.value);
 
-      // 급여 미리보기
-      if (salary.status === 'fulfilled' && salary.value) setSalaryPreview(salary.value);
-
     };
 
     fetchAll();
@@ -194,13 +193,12 @@ const Index = () => {
     return `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
   };
 
-  const employeeId = selectedAccount?.storeId ?? 0;
+  const employeeId = Number(selectedAccount?.id ?? 0);
 
   const handleAccountSelect = (account: AccountType) => {
     localStorage.setItem("currentRole", account.role);
     localStorage.setItem("currentStoreId", String(account.storeId));
-    localStorage.setItem("currentEmployeeId", String(account.id));
-    if (account.role === "사장") {
+    if (account.role === "owner") {
       navigate("/owner/home", { state: { storeMemberId: account.id } });
     } else {
       setSelectedAccount(account);
@@ -437,18 +435,9 @@ const Index = () => {
       <div className="mt-8 mb-8">
         <SalaryPreview
           userName={memberName}
-          month={getMonthLabel()}
-          totalAmount={salaryPreview?.estimated_salary ?? 0}
-          stores={[{
-            name: selectedAccount.storeName,
-            dateRange: (() => {
-              const now = new Date();
-              const mm = String(now.getMonth() + 1).padStart(2, "0");
-              return `${mm}.01~${mm}.${String(now.getDate()).padStart(2, "0")}`;
-            })(),
-            amount: salaryPreview?.estimated_salary ?? 0,
-            hours: salaryPreview ? `${salaryPreview.total_hours}h` : "",
-          }]}
+          month={MOCK_SALARY.month}
+          totalAmount={MOCK_SALARY.totalAmount}
+          stores={MOCK_SALARY.stores}
         />
       </div>
 

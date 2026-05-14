@@ -40,18 +40,18 @@ const BankSelectSheet = ({ open, onClose, onSelect }: BankSelectSheetProps) => {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 z-40"
+        className="fixed inset-0 bg-black/50 z-[100] touch-none sheet-overlay"
         onClick={onClose}
       />
 
       {/* Sheet */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 bg-background rounded-t-2xl max-h-[80vh] flex flex-col w-full max-w-[375px]">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-[110] bg-background rounded-t-2xl max-h-[80vh] flex flex-col w-full max-w-[375px]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4">
           <span className="text-[16px] font-semibold text-foreground">
             은행을 선택해주세요
           </span>
-          <button onClick={onClose}>
+          <button onClick={onClose} className="pressable">
             <X className="w-5 h-5 text-foreground" />
           </button>
         </div>
@@ -63,7 +63,7 @@ const BankSelectSheet = ({ open, onClose, onSelect }: BankSelectSheetProps) => {
               <button
                 key={bank.name}
                 onClick={() => onSelect(bank.name)}
-                className="flex flex-col items-center gap-2 py-4 rounded-xl bg-[hsl(0,0%,97%)] hover:bg-[hsl(0,0%,94%)] transition-colors"
+                className="pressable flex flex-col items-center gap-2 py-4 rounded-xl bg-[hsl(0,0%,97%)] hover:bg-[hsl(0,0%,94%)] transition-colors"
               >
                 {/* Bank image placeholder */}
                 <div className="w-10 h-10 rounded-full bg-[hsl(0,0%,88%)] flex items-center justify-center">

@@ -50,7 +50,7 @@ const SideMenu = ({ open, onClose, memberName, employeeType }: SideMenuProps) =>
               <p className="text-[14px] text-muted-foreground">{employeeType}</p>
             </div>
           </div>
-          <button onClick={onClose} className="mt-2">
+          <button onClick={onClose} className="pressable mt-2">
             <X className="h-6 w-6 text-foreground" />
           </button>
         </div>

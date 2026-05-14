@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronLeft, X, ChevronRight, Camera, Check } from "lucide-react";
+import { ChevronLeft, X, ChevronRight, Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Drawer, DrawerContent, DrawerClose } from "@/components/ui/drawer";
+import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { getFeedback, postFeedback } from "@/api/public";
 
@@ -56,10 +56,13 @@ const Feedback = () => {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [deleteTargetIndex, setDeleteTargetIndex] = useState<number | null>(null);
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(true);
   const albumInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const isFormValid = title.trim().length > 0 && content.trim().length > 0;
+
+  const member_id = 1; // TODO: JWT에서 꺼내오기
 
   useEffect(() => {
     const fetchFeedback = async () => {
@@ -68,6 +71,8 @@ const Feedback = () => {
         setFeedbackList(data.map(mapFeedback));
       } catch (err) {
         console.error(err);
+      } finally {
+        setFeedbackLoading(false);
       }
     };
     fetchFeedback();
@@ -93,7 +98,7 @@ const Feedback = () => {
 
   const handleSubmit = async () => {
     try {
-      await postFeedback(title.trim(), content.trim(), images);
+      await postFeedback(member_id, title.trim(), content.trim(), images);
       setTitle(""); setContent(""); setImages([]);
       setShowSubmitDialog(false);
       // 목록 갱신
@@ -105,25 +110,16 @@ const Feedback = () => {
     }
   };
 
-  const sheetBtnHandlers = (onClick: () => void) => ({
-    onClick,
-    onMouseDown: (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = '#E8F3FF'; e.currentTarget.style.color = '#4261FF'; (e.currentTarget.querySelector('.check-icon') as HTMLElement).style.display = 'block'; },
-    onMouseUp: (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#19191B'; (e.currentTarget.querySelector('.check-icon') as HTMLElement).style.display = 'none'; },
-    onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#19191B'; (e.currentTarget.querySelector('.check-icon') as HTMLElement).style.display = 'none'; },
-    onTouchStart: (e: React.TouchEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = '#E8F3FF'; e.currentTarget.style.color = '#4261FF'; (e.currentTarget.querySelector('.check-icon') as HTMLElement).style.display = 'block'; },
-    onTouchEnd: (e: React.TouchEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#19191B'; (e.currentTarget.querySelector('.check-icon') as HTMLElement).style.display = 'none'; },
-  });
-
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto flex flex-col">
       <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => navigate(-1)} className="p-1"><ChevronLeft className="w-6 h-6 text-foreground" /></button>
+        <button onClick={() => navigate(-1)} className="pressable p-1"><ChevronLeft className="w-6 h-6 text-foreground" /></button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>고객 건의함</h1>
       </div>
 
       <div className="flex px-5" style={{ gap: '36px', borderBottom: '1px solid #AAB4BF', backgroundColor: '#FFFFFF' }}>
         {(["submit", "history"] as const).map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className="py-3 relative"
+          <button key={tab} onClick={() => setActiveTab(tab)} className="pressable py-3 relative"
             style={{ fontSize: '16px', fontWeight: activeTab === tab ? 700 : 500, letterSpacing: '-0.02em', color: activeTab === tab ? '#4261FF' : '#AAB4BF' }}>
             {tab === "submit" ? "건의 접수" : "건의 내역"}
             {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-[3px] rounded-full" style={{ backgroundColor: '#4261FF' }} />}
@@ -154,7 +150,7 @@ const Feedback = () => {
               <div key={idx} className="relative w-[100px] h-[100px] rounded-xl overflow-hidden flex-shrink-0">
                 <img src={img} alt="" className="w-full h-full object-cover" />
                 <button onClick={() => { setDeleteTargetIndex(idx); setShowDeleteDialog(true); }}
-                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-foreground/60 flex items-center justify-center">
+                  className="pressable absolute top-2 right-2 w-6 h-6 rounded-full bg-foreground/60 flex items-center justify-center">
                   <X className="w-4 h-4 text-background" />
                 </button>
               </div>
@@ -169,7 +165,7 @@ const Feedback = () => {
           <span className="inline-block bg-muted rounded-full px-4 py-1.5 text-sm font-medium text-foreground mb-4">총 {feedbackList.length}건</span>
           <div className="space-y-3">
             {feedbackList.map((item) => (
-              <button key={item.id} onClick={() => navigate(`/feedback/${item.id}`, { state: item })} className="w-full text-left bg-muted rounded-xl px-5 py-4 flex items-center">
+              <button key={item.id} onClick={() => navigate(`/feedback/${item.id}`, { state: item })} className="pressable w-full text-left bg-muted rounded-xl px-5 py-4 flex items-center">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${item.status === "접수" ? "bg-primary/10 text-primary" : "bg-green-100 text-green-600"}`}>{item.status}</span>
@@ -180,7 +176,16 @@ const Feedback = () => {
                 <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               </button>
             ))}
-            {feedbackList.length === 0 && (
+            {feedbackLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <div style={{ display: 'flex', gap: '9px', alignItems: 'center' }}>
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'linear-gradient(135deg, #4261FF, #6b8cff)', animation: `navDotBounce 0.72s ease-in-out ${i * 0.12}s infinite` }} />
+                  ))}
+                </div>
+                <style>{`@keyframes navDotBounce { 0%, 80%, 100% { transform: scale(0.6) translateY(0); opacity: 0.3; } 40% { transform: scale(1.1) translateY(-4px); opacity: 1; } }`}</style>
+              </div>
+            ) : feedbackList.length === 0 && (
               <div className="flex items-center justify-center py-20">
                 <span style={{ fontSize: '14px', color: '#AAB4BF' }}>건의 내역이 없어요.</span>
               </div>
@@ -192,29 +197,29 @@ const Feedback = () => {
       <input ref={albumInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
 
-      <Drawer open={showUploadSheet} onOpenChange={setShowUploadSheet}>
-        <DrawerContent className="[&>div:first-child]:hidden" style={{ width: '100%', height: '212px', borderRadius: '20px 20px 0 0', backgroundColor: '#FFFFFF', padding: '0' }}>
-          <div style={{ paddingLeft: '16px', paddingRight: '16px' }}>
-            <div className="flex items-center justify-between" style={{ paddingTop: '30px', paddingBottom: '20px', paddingLeft: '4px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>사진 업로드하기</h2>
-              <DrawerClose asChild>
-                <button style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+      {showUploadSheet && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowUploadSheet(false)}>
+          <div className="w-full max-w-[430px] rounded-t-[20px] bg-white animate-in slide-in-from-bottom" onClick={e => e.stopPropagation()}>
+            <div style={{ paddingLeft: '20px', paddingRight: '20px' }}>
+              <div className="flex items-center justify-between" style={{ paddingTop: '30px', paddingBottom: '20px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>사진 업로드하기</h2>
+                <button className="pressable p-1" onClick={() => setShowUploadSheet(false)}>
                   <X style={{ width: '20px', height: '20px', color: '#19191B' }} strokeWidth={2.5} />
                 </button>
-              </DrawerClose>
-            </div>
-            <div className="flex flex-col" style={{ gap: '4px', paddingBottom: '16px' }}>
-              {[{ label: '앨범에서 선택하기', onClick: () => albumInputRef.current?.click() }, { label: '카메라 촬영하기', onClick: () => cameraInputRef.current?.click() }].map(({ label, onClick }) => (
-                <button key={label} {...sheetBtnHandlers(onClick)}
-                  style={{ width: '100%', height: '48px', borderRadius: '10px', backgroundColor: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '16px', paddingRight: '16px', fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#19191B', transition: 'background-color 0.1s' }}>
-                  <span>{label}</span>
-                  <Check className="check-icon" style={{ display: 'none', width: '16px', height: '16px', color: '#4261FF' }} />
-                </button>
-              ))}
+              </div>
+              <div className="flex flex-col" style={{ gap: '4px', paddingBottom: '20px' }}>
+                {[{ label: '앨범에서 선택하기', onClick: () => albumInputRef.current?.click() }, { label: '카메라 촬영하기', onClick: () => cameraInputRef.current?.click() }].map(({ label, onClick }) => (
+                  <button key={label} onClick={onClick} className="pressable"
+                    style={{ width: '100%', height: '48px', borderRadius: '10px', display: 'flex', alignItems: 'center', paddingLeft: '4px', fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#19191B' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </DrawerContent>
-      </Drawer>
+        </div>,
+        document.body
+      )}
 
       <ConfirmDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} title="사진 삭제"
         description={<>업로드하신 사진을 삭제하시겠어요?<br />삭제 시 복구가 불가해요</>}

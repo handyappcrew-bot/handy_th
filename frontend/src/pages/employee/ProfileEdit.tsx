@@ -51,7 +51,6 @@ const ProfileEdit = () => {
   const { toast } = useToast();
   const { state } = useLocation();
   const profileData: ProfileData = state?.profileData;
-  const storeId: number = state?.storeId ?? Number(localStorage.getItem("currentStoreId") ?? 1);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docFileInputRef = useRef<HTMLInputElement>(null);
@@ -147,7 +146,7 @@ const ProfileEdit = () => {
 
   const handleEditConfirm = async () => {
     try {
-      if (resetImage) await deleteEmployeeProfileImage(storeId);
+      if (resetImage) await deleteEmployeeProfileImage();
       const result = await changeInfo(
         name,
         bank,
@@ -158,8 +157,7 @@ const ProfileEdit = () => {
           resume: documentItems.find(d => d.key === "resume")?.file ?? null,
           employment_contract: documentItems.find(d => d.key === "employment_contract")?.file ?? null,
           health_certificate: documentItems.find(d => d.key === "health_certificate")?.file ?? null,
-        },
-        storeId,
+        }
       );
       setEditConfirmOpen(false);
       if (resetImage) {

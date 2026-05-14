@@ -99,7 +99,7 @@ export default function AccountWithdrawal() {
         <div className="px-5 pb-8">
           <button
             onClick={() => navigate("/")}
-            className="w-full py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-bold"
+            className="pressable w-full py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-bold"
           >
             확인
           </button>
@@ -114,7 +114,7 @@ export default function AccountWithdrawal() {
       {/* Header */}
       <div className="sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
       <div className="flex items-center h-14 px-5 border-b border-border">
-        <button onClick={handleBack} className="mr-2">
+        <button onClick={handleBack} className="pressable mr-2">
           <ChevronLeft className="w-6 h-6 text-foreground" />
         </button>
         <h1 className="text-[18px] font-bold text-foreground">회원 탈퇴</h1>
@@ -151,7 +151,7 @@ export default function AccountWithdrawal() {
           <div className="px-5 pb-8">
             <button
               onClick={() => setAgreed(!agreed)}
-              className="flex items-start gap-3 mb-4"
+              className="pressable flex items-start gap-3 mb-4"
             >
               <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 ${agreed ? "bg-primary border-primary" : "border-border"}`}>
                 {agreed && <Check className="w-4 h-4 text-primary-foreground" />}
@@ -164,14 +164,14 @@ export default function AccountWithdrawal() {
             <div className="flex gap-3">
               <button
                 onClick={() => navigate(-1)}
-                className="flex-1 py-3.5 rounded-xl border border-border text-[15px] text-foreground font-medium bg-primary/5"
+                className="pressable flex-1 py-3.5 rounded-xl border border-border text-[15px] text-foreground font-medium bg-primary/5"
               >
                 취소
               </button>
               <button
                 onClick={() => setStep("stores")}
                 disabled={!agreed}
-                className="flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-bold disabled:opacity-40"
+                className="flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-bold disabled:bg-[#DBDCDF] disabled:text-white"
               >
                 다음
               </button>
@@ -211,13 +211,13 @@ export default function AccountWithdrawal() {
             <div className="flex gap-3">
               <button
                 onClick={() => setStep("caution")}
-                className="flex-1 py-3.5 rounded-xl border border-border text-[15px] text-foreground font-medium bg-primary/5"
+                className="pressable flex-1 py-3.5 rounded-xl border border-border text-[15px] text-foreground font-medium bg-primary/5"
               >
                 이전
               </button>
               <button
                 onClick={() => setStep("reason")}
-                className="flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-bold"
+                className="pressable flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-bold"
               >
                 다음
               </button>
@@ -239,7 +239,7 @@ export default function AccountWithdrawal() {
                 <button
                   key={reason}
                   onClick={() => setSelectedReason(reason)}
-                  className="flex items-center gap-3 w-full py-4"
+                  className="pressable flex items-center gap-3 w-full py-4"
                 >
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedReason === reason ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
                     {selectedReason === reason && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
@@ -266,14 +266,14 @@ export default function AccountWithdrawal() {
             <div className="flex gap-3">
               <button
                 onClick={() => setStep("stores")}
-                className="flex-1 py-3.5 rounded-xl border border-border text-[15px] text-foreground font-medium bg-primary/5"
+                className="pressable flex-1 py-3.5 rounded-xl border border-border text-[15px] text-foreground font-medium bg-primary/5"
               >
                 이전
               </button>
               <button
                 onClick={() => setShowConfirmPopup(true)}
                 disabled={!canWithdraw}
-                className="flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-bold disabled:opacity-40"
+                className="flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-bold disabled:bg-[#DBDCDF] disabled:text-white"
               >
                 탈퇴하기
               </button>

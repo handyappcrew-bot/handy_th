@@ -34,7 +34,7 @@ function SelectDrawer({
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 20px 20px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B" }}>{title}</h2>
@@ -90,7 +90,7 @@ function TimePickerDrawer({
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 20px 20px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B" }}>{title}</h2>
@@ -209,7 +209,7 @@ export default function StoreHoursParts() {
               <p className="text-[13px]" style={{ color: '#AAB4BF', marginBottom: '8px' }}>*매장에서 사용하는 파트 용어를 선택해주세요 (예: 오픈, 오전, 1교대)</p>
               <button
                 onClick={() => setDrawerType("morningName")}
-                className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
+                className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
               >
                 <span className={morningName ? "text-foreground" : "text-muted-foreground"}>
                   {morningName || "오전 파트명 선택"}
@@ -224,7 +224,7 @@ export default function StoreHoursParts() {
               </label>
               <button
                 onClick={() => setDrawerType("morningStart")}
-                className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
+                className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
               >
                 <span className={morningStart ? "text-foreground" : "text-muted-foreground"}>
                   {morningStart || "오전 파트 시작 시간 입력"}
@@ -239,7 +239,7 @@ export default function StoreHoursParts() {
               </label>
               <button
                 onClick={() => setDrawerType("morningEnd")}
-                className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
+                className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
               >
                 <span className={morningEnd ? "text-foreground" : "text-muted-foreground"}>
                   {morningEnd || "오전 파트 종료 시간 입력"}
@@ -259,7 +259,7 @@ export default function StoreHoursParts() {
               </label>
               <button
                 onClick={() => setDrawerType("afternoonUse")}
-                className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
+                className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
               >
                 <span className={afternoonUse ? "text-foreground" : "text-muted-foreground"}>
                   {afternoonUse || "오후 파트 여부 선택"}
@@ -280,7 +280,7 @@ export default function StoreHoursParts() {
                   <p className="text-[13px]" style={{ color: '#AAB4BF', marginBottom: '8px' }}>*매장에서 사용하는 파트 용어를 선택해주세요 (예: 미들, 오후, 2교대)</p>
                   <button
                     onClick={() => setDrawerType("afternoonName")}
-                    className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
+                    className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
                   >
                     <span className={afternoonName ? "text-foreground" : "text-muted-foreground"}>
                       {afternoonName || "오후 파트명 선택"}
@@ -295,7 +295,7 @@ export default function StoreHoursParts() {
                   </label>
                   <button
                     onClick={() => setDrawerType("afternoonStart")}
-                    className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
+                    className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
                   >
                     <span className={afternoonStart ? "text-foreground" : "text-muted-foreground"}>
                       {afternoonStart || "오후 파트 시작 시간 입력"}
@@ -310,7 +310,7 @@ export default function StoreHoursParts() {
                   </label>
                   <button
                     onClick={() => setDrawerType("afternoonEnd")}
-                    className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
+                    className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
                   >
                     <span className={afternoonEnd ? "text-foreground" : "text-muted-foreground"}>
                       {afternoonEnd || "오후 파트 종료 시간 입력"}
@@ -333,7 +333,7 @@ export default function StoreHoursParts() {
               <p className="text-[13px]" style={{ color: '#AAB4BF', marginBottom: '8px' }}>*매장에서 사용하는 파트 용어를 선택해주세요 (예: 마감, 저녁, 3교대)</p>
               <button
                 onClick={() => setDrawerType("eveningName")}
-                className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
+                className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
               >
                 <span className={eveningName ? "text-foreground" : "text-muted-foreground"}>
                   {eveningName || "저녁 파트명 선택"}
@@ -348,7 +348,7 @@ export default function StoreHoursParts() {
               </label>
               <button
                 onClick={() => setDrawerType("eveningStart")}
-                className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
+                className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
               >
                 <span className={eveningStart ? "text-foreground" : "text-muted-foreground"}>
                   {eveningStart || "저녁 파트 시작 시간 입력"}
@@ -363,7 +363,7 @@ export default function StoreHoursParts() {
               </label>
               <button
                 onClick={() => setDrawerType("eveningEnd")}
-                className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
+                className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}
               >
                 <span className={eveningEnd ? "text-foreground" : "text-muted-foreground"}>
                   {eveningEnd || "저녁 파트 종료 시간 입력"}
@@ -388,7 +388,7 @@ export default function StoreHoursParts() {
         )}
 
         {confirmOpen && createPortal(
-          <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center" onClick={() => setConfirmOpen(false)}>
+          <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center" onClick={() => setConfirmOpen(false)}>
             <div style={{ width: "calc(100% - 48px)", maxWidth: "340px", backgroundColor: "#FFFFFF", borderRadius: "20px", display: "flex", flexDirection: "column", padding: "28px 16px 16px" }} onClick={e => e.stopPropagation()}>
               <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#19191B", textAlign: "center", marginBottom: "4px" }}>운영 시간 설정 저장</h3>
               <p style={{ fontSize: "13px", color: "#70737B", textAlign: "center", marginBottom: "16px" }}>아래 내용으로 저장할게요. 확인해주세요.</p>
@@ -439,8 +439,8 @@ export default function StoreHoursParts() {
               </div>
 
               <div style={{ display: "flex", gap: "10px" }}>
-                <button onClick={() => setConfirmOpen(false)} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#70737B" }}>취소</button>
-                <button onClick={handleSave} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF" }}>저장하기</button>
+                <button className="pressable" onClick={() => setConfirmOpen(false)} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#70737B" }}>취소</button>
+                <button className="pressable" onClick={handleSave} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF" }}>저장하기</button>
               </div>
             </div>
           </div>,

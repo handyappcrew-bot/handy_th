@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, Plus, X, UserPlus, UserMinus, C
 import ScheduleMonthlyView from "@/components/schedule/ScheduleMonthlyView";
 import ScheduleWeeklyView from "@/components/schedule/ScheduleWeeklyView";
 // ScheduleDaySheet 인라인으로 대체
-import ScheduleChangeRequestTab from "@/components/schedule/ScheduleChangeRequestTab";
+import ScheduleChangeRequestTab, { MOCK_REQUESTS } from "@/components/schedule/ScheduleChangeRequestTab";
 import DailyScheduleAdd from "@/components/schedule/DailyScheduleAdd";
 import DailyScheduleDelete from "@/components/schedule/DailyScheduleDelete";
 import DailyVacationSetting from "@/components/schedule/DailyVacationSetting";
@@ -16,13 +16,12 @@ export default function ScheduleManagement() {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") === "일정변경요청" ? "일정 변경 요청" : "주간 일정";
   const [activeTab, setActiveTab] = useState<"주간 일정" | "월간 일정" | "일정 변경 요청">(initialTab as "주간 일정" | "월간 일정" | "일정 변경 요청");
-  const [changeRequestCount, setChangeRequestCount] = useState(0);
+  const [changeRequestCount, setChangeRequestCount] = useState(MOCK_REQUESTS.length);
   const viewMode = activeTab === "월간 일정" ? "월간" : "주간";
   const [currentDate, setCurrentDate] = useState(new Date());
   const [fabOpen, setFabOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [daySchedule, setDaySchedule] = useState<any[]>([]);
   const [showDailyAdd, setShowDailyAdd] = useState(false);
   const [showDailyDelete, setShowDailyDelete] = useState(false);
   const [showVacation, setShowVacation] = useState(false);
@@ -38,19 +37,6 @@ export default function ScheduleManagement() {
     }
     return () => { document.body.removeAttribute('data-overlay-open'); };
   }, [anyDailyOpen]);
-
-  useEffect(() => {
-    if (!selectedDay) return;
-    const storeId = localStorage.getItem("currentStoreId");
-    if (!storeId) return;
-    const y = selectedDay.getFullYear();
-    const m = selectedDay.getMonth() + 1;
-    const d = selectedDay.getDate();
-    fetch(`/api/employee/schedule/${storeId}/detail?year=${y}&month=${m}&day=${d}`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => setDaySchedule(data))
-      .catch(() => setDaySchedule([]));
-  }, [selectedDay]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -149,7 +135,7 @@ export default function ScheduleManagement() {
           )}
 
           {/* FAB */}
-          {fabOpen && createPortal(
+          {fabOpen && (
             <>
               {/* 딤드 오버레이 - 바텀네비 포함 전체 덮음 */}
               <div
@@ -171,6 +157,7 @@ export default function ScheduleManagement() {
               }}>
                 {fabActions.map((action, i) => (
                   <button
+                    className="pressable"
                     key={i}
                     onClick={() => {
                       if (action.key === "add") { setFabOpen(false); setShowDailyAdd(true); }
@@ -216,14 +203,13 @@ export default function ScheduleManagement() {
                   </button>
                 ))}
               </div>
-              
-            </>,
-            document.body
+            </>
           )}
           {!showDailyAdd && !showDailyDelete && !showVacation && !showScheduleChange && (
           <div style={{ position: 'fixed', bottom: 'calc(74px + env(safe-area-inset-bottom) + 16px)', right: 'clamp(14px, 4vw, 20px)', zIndex: 201 }}>
             {/* 메인 FAB 버튼 */}
             <button
+              className="pressable"
               onClick={() => setFabOpen(!fabOpen)}
               style={{
                 width: 'clamp(52px, 14.9vw, 56px)',
@@ -253,44 +239,41 @@ export default function ScheduleManagement() {
 
       {/* Day Detail Bottom Sheet */}
       {!!selectedDay && createPortal(
-        <div className="fixed inset-0 z-[210] flex items-end justify-center bg-black/50" onClick={() => setSelectedDay(null)}>
+        <div className="fixed inset-0 z-[210] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setSelectedDay(null)}>
           <div className="w-full max-w-lg rounded-t-2xl bg-white shadow-xl px-6 pb-8 pt-6" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-start justify-between mb-6">
               <h2 className="text-[22px] font-bold text-foreground">
                 {`${selectedDay.getFullYear()}년 ${selectedDay.getMonth() + 1}월 ${selectedDay.getDate()}일 (${["일","월","화","수","목","금","토"][selectedDay.getDay()]})`}
               </h2>
-              <button onClick={() => setSelectedDay(null)} className="mt-1">
+              <button onClick={() => setSelectedDay(null)} className="pressable mt-1">
                 <X className="h-6 w-6 text-foreground" />
               </button>
             </div>
             {/* Shift entries */}
             <div className="space-y-5">
-              {daySchedule.length === 0 ? (
-                <p className="text-[14px] text-muted-foreground">등록된 일정이 없습니다.</p>
-              ) : daySchedule.map((entry: any, i: number) => {
-                const shiftColors: Record<string, { bg: string; color: string }> = {
-                  "오픈": { bg: "#FDF9DF", color: "#FFB300" },
-                  "미들": { bg: "#ECFFF1", color: "#1EDC83" },
-                  "마감": { bg: "#E8F9FF", color: "#14C1FA" },
-                  "일일": { bg: "#EEF1FF", color: "#4261FF" },
-                };
-                const shiftStyle = shiftColors[entry.shift_name] ?? { bg: "#F0F0F0", color: "#666666" };
-                const timeStr = entry.start_time && entry.end_time ? `${entry.start_time} - ${entry.end_time}` : '';
-                const names = (entry.employees || []).map((e: any) => e.name);
+              {([
+                { shift: "오픈" as const, slots: [{ time: "08:00 - 12:00", names: ["문자영", "문자일"] }] },
+                { shift: "미들" as const, slots: [{ time: "12:00 - 16:00", names: ["문자이", "문자삼"] }, { time: "15:00 - 19:00", names: ["문자민", "문자통"] }] },
+                { shift: "마감" as const, slots: [{ time: "18:00 - 22:00", names: ["문자사", "문자오"] }] },
+              ]).map((entry, i) => {
+                const shiftStyle = { "오픈": { bg: "#FDF9DF", color: "#FFB300" }, "미들": { bg: "#ECFFF1", color: "#1EDC83" }, "마감": { bg: "#E8F9FF", color: "#14C1FA" }, "일일": { bg: "#EEF1FF", color: "#4261FF" } }[entry.shift];
+                const totalCount = entry.slots.reduce((acc, s) => acc + s.names.length, 0);
                 return (
                   <div key={i}>
                     <div className="flex items-center gap-2 mb-2">
                       <span style={{ borderRadius: '4px', padding: '4px 8px', fontSize: '13px', fontWeight: 500, backgroundColor: shiftStyle.bg, color: shiftStyle.color }}>
-                        {entry.shift_name}
+                        {entry.shift}
                       </span>
-                      <span className="text-[13px] text-muted-foreground">{names.length}명</span>
+                      <span className="text-[13px] text-muted-foreground">{totalCount}명</span>
                     </div>
                     <div className="space-y-1 pl-2">
-                      <div className="flex items-start gap-3">
-                        {timeStr && <span className="text-[14px] text-muted-foreground whitespace-nowrap">{timeStr}</span>}
-                        <span className="text-[14px] font-medium text-foreground">{names.join(', ')}</span>
-                      </div>
+                      {entry.slots.map((slot, si) => (
+                        <div key={si} className="flex items-start gap-3">
+                          <span className="text-[14px] text-muted-foreground whitespace-nowrap">{slot.time}</span>
+                          <span className="text-[14px] font-medium text-foreground">{slot.names.join(', ')}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );
@@ -321,7 +304,7 @@ export default function ScheduleManagement() {
 
       {/* Month Picker Overlay */}
       {monthPickerOpen && createPortal(
-        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/50" onClick={() => setMonthPickerOpen(false)}>
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setMonthPickerOpen(false)}>
           <div className="relative rounded-2xl p-5 w-[320px] shadow-lg" style={{ backgroundColor: '#FFFFFF' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
               <button onClick={() => setPickerYear(p => p - 1)} className="pressable p-1"><ChevronLeft style={{ width: '20px', height: '20px', color: '#19191B' }} /></button>

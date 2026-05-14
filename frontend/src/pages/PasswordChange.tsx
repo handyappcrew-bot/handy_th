@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronLeft, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -16,10 +17,10 @@ const PwField = ({ label, value, onChange, show, onToggle, error }: {
       <input
         type={show ? "text" : "password"} value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={label + " 입력"}
+        placeholder={label.endsWith("입력") ? label : label + " 입력"}
         className={`w-full h-[52px] rounded-xl border px-4 pr-12 text-[16px] text-[hsl(210,5%,16%)] placeholder:text-muted-foreground focus:outline-none ${error ? "border-destructive" : "border-border focus:border-primary"}`}
       />
-      <button type="button" onClick={onToggle} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+      <button type="button" onClick={onToggle} className="pressable absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">
         {show ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
       </button>
     </div>
@@ -76,7 +77,7 @@ const PasswordChange = () => {
   return (
     <div className="min-h-screen max-w-[430px] mx-auto relative font-[Pretendard]" style={{ backgroundColor: '#FFFFFF' }}>
       <div className="sticky top-0 z-10 flex items-center gap-2 px-2 pt-4 pb-2" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => navigate(-1)} className="p-1"><ChevronLeft className="h-6 w-6 text-foreground" /></button>
+        <button onClick={() => navigate(-1)} className="pressable p-1"><ChevronLeft className="h-6 w-6 text-foreground" /></button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>비밀번호 변경</h1>
       </div>
 
@@ -86,19 +87,22 @@ const PasswordChange = () => {
         <div className="mt-8 space-y-6">
           <PwField label="기존 비밀번호" value={oldPassword} onChange={(v) => { setOldPassword(v); setOldPasswordError(undefined); }} show={showOld} onToggle={() => setShowOld(!showOld)}
             error={oldPasswordError ?? (submitted && !oldPassword ? "기존 비밀번호를 입력해주세요" : undefined)} />
-          <PwField label="새 비밀번호" value={newPassword} onChange={setNewPassword} show={showNew} onToggle={() => setShowNew(!showNew)}
+          <PwField label="새 비밀번호 입력" value={newPassword} onChange={setNewPassword} show={showNew} onToggle={() => setShowNew(!showNew)}
             error={submitted && !isNewValid && newPassword ? "올바르지 않은 비밀번호 형식이에요" : undefined} />
-          <PwField label="새비밀번호 확인" value={confirmPassword} onChange={setConfirmPassword} show={showConfirm} onToggle={() => setShowConfirm(!showConfirm)}
+          <PwField label="새 비밀번호 확인 입력" value={confirmPassword} onChange={setConfirmPassword} show={showConfirm} onToggle={() => setShowConfirm(!showConfirm)}
             error={submitted && !isConfirmMatch && confirmPassword ? "비밀번호가 일치하지 않아요" : undefined} />
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-[20px] pb-8" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={handleSubmit} disabled={!oldPassword || !newPassword || !confirmPassword || isLoading}
-          className={`w-full py-4 rounded-xl text-[16px] font-semibold ${oldPassword && newPassword && confirmPassword && !isLoading ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-          {isLoading ? "변경 중..." : "변경하기"}
-        </button>
-      </div>
+      {createPortal(
+        <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-[20px] pb-8" style={{ backgroundColor: '#FFFFFF' }}>
+          <button onClick={handleSubmit} disabled={!oldPassword || !newPassword || !confirmPassword || isLoading}
+            className={`w-full py-4 rounded-xl text-[16px] font-semibold ${oldPassword && newPassword && confirmPassword && !isLoading ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+            {isLoading ? "변경 중..." : "변경하기"}
+          </button>
+        </div>,
+        document.body
+      )}
 
       <ConfirmDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen} title="비밀번호 변경"
         description="새로 입력한 비밀번호로 변경 하시겠어요?"

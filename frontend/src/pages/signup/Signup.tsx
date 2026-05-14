@@ -1,21 +1,28 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 import { formatPhone, validatePhone } from "@/utils/valid";
+import { clearProfileInfoDraft } from "@/utils/signupDraft";
 
 const PhoneVerifyPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const type = params.get("type") || "normal";
+  const type = params.get("type") === "social" ? "social" : "general";
   const [phone, setPhone] = useState("");
   const [touched, setTouched] = useState(false);
-  const isValid = validatePhone(phone); 
+  const [phoneFocused, setPhoneFocused] = useState(false);
+  const isValid = validatePhone(phone);
   const [errorMsg, setErrorMsg] = useState("");
-  const showError = (touched && phone.length >= 10 && !isValid) || errorMsg;
-  
-  const handleChange = (e) => {
+  const showError = !!((touched && phone.length >= 10 && !isValid) || errorMsg);
+
+  // 회원가입 첫 진입: 이전 미완료 시도의 잔존 draft 정리
+  useEffect(() => {
+    clearProfileInfoDraft();
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value);
     setPhone(formatted);
     setTouched(true);
@@ -58,20 +65,19 @@ const PhoneVerifyPage = () => {
       console.error(err);
       setErrorMsg("네트워크 오류가 발생했어요. 다시 시도해주세요.");
     }
-
-
   };
 
   return (
     <PageLayout
+      headerTitle="회원가입"
       title={
         <>
-          <h1 className="text-[26px] font-bold leading-tight text-foreground">
+          <h2 className="text-[22px] font-bold leading-tight text-foreground">
             회원가입을 위해
-          </h1>
-          <h1 className="text-[26px] font-bold leading-tight text-foreground">
+          </h2>
+          <h2 className="text-[22px] font-bold leading-tight text-foreground">
             본인 인증을 해주세요
-          </h1>
+          </h2>
         </>
       }
       subtitle="휴대폰 번호를 아이디로 사용해요"
@@ -79,9 +85,9 @@ const PhoneVerifyPage = () => {
         <button
           disabled={!isValid}
           onClick={handleSubmit}
-          className={`w-full rounded-2xl py-4 text-[17px] font-semibold transition-colors ${isValid
+          className={`pressable w-full rounded-2xl py-4 text-[17px] font-semibold transition-colors ${isValid
             ? "bg-primary text-primary-foreground"
-            : "bg-secondary text-secondary-foreground"
+            : "btn-disabled"
             }`}
         >
           인증번호 문자 보내기
@@ -96,8 +102,16 @@ const PhoneVerifyPage = () => {
           type="tel"
           value={phone}
           onChange={handleChange}
+          onFocus={() => setPhoneFocused(true)}
+          onBlur={() => setPhoneFocused(false)}
           placeholder="숫자만 입력"
-          className={`mt-2 w-full rounded-xl border bg-background px-4 py-3.5 text-[16px] outline-none transition-colors ${showError ? "border-destructive" : "border-input"
+          style={{ outline: 'none', boxShadow: 'none' }}
+          className={`mt-2 w-full rounded-xl border-2 bg-background px-4 py-3.5 text-[16px] transition-colors ${
+            showError
+              ? "border-input-error"
+              : phoneFocused
+                ? "border-input-focus"
+                : "border-input"
             }`}
         />
         {showError && (

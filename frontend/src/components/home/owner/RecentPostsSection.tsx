@@ -20,7 +20,7 @@ export default function RecentPostsSection({ posts }: RecentPostsSectionProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h2 style={{ fontSize: 'clamp(18px, 5.3vw, 20px)', fontWeight: 700, color: '#19191B', letterSpacing: '-0.02em' }}>최근 등록된 게시글</h2>
-        <button onClick={() => navigate("/board")} className="flex items-center gap-0.5 text-[13px] text-muted-foreground">
+        <button onClick={() => navigate("/board")} className="pressable flex items-center gap-0.5 text-[13px] text-muted-foreground">
           게시판
           <ChevronRight className="w-4 h-4" />
         </button>

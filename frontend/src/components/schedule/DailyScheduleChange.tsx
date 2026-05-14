@@ -3,8 +3,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, Check, X } from "lucide-react";
 import { ko } from "date-fns/locale";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 function getCalendarDays(year: number, month: number) {
@@ -451,7 +449,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
                 <button
                   key={s.id}
                   onClick={() => setSelectedStaff(isSelected ? null : s.id)}
-                  className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl" style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
+                  className="pressable flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl" style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
                 >
                   <div className="w-[44px] h-[44px] rounded-full flex items-center justify-center text-white text-[16px] font-bold flex-shrink-0" style={{ backgroundColor: s.avatarColor }}>
                     {s.name.charAt(0)}
@@ -482,7 +480,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
           </p>
           <button
             onClick={() => setShowChangeTypeSheet(true)}
-            className="w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px', marginBottom: '4px' }}
+            className="pressable w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px', marginBottom: '4px' }}
           >
             <span style={{ fontSize: '15px', color: changeType ? '#19191B' : '#9EA3AD' }}>
               {changeType || "변경 유형 선택"}
@@ -503,7 +501,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
           <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '8px' }}>근무일 변경</p>
           <button
             onClick={() => setShowDatePicker(true)}
-            className="w-full flex items-center justify-between"
+            className="pressable w-full flex items-center justify-between"
             style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px', marginBottom: '30px', backgroundColor: '#FFFFFF' }}
           >
             <span style={{ fontSize: '15px', color: newDate ? '#19191B' : '#9EA3AD' }}>
@@ -513,14 +511,14 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
           </button>
           <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '16px' }}>출근 시간 변경</p>
           <div style={{ marginBottom: '30px' }}>
-            <button onClick={() => setActiveTimePicker('start')} className="w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
+            <button onClick={() => setActiveTimePicker('start')} className="pressable w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
               <span style={{ fontSize: '15px', color: newStartTime ? '#19191B' : '#9EA3AD' }}>{newStartTime || "출근 시간 선택"}</span>
               <ChevronDown style={{ width: '20px', height: '20px', color: '#9EA3AD' }} />
             </button>
           </div>
           <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '16px' }}>퇴근 시간 변경</p>
           <div style={{ marginBottom: '30px' }}>
-            <button onClick={() => setActiveTimePicker('end')} className="w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
+            <button onClick={() => setActiveTimePicker('end')} className="pressable w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
               <span style={{ fontSize: '15px', color: newEndTime ? '#19191B' : '#9EA3AD' }}>{newEndTime || "퇴근 시간 선택"}</span>
               <ChevronDown style={{ width: '20px', height: '20px', color: '#9EA3AD' }} />
             </button>
@@ -555,7 +553,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
                 <button
                   key={s.id}
                   onClick={() => setExchangeStaffId(isSelected ? null : s.id)}
-                  className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl" style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
+                  className="pressable flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl" style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
                 >
                   <div className="w-[44px] h-[44px] rounded-full flex items-center justify-center text-white text-[16px] font-bold flex-shrink-0" style={{ backgroundColor: s.avatarColor }}>
                     {s.name.charAt(0)}
@@ -727,7 +725,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
                 <button
                   key={s.id}
                   onClick={() => setSubstituteStaffId(isSelected ? null : s.id)}
-                  className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl" style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
+                  className="pressable flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl" style={isSelected ? { backgroundColor: 'rgba(66,97,255,0.05)' } : {}}
                 >
                   <div className="w-[44px] h-[44px] rounded-full flex items-center justify-center text-white text-[16px] font-bold flex-shrink-0" style={{ backgroundColor: s.avatarColor }}>
                     {s.name.charAt(0)}
@@ -819,14 +817,14 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
           </div>
           <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '16px' }}>출근 시간 변경</p>
           <div style={{ marginBottom: '30px' }}>
-            <button onClick={() => setActiveTimePicker('editStart')} className="w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
+            <button onClick={() => setActiveTimePicker('editStart')} className="pressable w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
               <span className="text-[15px] text-foreground">{editStaff1StartTime}</span>
               <ChevronDown style={{ width: '20px', height: '20px', color: '#9EA3AD' }} />
             </button>
           </div>
           <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '16px' }}>퇴근 시간 변경</p>
           <div style={{ marginBottom: '30px' }}>
-            <button onClick={() => setActiveTimePicker('editEnd')} className="w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
+            <button onClick={() => setActiveTimePicker('editEnd')} className="pressable w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
               <span className="text-[15px] text-foreground">{editStaff1EndTime}</span>
               <ChevronDown style={{ width: '20px', height: '20px', color: '#9EA3AD' }} />
             </button>
@@ -863,14 +861,14 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
           </div>
           <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '16px' }}>출근 시간 변경</p>
           <div style={{ marginBottom: '30px' }}>
-            <button onClick={() => setActiveTimePicker('editStart2')} className="w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
+            <button onClick={() => setActiveTimePicker('editStart2')} className="pressable w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
               <span className="text-[15px] text-foreground">{editStaff2StartTime}</span>
               <ChevronDown style={{ width: '20px', height: '20px', color: '#9EA3AD' }} />
             </button>
           </div>
           <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '16px' }}>퇴근 시간 변경</p>
           <div style={{ marginBottom: '30px' }}>
-            <button onClick={() => setActiveTimePicker('editEnd2')} className="w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
+            <button onClick={() => setActiveTimePicker('editEnd2')} className="pressable w-full flex items-center justify-between" style={{ height: '52px', padding: '0 16px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
               <span className="text-[15px] text-foreground">{editStaff2EndTime}</span>
               <ChevronDown style={{ width: '20px', height: '20px', color: '#9EA3AD' }} />
             </button>
@@ -883,6 +881,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
         <div style={{ padding: '16px 20px 32px' }}>
           <button
             onClick={() => setShowExchangeConfirm(true)}
+            className="pressable"
             style={{ width: '100%', height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, border: 'none', color: '#FFFFFF', backgroundColor: '#4261FF', cursor: 'pointer' }}
           >
             교환하기
@@ -892,7 +891,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
         <div style={{ padding: '16px 20px 32px' }}>
           <button
             onClick={handleBottomButton}
-            className="w-full py-4 rounded-2xl text-[16px] font-bold bg-primary text-primary-foreground"
+            className="pressable w-full py-4 rounded-2xl text-[16px] font-bold bg-primary text-primary-foreground"
           >
             다음
           </button>
@@ -901,13 +900,14 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
         <div className="px-5 pb-8 pt-4 flex gap-3">
           <button
             onClick={() => { setStep(8); }}
+            className="pressable"
             style={{ flex: 1, height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, border: '1px solid #DBDCDF', color: '#19191B', backgroundColor: '#FFFFFF', cursor: 'pointer' }}
           >
             이전
           </button>
           <button
             onClick={() => setShowExchangeConfirm(true)}
-            className="flex-1 py-4 rounded-2xl text-[16px] font-bold bg-primary text-primary-foreground"
+            className="pressable flex-1 py-4 rounded-2xl text-[16px] font-bold bg-primary text-primary-foreground"
           >
             교환하기
           </button>
@@ -916,6 +916,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
         <div style={{ padding: '16px 20px 32px' }}>
           <button
             onClick={() => setShowSubstituteConfirm(true)}
+            className="pressable"
             style={{ width: '100%', height: '56px', borderRadius: '16px', fontSize: '16px', fontWeight: 700, border: 'none', cursor: 'pointer', backgroundColor: '#4261FF', color: '#FFFFFF' }}
           >
             변경하기
@@ -1015,7 +1016,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
       )}
 
       {activeTimePicker && createPortal(
-        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/50" onClick={() => setActiveTimePicker(null)}>
+        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setActiveTimePicker(null)}>
           <div className="w-full max-w-lg rounded-t-3xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <h3 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>
@@ -1067,7 +1068,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
       )}
 
       {showChangeTypeSheet && createPortal(
-        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/50" onClick={() => setShowChangeTypeSheet(false)}>
+        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowChangeTypeSheet(false)}>
           <div className="w-full max-w-lg rounded-t-3xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <h3 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>일정 변경 유형 선택</h3>
@@ -1099,7 +1100,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
 
       {/* Work schedule change confirmation popup */}
       {showConfirm && staff && selectedDate && newDate && createPortal(
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80" onClick={() => setShowConfirm(false)}>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowConfirm(false)}>
           <div className="animate-in zoom-in-95" style={{ maxWidth: '320px', width: 'calc(100% - 48px)', backgroundColor: '#FFFFFF', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 16px' }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B', textAlign: 'center', marginBottom: '8px' }}>근무 일정 변경하기</h3>
             <p style={{ fontSize: '14px', fontWeight: 400, letterSpacing: '-0.02em', color: '#70737B', textAlign: 'center', marginBottom: '12px', lineHeight: '1.5' }}>
@@ -1121,7 +1122,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
 
       {/* Exchange confirmation popup */}
       {showExchangeConfirm && staff && selectedDate && exchangeStaff && exchangeDate && createPortal(
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80" onClick={() => setShowExchangeConfirm(false)}>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowExchangeConfirm(false)}>
           <div className="animate-in zoom-in-95" style={{ maxWidth: '320px', width: 'calc(100% - 48px)', backgroundColor: '#FFFFFF', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 16px' }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B', textAlign: 'center', marginBottom: '8px' }}>직원 간 근무 일정 교환하기</h3>
             <p style={{ fontSize: '14px', fontWeight: 400, letterSpacing: '-0.02em', color: '#70737B', textAlign: 'center', marginBottom: '12px', lineHeight: '1.5' }}>
@@ -1144,7 +1145,7 @@ export default function DailyScheduleChange({ onClose }: { onClose: () => void }
 
       {/* Substitute confirmation popup */}
       {showSubstituteConfirm && staff && selectedDate && substituteStaff && createPortal(
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80" onClick={() => setShowSubstituteConfirm(false)}>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowSubstituteConfirm(false)}>
           <div className="animate-in zoom-in-95" style={{ maxWidth: '320px', width: 'calc(100% - 48px)', backgroundColor: '#FFFFFF', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 16px' }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B', textAlign: 'center', marginBottom: '8px' }}>대타 근무자 등록하기</h3>
             <p style={{ fontSize: '14px', fontWeight: 400, letterSpacing: '-0.02em', color: '#70737B', textAlign: 'center', marginBottom: '12px', lineHeight: '1.5' }}>

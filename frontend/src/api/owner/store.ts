@@ -13,7 +13,9 @@ interface StoreInfo {
 // 매장정보 조회
 export async function getStoreInfo(storeId: number) {
     try {
-        const res = await fetch(`${BASE_URL}/api/owner/store/${storeId}`);
+        const res = await fetch(`${BASE_URL}/api/owner/store/${storeId}`, {
+            credentials: 'include',
+        });
         if (!res.ok) throw new Error('매장 데이터를 불러오는데 실패했습니다.');
         const data = await res.json();
         return data;

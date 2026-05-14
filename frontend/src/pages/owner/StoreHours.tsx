@@ -30,7 +30,7 @@ function TimePickerDrawer({
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 20px 20px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B" }}>{title}</h2>
@@ -82,7 +82,7 @@ function SelectDrawer({
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 20px 20px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B" }}>{title}</h2>
@@ -138,7 +138,7 @@ function DayPickerDrawer({
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 20px 20px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B" }}>고정 휴무일 주기 선택하기</h2>
@@ -166,7 +166,7 @@ function DayPickerDrawer({
           <div className="flex gap-3">
             <button
               onClick={() => onOpenChange(false)}
-              className="flex-1 py-3 rounded-xl text-[15px] font-medium text-primary bg-primary/10"
+              className="pressable flex-1 py-3 rounded-xl text-[15px] font-medium text-primary bg-primary/10"
             >
               이전
             </button>

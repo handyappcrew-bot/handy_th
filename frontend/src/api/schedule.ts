@@ -81,34 +81,6 @@ export async function getScheduleChange(storeId: number) {
 }
 
 /**
- * 일정 변경 요청 등록
- */
-export async function postScheduleChange(body: {
-  store_id: number;
-  type: "schedule_change" | "vacation";
-  origin_date?: string;
-  origin_start?: string;
-  origin_end?: string;
-  desired_date: string;
-  desired_start?: string;
-  desired_end?: string;
-  reason?: string;
-}) {
-  try {
-    const res = await fetch(`${BASE}/schedule/change`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(body),
-    });
-    return await handleResponse(res, "일정 변경 요청에 실패했습니다.");
-  } catch (err) {
-    console.error("API 호출 에러:", err);
-    throw err;
-  }
-}
-
-/**
  * 변경 요청 내역 삭제
  */
 export async function deleteScheduleChange(id: string) {

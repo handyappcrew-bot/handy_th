@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import BottomNav from "@/components/home/employee/BottomNav";
 import MonthlySummary from "@/components/attendance/MonthlySummary";
 import AttendanceDetailSheet from "@/components/attendance/AttendanceDetailSheet";
 import type { AttendanceDetail, AttendanceStatus } from "@/components/attendance/AttendanceDetailSheet";
@@ -216,8 +215,8 @@ const AttendanceManagement = () => {
         const res = await fetch('/api/employee/work/logs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ store_id: Number(localStorage.getItem("currentStoreId") ?? 1), year: currentYear, month: currentMonth }),
           credentials: 'include',
+          body: JSON.stringify({ employee_id: Number(localStorage.getItem("currentStoreMemberId") ?? 1), store_id: Number(localStorage.getItem("currentStoreId") ?? 1), year: currentYear, month: currentMonth }),
         });
         const data = await res.json();
         if (res.ok) {
@@ -492,7 +491,7 @@ const AttendanceManagement = () => {
 
       {/* 수정 요청 내역 탭 */}
       {activeTab === "edit_requests" && (
-        <div className="pb-8" style={{ backgroundColor: '#F7F7F8' }}>
+        <div className="pb-8" style={{ backgroundColor: '#F7F7F8', minHeight: '100vh' }}>
           <div className="flex px-5 py-3 overflow-x-auto" style={{ gap: '8px' }}>
             {FILTER_TABS.map((f) => {
               const isActive = filterTab === f;

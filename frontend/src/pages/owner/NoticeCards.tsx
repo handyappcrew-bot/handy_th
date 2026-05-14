@@ -20,7 +20,7 @@ const NoticeCards = ({ notices, onDismiss }: NoticeCardsProps) => {
 
   const handleClick = (notice: NoticeCard) => {
     if (notice.type === "board") navigateTo(`/board/${notice.id}`, "게시판으로 이동했어요");
-    else if (notice.type === "salary") navigateTo("/salary/pay-stub/1", "급여 명세서로 이동했어요");
+    else if (notice.type === "salary") navigateTo("/employee/salary/pay-stub/1", "급여 명세서로 이동했어요");
   };
 
   return (

@@ -80,13 +80,13 @@ function ConfirmPopup({ title, desc, cancelLabel = "취소", confirmLabel = "확
   onCancel: () => void; onConfirm: () => void;
 }) {
   return createPortal(
-    <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center">
+    <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center sheet-overlay">
       <div className="animate-in zoom-in-95" style={{ width: "calc(100% - 48px)", maxWidth: "320px", backgroundColor: "#FFFFFF", borderRadius: "20px", display: "flex", flexDirection: "column", alignItems: "center", padding: "28px 16px 16px" }} onClick={e => e.stopPropagation()}>
         <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#19191B", textAlign: "center", marginBottom: "8px" }}>{title}</h3>
         <p style={{ fontSize: "14px", color: "#70737B", textAlign: "center", marginBottom: "20px", lineHeight: "1.5", whiteSpace: "pre-line" }}>{desc}</p>
         <div style={{ display: "flex", gap: "10px", width: "100%" }}>
-          <button onClick={onCancel} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#70737B" }}>{cancelLabel}</button>
-          <button onClick={onConfirm} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF" }}>{confirmLabel}</button>
+          <button className="pressable" onClick={onCancel} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#70737B" }}>{cancelLabel}</button>
+          <button className="pressable" onClick={onConfirm} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF" }}>{confirmLabel}</button>
         </div>
       </div>
     </div>,
@@ -98,7 +98,7 @@ function SelectionDrawer({ open, onOpenChange, title, options, selected, onSelec
   const { mounted, animStyle, overlayStyle, requestClose } = useBottomSheet(open, () => onOpenChange(false));
   if (!mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" style={overlayStyle} onClick={requestClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" style={overlayStyle} onClick={requestClose}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", ...animStyle }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: "30px 20px 20px" }}>
           <div className="flex items-center justify-between" style={{ marginBottom: "20px" }}>
@@ -109,7 +109,7 @@ function SelectionDrawer({ open, onOpenChange, title, options, selected, onSelec
             const isSel = opt === selected;
             return (
               <button key={opt} onClick={() => { onSelect(opt); requestClose(); }}
-                className={`w-full flex items-center justify-between py-3.5 px-4 rounded-xl mb-1 ${isSel ? "bg-primary/10" : "bg-transparent active:bg-muted/50"}`}>
+                className={`pressable w-full flex items-center justify-between py-3.5 px-4 rounded-xl mb-1 ${isSel ? "bg-primary/10" : "bg-transparent active:bg-muted/50"}`}>
                 <span className={`text-[15px] font-medium ${isSel ? "text-primary" : "text-foreground"}`}>{opt}</span>
                 {isSel && <Check className="w-5 h-5 text-primary" />}
               </button>
@@ -132,7 +132,7 @@ function TaxInputDrawer({ open, onOpenChange, title, value, onConfirm, prefix, t
   const { mounted, animStyle, overlayStyle, requestClose } = useBottomSheet(open, () => onOpenChange(false));
   if (!mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" style={overlayStyle} onClick={requestClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" style={overlayStyle} onClick={requestClose}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", ...animStyle }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: "30px 20px 20px" }}>
           <div className="flex items-center justify-between" style={{ marginBottom: "20px" }}>
@@ -149,6 +149,7 @@ function TaxInputDrawer({ open, onOpenChange, title, value, onConfirm, prefix, t
             <p style={{ fontSize: "13px", fontWeight: 600, color: "#FF3D3D", marginBottom: "16px" }}>{taxLabel ? `${taxLabel} 비율을 입력해주세요` : "비율을 입력해주세요"}</p>
           )}
           <button onClick={() => { if (!taxHasVal) return; onConfirm(inputValue); requestClose(); }}
+            className="pressable"
             style={{ width: "100%", height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: taxHasVal ? "pointer" : "default", backgroundColor: taxHasVal ? "#4261FF" : "#DBDCDF", color: "#FFFFFF", marginTop: taxHasVal ? "24px" : "0" }}>
             입력 완료
           </button>
@@ -170,7 +171,7 @@ function TextInputDrawer({ open, onOpenChange, title, value, onConfirm, placehol
   const { mounted, animStyle, overlayStyle, requestClose } = useBottomSheet(open, () => onOpenChange(false));
   if (!mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" style={overlayStyle} onClick={requestClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" style={overlayStyle} onClick={requestClose}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", ...animStyle }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: "30px 20px 20px" }}>
           <div className="flex items-center justify-between" style={{ marginBottom: "20px" }}>
@@ -185,6 +186,7 @@ function TextInputDrawer({ open, onOpenChange, title, value, onConfirm, placehol
           {belowMin && <p style={{ fontSize: "13px", fontWeight: 600, color: "#FF3D3D", marginBottom: "16px" }}>최저시급 10,320원 미만은 입력할 수 없어요</p>}
           {!belowMin && subText && <p style={{ fontSize: "13px", fontWeight: 600, color: "#4261FF", marginBottom: "16px", whiteSpace: "pre-line" }}>{subText}</p>}
           <button onClick={() => { onConfirm(isCurrency ? val.replace(/,/g, "") : val); requestClose(); }}
+            className="pressable"
             style={{ ...(hasVal ? { width: "100%", height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF" } : { width: "100%", height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#FFFFFF" }), marginTop: "24px" }}>
             입력 완료
           </button>
@@ -199,7 +201,7 @@ function BankSelectionDrawer({ open, onOpenChange, selected, onSelect }: { open:
   const { mounted, animStyle, overlayStyle, requestClose } = useBottomSheet(open, () => onOpenChange(false));
   if (!mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" style={overlayStyle} onClick={requestClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" style={overlayStyle} onClick={requestClose}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", ...animStyle }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", flexDirection: "column", maxHeight: "85vh" }}>
           <div style={{ padding: "30px 20px 20px", flexShrink: 0 }}>
@@ -261,14 +263,16 @@ function WorkDayDrawer({ open, onOpenChange, workSchedule, onAdd, onDelete }: { 
     <>
       {/* 삭제 확인 팝업 — z-[200]으로 바텀시트 딤드 위에 표시 */}
       {deleteConfirmOpen && createPortal(
-        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center">
+        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center sheet-overlay">
           <div className="animate-in zoom-in-95" style={{ width: "calc(100% - 48px)", maxWidth: "320px", backgroundColor: "#FFFFFF", borderRadius: "20px", display: "flex", flexDirection: "column", alignItems: "center", padding: "28px 16px 16px" }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#19191B", textAlign: "center", marginBottom: "8px" }}>근무일 삭제하기</h3>
             <p style={{ fontSize: "14px", color: "#70737B", textAlign: "center", marginBottom: "20px", lineHeight: "1.5" }}>선택한 근무일을 삭제하시겠어요?</p>
             <div style={{ display: "flex", gap: "10px", width: "100%" }}>
               <button onClick={() => { setDeleteConfirmOpen(false); setListSel([]); }}
+                className="pressable"
                 style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#70737B" }}>취소</button>
               <button onClick={() => {
+                className="pressable"
                 onDelete(listSel);
                 setListSel([]);
                 setDeleteConfirmOpen(false);
@@ -285,7 +289,7 @@ function WorkDayDrawer({ open, onOpenChange, workSchedule, onAdd, onDelete }: { 
 
       {/* 바텀시트 드로어 */}
       {mounted && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" style={overlayStyle} onClick={handleClose}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" style={overlayStyle} onClick={handleClose}>
           <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", ...animStyle }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: "30px 20px 20px" }}>
               <div className="flex items-center justify-between" style={{ marginBottom: step === "list" ? "20px" : "10px" }}>
@@ -308,7 +312,7 @@ function WorkDayDrawer({ open, onOpenChange, workSchedule, onAdd, onDelete }: { 
                           return (
                             <button key={ws.day}
                               onClick={() => setListSel(p => p.includes(ws.day) ? p.filter(d => d !== ws.day) : [...p, ws.day])}
-                              className={`w-full flex items-center justify-between py-3.5 px-4 rounded-xl ${isSel ? "bg-primary/10" : "bg-transparent active:bg-muted/50"}`}>
+                              className={`pressable w-full flex items-center justify-between py-3.5 px-4 rounded-xl ${isSel ? "bg-primary/10" : "bg-transparent active:bg-muted/50"}`}>
                               <div className="flex items-center gap-2">
                                 <div className="flex gap-1.5">
                                   {ws.shifts.map(s => <span key={s} className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${SHIFT_BADGE_STYLES[s as ShiftType]}`}>{s}</span>)}
@@ -324,11 +328,13 @@ function WorkDayDrawer({ open, onOpenChange, workSchedule, onAdd, onDelete }: { 
                   }
                   <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
                     <button
+                      className="pressable"
                       onClick={() => { if (listSel.length > 0) setDeleteConfirmOpen(true); }}
                       style={{ ...(listSel.length > 0 ? { flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF" } : { flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#FFFFFF" }) }}>
                       삭제하기
                     </button>
                     <button
+                      className="pressable"
                       onClick={() => { setSelDay(""); setSelShifts([]); setStep("selectDay"); }}
                       style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DEEBFF", color: "#4261FF" }}>
                       추가하기
@@ -343,6 +349,7 @@ function WorkDayDrawer({ open, onOpenChange, workSchedule, onAdd, onDelete }: { 
                   <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginBottom: "24px" }}>
                     {DAYS.map(d => (
                       <button key={d} onClick={() => setSelDay(d)}
+                        className="pressable"
                         style={{ width: "40px", height: "40px", borderRadius: "10px", fontSize: "14px", fontWeight: 600, border: "none", cursor: "pointer", backgroundColor: d === selDay ? "#4261FF" : "#F7F7F8", color: d === selDay ? "#FFFFFF" : "#70737B" }}>
                         {d}
                       </button>
@@ -364,7 +371,7 @@ function WorkDayDrawer({ open, onOpenChange, workSchedule, onAdd, onDelete }: { 
                       const checked = selShifts.includes(opt.key);
                       return (
                         <button key={opt.key} onClick={() => setSelShifts(p => p.includes(opt.key) ? p.filter(x => x !== opt.key) : [...p, opt.key])}
-                          className="flex items-center gap-3 w-full text-left" style={{ padding: "8px 0" }}>
+                          className="pressable flex items-center gap-3 w-full text-left" style={{ padding: "8px 0" }}>
                           <div style={{ width: "24px", height: "24px", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: checked ? "#4261FF" : "#FFFFFF", border: checked ? "1px solid #4261FF" : "1px solid #DBDCDF", flexShrink: 0 }}>
                             {checked && <Check style={{ width: "14px", height: "14px", color: "#FFFFFF" }} />}
                           </div>
@@ -424,8 +431,10 @@ function WorkDayDrawer({ open, onOpenChange, workSchedule, onAdd, onDelete }: { 
                     </div>
                     <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
                       <button onClick={() => shiftIdx > 0 ? setShiftIdx(shiftIdx - 1) : setStep("selectShifts")}
+                        className="pressable"
                         style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DEEBFF", color: "#4261FF" }}>이전</button>
                       <button onClick={handleFinish}
+                        className="pressable"
                         style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF" }}>
                         {shiftIdx === selShifts.length - 1 ? "추가하기" : "다음"}
                       </button>
@@ -552,7 +561,7 @@ function DatePickerDrawer({ open, onClose, title, value, onConfirm }: {
 
   if (!mounted) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40" style={overlayStyle} onClick={requestClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" style={overlayStyle} onClick={requestClose}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", ...animStyle }} onClick={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
         <div style={{ padding: "30px 20px 20px" }}>
           <div className="flex items-center justify-between" style={{ marginBottom: "24px" }}>
@@ -566,6 +575,7 @@ function DatePickerDrawer({ open, onClose, title, value, onConfirm }: {
             <ScrollPicker items={days} selected={safeDay} onSelect={setDay} suffix="일" />
           </div>
           <button onClick={() => { requestClose(); setTimeout(() => onConfirm(formatted), 50); }}
+            className="pressable"
             style={{ width: "100%", height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF", marginTop: "24px" }}>
             선택 완료
           </button>
@@ -580,8 +590,8 @@ function BottomButtons({ onCancel, onSave }: { onCancel: () => void; onSave: () 
   return createPortal(
     <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "#FFFFFF", borderTop: "1px solid #F7F7F8" }}>
       <div style={{ maxWidth: "512px", margin: "0 auto", padding: "16px 20px", display: "flex", gap: "8px" }}>
-        <button onClick={onCancel} style={{ width: "122px", height: "56px", flexShrink: 0, backgroundColor: "#DEEBFF", borderRadius: "16px", border: "none", fontSize: "16px", fontWeight: 700, color: "#4261FF", cursor: "pointer" }}>취소</button>
-        <button onClick={onSave} style={{ flex: 1, height: "56px", backgroundColor: "#4261FF", borderRadius: "16px", border: "none", fontSize: "16px", fontWeight: 700, color: "#FFFFFF", cursor: "pointer" }}>저장하기</button>
+        <button className="pressable" onClick={onCancel} style={{ width: "122px", height: "56px", flexShrink: 0, backgroundColor: "#DEEBFF", borderRadius: "16px", border: "none", fontSize: "16px", fontWeight: 700, color: "#4261FF", cursor: "pointer" }}>취소</button>
+        <button className="pressable" onClick={onSave} style={{ flex: 1, height: "56px", backgroundColor: "#4261FF", borderRadius: "16px", border: "none", fontSize: "16px", fontWeight: 700, color: "#FFFFFF", cursor: "pointer" }}>저장하기</button>
       </div>
     </div>,
     document.body
@@ -671,27 +681,7 @@ function SectionContract({ staffId, initial, onBack, onRequestCancel }: { staffI
     setValidationError("");
     setSaveOpen(true);
   };
-  const doSave = async () => {
-    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
-    const apiPatch: Record<string, any> = {
-      employee_type: employmentType,
-      salary_cycle: payCycle,
-      salary_day: payDay,
-      is_probation: probation,
-      hourly_rate: null,
-      monthly_salary: null,
-    };
-    if (salaryType === "시급" && salaryAmount) {
-      apiPatch.hourly_rate = Number(salaryAmount.replace(/,/g, ""));
-    } else if (salaryType === "월급 (연봉 포함)" && salaryAmount) {
-      apiPatch.monthly_salary = Number(salaryAmount.replace(/,/g, ""));
-    }
-    const ok = await staffStore.saveToApi(staffId, storeId, apiPatch);
-    if (!ok) {
-      toast({ description: "저장에 실패했습니다.", variant: "destructive", duration: 2000 });
-      setSaveOpen(false);
-      return;
-    }
+  const doSave = () => {
     const taxDone = initial.incomeTax.some(t => t.active) || initial.socialInsurance.some(t => t.active);
     const shouldClearNew = initial.isNew && !!salaryType && taxDone;
     staffStore.update(staffId, {
@@ -814,13 +804,13 @@ function SectionContract({ staffId, initial, onBack, onRequestCancel }: { staffI
                 <div ref={refs.probationPeriod}>
                   <FieldBlock label="수습 기간">
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <button onClick={() => { setProbStartOpen(true); setErrorField(""); setValidationError(""); }} className="select-trigger flex items-center justify-between"
+                      <button onClick={() => { setProbStartOpen(true); setErrorField(""); setValidationError(""); }} className="pressable select-trigger flex items-center justify-between"
                         style={{ flex: 1, height: "48px", borderRadius: "10px", paddingLeft: "16px", paddingRight: "12px", border: !probationStart ? "1px solid #FF3D3D" : "1px solid #DBDCDF" }}>
                         <span style={{ fontSize: "15px", fontWeight: 500, color: probationStart ? "#19191B" : "#9EA3AD" }}>{probationStart || "시작일"}</span>
                         <ChevronDown className="w-4 h-4 text-muted-foreground" />
                       </button>
                       <span style={{ fontSize: "14px", color: "#70737B", flexShrink: 0 }}>~</span>
-                      <button onClick={() => { setProbEndOpen(true); setErrorField(""); setValidationError(""); }} className="select-trigger flex items-center justify-between"
+                      <button onClick={() => { setProbEndOpen(true); setErrorField(""); setValidationError(""); }} className="pressable select-trigger flex items-center justify-between"
                         style={{ flex: 1, height: "48px", borderRadius: "10px", paddingLeft: "16px", paddingRight: "12px", border: !probationEnd ? "1px solid #FF3D3D" : "1px solid #DBDCDF" }}>
                         <span style={{ fontSize: "15px", fontWeight: 500, color: probationEnd ? "#19191B" : "#9EA3AD" }}>{probationEnd || "종료일"}</span>
                         <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -863,7 +853,7 @@ function SectionContract({ staffId, initial, onBack, onRequestCancel }: { staffI
               )}
             </FieldBlock>
             {breakTimeOpen && createPortal(
-              <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={() => setBreakTimeOpen(false)}>
+              <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setBreakTimeOpen(false)}>
                 <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", padding: "30px 20px 20px" }} onClick={e => e.stopPropagation()}>
                   <div className="flex items-center justify-between" style={{ marginBottom: "20px" }}>
                     <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B" }}>휴게 시간 선택하기</h2>
@@ -873,7 +863,7 @@ function SectionContract({ staffId, initial, onBack, onRequestCancel }: { staffI
                     const isSel = min === breakMinutes;
                     return (
                       <button key={min} onClick={() => { setBreakMinutes(min); setBreakTimeOpen(false); }}
-                        className={`w-full flex items-center justify-between py-3.5 px-4 rounded-xl mb-1 ${isSel ? "bg-primary/10" : "bg-transparent active:bg-muted/50"}`}>
+                        className={`pressable w-full flex items-center justify-between py-3.5 px-4 rounded-xl mb-1 ${isSel ? "bg-primary/10" : "bg-transparent active:bg-muted/50"}`}>
                         <span className={`text-[15px] font-medium ${isSel ? "text-primary" : "text-foreground"}`}>{min}분</span>
                         {isSel && <Check className="w-5 h-5 text-primary" />}
                       </button>
@@ -889,7 +879,7 @@ function SectionContract({ staffId, initial, onBack, onRequestCancel }: { staffI
           <FieldBlock label="근무일">
             <button
               onClick={() => { setWorkDayOpen(true); setErrorField(""); setValidationError(""); }}
-              className="select-trigger w-full text-left"
+              className="pressable select-trigger w-full text-left"
               style={{
                 border: errorField === "workSchedule" ? "1px solid #FF3D3D" : workSchedule.length === 0 ? "1px solid #FF3D3D" : "1px solid #DBDCDF",
                 borderRadius: "10px",
@@ -1015,7 +1005,7 @@ function SectionContract({ staffId, initial, onBack, onRequestCancel }: { staffI
       <TextInputDrawer open={annualSalaryDrawerOpen} onOpenChange={setAnnualSalaryDrawerOpen} title="연봉 입력하기" value={annualSalary} onConfirm={setAnnualSalary} isCurrency placeholder="숫자만 입력" subText={"주 40시간 기준 최저 연봉은\n25,882,560원이에요"} />
 
       {payDay$.mounted && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" style={payDay$.overlayStyle} onClick={payDay$.requestClose}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" style={payDay$.overlayStyle} onClick={payDay$.requestClose}>
           <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", ...payDay$.animStyle }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", flexDirection: "column", maxHeight: "60vh" }}>
               <div style={{ padding: "30px 20px 12px", flexShrink: 0 }}>
@@ -1028,7 +1018,7 @@ function SectionContract({ staffId, initial, onBack, onRequestCancel }: { staffI
                 {(PAY_DAY_OPTIONS[payCycle] || PAY_DAY_OPTIONS["월 1회 (월급)"]).map(opt => {
                   const isSel = opt === payDay;
                   return (
-                    <button key={opt} onClick={() => { setPayDay(opt); payDay$.requestClose(); }} className={`w-full flex items-center justify-between py-3.5 px-4 rounded-xl mb-1 ${isSel ? "bg-primary/10" : "bg-transparent active:bg-muted/50"}`}>
+                    <button key={opt} onClick={() => { setPayDay(opt); payDay$.requestClose(); }} className={`pressable w-full flex items-center justify-between py-3.5 px-4 rounded-xl mb-1 ${isSel ? "bg-primary/10" : "bg-transparent active:bg-muted/50"}`}>
                       <span className={`text-[15px] font-medium ${isSel ? "text-primary" : "text-foreground"}`}>{opt}</span>
                       {isSel && <Check className="w-5 h-5 text-primary" />}
                     </button>
@@ -1103,27 +1093,7 @@ function SectionTax({ staffId, initial, onBack, onRequestCancel }: { staffId: st
     setSaveOpen(true);
   };
 
-  const doSave = async () => {
-    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
-    const findVal = (items: TaxItem[], key: string) => {
-      const item = items.find(t => t.key === key);
-      return item?.active ? parseFloat(item.value) || null : null;
-    };
-    const apiPatch = {
-      income_tax: findVal(incomeTax, "income"),
-      local_income_tax: findVal(incomeTax, "local"),
-      national_pension: findVal(socialInsurance, "national"),
-      health_insurance: findVal(socialInsurance, "health"),
-      long_term_care: findVal(socialInsurance, "longterm"),
-      employment_insurance: findVal(socialInsurance, "employment"),
-      industrial_accident: findVal(socialInsurance, "industrial"),
-    };
-    const ok = await staffStore.saveToApi(staffId, storeId, apiPatch);
-    if (!ok) {
-      toast({ description: "저장에 실패했습니다.", variant: "destructive", duration: 2000 });
-      setSaveOpen(false);
-      return;
-    }
+  const doSave = () => {
     const contractDone = !!initial.salaryType;
     const taxDone = [...incomeTax, ...socialInsurance].some(t => t.active);
     const shouldClearNew = initial.isNew && contractDone && taxDone;
@@ -1160,10 +1130,10 @@ function SectionTax({ staffId, initial, onBack, onRequestCancel }: { staffId: st
     return (
       <div ref={el => { taxRefs.current[tax.key] = el; }} style={{ marginBottom: "8px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <button onClick={onToggle} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", width: "134px", height: "48px", borderRadius: "10px", border: `1px solid ${tax.active ? "rgba(16,201,125,0.3)" : "#DBDCDF"}`, fontSize: "14px", fontWeight: 500, cursor: "pointer", flexShrink: 0, backgroundColor: tax.active ? "rgba(16,201,125,0.1)" : "#FFFFFF", color: tax.active ? "#10C97D" : "#93989E" }}>
+          <button className="pressable" onClick={onToggle} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", width: "134px", height: "48px", borderRadius: "10px", border: `1px solid ${tax.active ? "rgba(16,201,125,0.3)" : "#DBDCDF"}`, fontSize: "14px", fontWeight: 500, cursor: "pointer", flexShrink: 0, backgroundColor: tax.active ? "rgba(16,201,125,0.1)" : "#FFFFFF", color: tax.active ? "#10C97D" : "#93989E" }}>
             {tax.active && <Check style={{ width: "14px", height: "14px" }} />}{tax.label}
           </button>
-          <button onClick={() => tax.active && onEdit()} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", flex: 1, height: "48px", borderRadius: "10px", border: borderStyle, paddingLeft: "12px", paddingRight: "12px", background: tax.active ? "#FFFFFF" : "#F7F7F8", cursor: tax.active ? "pointer" : "default", transition: "border 0.15s" }}>
+          <button className="pressable" onClick={() => tax.active && onEdit()} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", flex: 1, height: "48px", borderRadius: "10px", border: borderStyle, paddingLeft: "12px", paddingRight: "12px", background: tax.active ? "#FFFFFF" : "#F7F7F8", cursor: tax.active ? "pointer" : "default", transition: "border 0.15s" }}>
             {tax.key === "longterm" && <span style={{ fontSize: "14px", color: "#70737B", flexShrink: 0, marginRight: "4px" }}>건강보험의</span>}
             <span style={{ fontSize: "14px", fontWeight: 500, color: tax.active ? (isEmpty ? "#70737B" : "#19191B") : "#C0C4CC", flex: 1, textAlign: "right" }}>
               {isEmpty ? "미입력" : tax.value}
@@ -1287,17 +1257,7 @@ function SectionPersonal({ staffId, initial, onBack, onRequestCancel }: { staffI
     setErrorField(""); setErrorMsg("");
     setSaveOpen(true);
   };
-  const doSave = async () => {
-    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
-    const ok = await staffStore.saveToApi(staffId, storeId, {
-      bank,
-      account_number: accountNumber,
-    });
-    if (!ok) {
-      toast({ description: "저장에 실패했습니다.", variant: "destructive", duration: 2000 });
-      setSaveOpen(false);
-      return;
-    }
+  const doSave = () => {
     staffStore.update(staffId, { bank, accountNumber });
     setSaveOpen(false);
     toast({ description: "인적 사항이 저장되었어요.", duration: 2000 });
@@ -1313,7 +1273,7 @@ function SectionPersonal({ staffId, initial, onBack, onRequestCancel }: { staffI
         <SelectField label="은행" value={bank || "미선택"} onTap={() => { setBankOpen(true); if (errorField === "bank") { setErrorField(""); setErrorMsg(""); } }} error={errorField === "bank"} errorMsg={errorField === "bank" ? errorMsg : ""} />
         <InputField label="계좌번호" value={accountNumber || "미입력"} onTap={() => { setAccountOpen(true); if (errorField === "accountNumber") { setErrorField(""); setErrorMsg(""); } }} error={errorField === "accountNumber"} errorMsg={errorField === "accountNumber" ? errorMsg : ""} />
       </div>
-      <TextInputDrawer open={accountOpen} onOpenChange={setAccountOpen} title="계좌번호 입력하기" value={accountNumber} onConfirm={setAccountNumber} placeholder="숫자 및 - 입력 (예: 3333-01-333333)" inputMode="tel" />
+      <TextInputDrawer open={accountOpen} onOpenChange={setAccountOpen} title="계좌번호 입력하기" value={accountNumber} onConfirm={setAccountNumber} placeholder="숫자만 입력" inputMode="numeric" />
       <BankSelectionDrawer open={bankOpen} onOpenChange={setBankOpen} selected={bank} onSelect={setBank} />
       {cancelOpen && <ConfirmPopup title={`인적 사항 ${initial.isNew ? "등록" : "수정"} 취소`} desc={`${initial.isNew ? "등록" : "수정"} 중인 내용이 저장되지 않아요.\n정말 취소하시겠어요?`} cancelLabel="취소" confirmLabel="확인" onCancel={() => setCancelOpen(false)} onConfirm={() => { setCancelOpen(false); onBack(); }} />}
       {saveOpen && <ConfirmPopup title="인적 사항 저장하기" desc="인적 사항을 저장하시겠어요?" cancelLabel="취소" confirmLabel="저장하기" onCancel={() => setSaveOpen(false)} onConfirm={doSave} />}
@@ -1333,14 +1293,7 @@ function SectionMemo({ staffId, initial, onBack, onRequestCancel }: { staffId: s
   const isDirty = memo !== initial.memo;
   const handleCancel = () => { if (isDirty) setCancelOpen(true); else onBack(); };
   useEffect(() => { onRequestCancel?.(() => handleCancel()); }, [isDirty]);
-  const doSave = async () => {
-    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
-    const ok = await staffStore.saveToApi(staffId, storeId, { memo });
-    if (!ok) {
-      toast({ description: "저장에 실패했습니다.", variant: "destructive", duration: 2000 });
-      setSaveOpen(false);
-      return;
-    }
+  const doSave = () => {
     staffStore.update(staffId, { memo });
     setSaveOpen(false);
     toast({ description: "메모가 저장되었어요.", duration: 2000 });
@@ -1351,14 +1304,14 @@ function SectionMemo({ staffId, initial, onBack, onRequestCancel }: { staffId: s
       <div className="bg-card px-5 py-5">
         <h3 style={{ fontSize: "clamp(18px, 5vw, 20px)", fontWeight: 700, color: "#19191B", letterSpacing: "-0.02em", marginBottom: "20px" }}>메모</h3>
         <FieldBlock label="메모 내용">
-          <button onClick={() => { setMemoTemp(memo); setMemoDrawerOpen(true); }} className="select-trigger text-left whitespace-pre-wrap"
+          <button onClick={() => { setMemoTemp(memo); setMemoDrawerOpen(true); }} className="pressable select-trigger text-left whitespace-pre-wrap"
             style={{ width: "100%", fontSize: "16px", fontWeight: 500, color: memo ? "#19191B" : "#9EA3AD", border: "1px solid #DBDCDF", borderRadius: "10px", padding: "13px 16px", minHeight: "48px", background: "transparent" }}>
             {memo || "메모를 입력해 주세요"}
           </button>
         </FieldBlock>
       </div>
       {memo$.mounted && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" style={memo$.overlayStyle} onClick={memo$.requestClose}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" style={memo$.overlayStyle} onClick={memo$.requestClose}>
           <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", ...memo$.animStyle }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: "30px 20px 20px" }}>
               <div className="flex items-center justify-between" style={{ marginBottom: "20px" }}>
@@ -1366,15 +1319,15 @@ function SectionMemo({ staffId, initial, onBack, onRequestCancel }: { staffId: s
                 <button className="pressable" onClick={memo$.requestClose}><X style={{ width: "20px", height: "20px", color: "#19191B" }} strokeWidth={2.5} /></button>
               </div>
               <div className="relative mb-4">
-                <textarea value={memoTemp} onChange={e => { if (e.target.value.length <= 50) setMemoTemp(e.target.value); }} placeholder="등록하실 메모를 입력해 주세요" rows={6} className="w-full text-[14px] font-medium text-foreground bg-transparent outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 border border-border rounded-xl px-4 py-3 resize-none" />
+                <textarea value={memoTemp} onChange={e => { if (e.target.value.length <= 50) setMemoTemp(e.target.value); }} placeholder="등록하실 메모를 입력해 주세요" rows={6} data-no-focus className="w-full text-[14px] font-medium text-foreground bg-transparent outline-none focus:outline-none border border-border rounded-xl px-4 py-3 resize-none" />
                 <span className="absolute bottom-4 right-4 text-[12px] text-muted-foreground">{memoTemp.length}/50</span>
               </div>
               {memoTemp.trim().length > 0 ? (
-                <button onClick={() => { setMemo(memoTemp); memo$.requestClose(); }} style={{ width: "100%", height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF", marginTop: "24px" }}>입력완료</button>
+                <button className="pressable" onClick={() => { setMemo(memoTemp); memo$.requestClose(); }} style={{ width: "100%", height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF", marginTop: "24px" }}>입력완료</button>
               ) : (
                 <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
-                  <button onClick={memo$.requestClose} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#70737B" }}>취소</button>
-                  <button onClick={() => { setMemo(""); memo$.requestClose(); }} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DEEBFF", color: "#4261FF" }}>건너뛰기</button>
+                  <button className="pressable" onClick={memo$.requestClose} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#70737B" }}>취소</button>
+                  <button className="pressable" onClick={() => { setMemo(""); memo$.requestClose(); }} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, letterSpacing: "-0.02em", border: "none", cursor: "pointer", backgroundColor: "#DEEBFF", color: "#4261FF" }}>건너뛰기</button>
                 </div>
               )}
             </div>
@@ -1422,11 +1375,11 @@ function SectionDocs({ staffId, initial, onBack, onRequestCancel }: { staffId: s
               <span style={{ fontSize: "16px", fontWeight: 500, color: "#70737B", display: "block", marginBottom: "8px" }}>{doc.label}</span>
               {docs[doc.key] ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <button onClick={() => setImagePreview(docs[doc.key])} style={{ fontSize: "16px", fontWeight: 500, color: "#4261FF", textDecoration: "underline", flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>{docs[doc.key]}</button>
-                  <button onClick={() => setDeleteConfirm({ open: true, key: doc.key, label: doc.label })} style={{ fontSize: "13px", color: "#FF3D3D", fontWeight: 500, padding: "6px 12px", border: "1px solid rgba(255,61,61,0.3)", borderRadius: "8px", background: "none", cursor: "pointer" }}>삭제</button>
+                  <button className="pressable" onClick={() => setImagePreview(docs[doc.key])} style={{ fontSize: "16px", fontWeight: 500, color: "#4261FF", textDecoration: "underline", flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>{docs[doc.key]}</button>
+                  <button className="pressable" onClick={() => setDeleteConfirm({ open: true, key: doc.key, label: doc.label })} style={{ fontSize: "13px", color: "#FF3D3D", fontWeight: 500, padding: "6px 12px", border: "1px solid rgba(255,61,61,0.3)", borderRadius: "8px", background: "none", cursor: "pointer" }}>삭제</button>
                 </div>
               ) : (
-                <button onClick={() => setUploadDrawer({ open: true, key: doc.key, title: doc.title })} className="select-trigger"
+                <button onClick={() => setUploadDrawer({ open: true, key: doc.key, title: doc.title })} className="pressable select-trigger"
                   style={{ width: "100%", height: "48px", border: "1px solid #DBDCDF", borderRadius: "10px", paddingLeft: "16px", fontSize: "16px", fontWeight: 500, color: "#9EA3AD", textAlign: "center", background: "transparent", cursor: "pointer" }}>
                   {doc.title}
                 </button>
@@ -1436,7 +1389,7 @@ function SectionDocs({ staffId, initial, onBack, onRequestCancel }: { staffId: s
         </div>
       </div>
       {upload$.mounted && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" style={upload$.overlayStyle} onClick={upload$.requestClose}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" style={upload$.overlayStyle} onClick={upload$.requestClose}>
           <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", ...upload$.animStyle }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: "30px 20px 20px" }}>
               <div className="flex items-center justify-between" style={{ marginBottom: "20px" }}>
@@ -1466,7 +1419,7 @@ function SectionDocs({ staffId, initial, onBack, onRequestCancel }: { staffId: s
       )}
       {deleteConfirm.open && <ConfirmPopup title={`${deleteConfirm.label} 삭제하기`} desc={`${deleteConfirm.label}를 삭제하시겠어요?`} cancelLabel="취소" confirmLabel="삭제하기" onCancel={() => setDeleteConfirm({ open: false, key: "resume", label: "" })} onConfirm={() => { setDocs(p => ({ ...p, [deleteConfirm.key]: "" })); setDeleteConfirm({ open: false, key: "resume", label: "" }); toast({ description: `${deleteConfirm.label}이(가) 삭제되었습니다.`, duration: 2000 }); }} />}
       {imagePreview && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 touch-none" onClick={() => setImagePreview("")}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setImagePreview("")}>
           <div style={{ width: "calc(100% - 48px)", maxWidth: "420px", backgroundColor: "#FFFFFF", borderRadius: "20px", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #F0F0F0" }}>
               <span style={{ fontSize: "16px", fontWeight: 700, color: "#19191B", letterSpacing: "-0.02em" }}>{imagePreview}</span>
@@ -1513,14 +1466,7 @@ function SectionWorkStatus({ staffId, initial, onBack, onRequestCancel }: { staf
   const isDirty = workStatus !== initial.workStatus;
   const handleCancel = () => { if (isDirty) setCancelOpen(true); else onBack(); };
   useEffect(() => { onRequestCancel?.(() => handleCancel()); }, [isDirty]);
-  const doSave = async () => {
-    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
-    const ok = await staffStore.saveToApi(staffId, storeId, { working_status: workStatus });
-    if (!ok) {
-      toast({ description: "저장에 실패했습니다.", variant: "destructive", duration: 2000 });
-      setSaveOpen(false);
-      return;
-    }
+  const doSave = () => {
     staffStore.update(staffId, { workStatus });
     setSaveOpen(false);
     toast({ description: "근무 상태가 저장되었어요.", duration: 2000 });
@@ -1533,7 +1479,7 @@ function SectionWorkStatus({ staffId, initial, onBack, onRequestCancel }: { staf
         <SelectField label="근무 상태" value={workStatus || "미선택"} onTap={() => setWorkStatusOpen(true)} />
       </div>
       {ws$.mounted && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" style={ws$.overlayStyle} onClick={ws$.requestClose}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" style={ws$.overlayStyle} onClick={ws$.requestClose}>
           <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF", ...ws$.animStyle }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: "30px 20px 20px" }}>
               <div className="flex items-center justify-between" style={{ marginBottom: "20px" }}>
@@ -1594,7 +1540,7 @@ function InputField({ label, value, onTap, error, errorMsg }: { label: string; v
   const border = error ? "2px solid #FF3D3D" : focused ? "2px solid #4261FF" : empty ? "1px solid #FF3D3D" : "1px solid #DBDCDF";
   return (
     <FieldBlock label={label}>
-      <button onClick={onTap} onMouseDown={() => setFocused(true)} onMouseUp={() => setFocused(false)} onMouseLeave={() => setFocused(false)} onTouchStart={() => setFocused(true)} onTouchEnd={() => setFocused(false)} className="select-trigger flex items-center justify-between"
+      <button onClick={onTap} onMouseDown={() => setFocused(true)} onMouseUp={() => setFocused(false)} onMouseLeave={() => setFocused(false)} onTouchStart={() => setFocused(true)} onTouchEnd={() => setFocused(false)} className="pressable select-trigger flex items-center justify-between"
         style={{ width: "100%", height: "48px", borderRadius: "10px", paddingLeft: "16px", paddingRight: "16px", border, transition: "border 0.15s", outline: "none" }}>
         <span style={{ fontSize: "16px", fontWeight: 500, color: empty ? "#70737B" : "#19191B" }}>{value}</span>
       </button>
@@ -1611,7 +1557,7 @@ function SelectField({ label, value, onTap, error, errorMsg }: { label: string; 
   const border = error ? "2px solid #FF3D3D" : focused ? "2px solid #4261FF" : empty ? "1px solid #FF3D3D" : "1px solid #DBDCDF";
   return (
     <FieldBlock label={label}>
-      <button onClick={onTap} onMouseDown={() => setFocused(true)} onMouseUp={() => setFocused(false)} onMouseLeave={() => setFocused(false)} onTouchStart={() => setFocused(true)} onTouchEnd={() => setFocused(false)} className="select-trigger flex items-center justify-between"
+      <button onClick={onTap} onMouseDown={() => setFocused(true)} onMouseUp={() => setFocused(false)} onMouseLeave={() => setFocused(false)} onTouchStart={() => setFocused(true)} onTouchEnd={() => setFocused(false)} className="pressable select-trigger flex items-center justify-between"
         style={{ width: "100%", height: "48px", borderRadius: "10px", paddingLeft: "16px", paddingRight: "16px", border, transition: "border 0.15s", outline: "none" }}>
         <span style={{ fontSize: "16px", fontWeight: 500, color: empty ? "#70737B" : "#19191B" }}>{value}</span>
         <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -1625,7 +1571,7 @@ function SelectField({ label, value, onTap, error, errorMsg }: { label: string; 
 
 function ToggleChip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px", fontSize: "14px", fontWeight: 500, width: "110px", height: "48px", borderRadius: "10px", cursor: "pointer", backgroundColor: active ? "rgba(16,201,125,0.1)" : "#FFFFFF", color: active ? "#10C97D" : "#93989E", border: `1px solid ${active ? "rgba(16,201,125,0.3)" : "#DBDCDF"}` }}>
+    <button className="pressable" onClick={onClick} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px", fontSize: "14px", fontWeight: 500, width: "110px", height: "48px", borderRadius: "10px", cursor: "pointer", backgroundColor: active ? "rgba(16,201,125,0.1)" : "#FFFFFF", color: active ? "#10C97D" : "#93989E", border: `1px solid ${active ? "rgba(16,201,125,0.3)" : "#DBDCDF"}` }}>
       {active && <Check style={{ width: "14px", height: "14px" }} />} {label}
     </button>
   );

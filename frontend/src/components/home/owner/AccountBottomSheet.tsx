@@ -26,7 +26,7 @@ export default function AccountBottomSheet({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay"
       onClick={() => onOpenChange(false)}
     >
       <div
@@ -36,7 +36,7 @@ export default function AccountBottomSheet({
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold text-foreground">계정 유형 선택</h2>
-          <button onClick={() => onOpenChange(false)}>
+          <button onClick={() => onOpenChange(false)} className="pressable">
             <X className="h-6 w-6 text-foreground" />
           </button>
         </div>

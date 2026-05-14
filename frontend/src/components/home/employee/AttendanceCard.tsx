@@ -254,7 +254,11 @@ const AttendanceCard = ({
   const showEndTime = !wasAbsent;
 
   return (
-    <div className="mx-5 rounded-2xl bg-card p-5" style={{ boxShadow: '2px 2px 12px rgba(0,0,0,0.06)' }}>
+    <div
+      className="mx-5 rounded-2xl bg-card p-5"
+      // contain: 1초 간격 setNow 리렌더와 progress width 트랜지션이 카드 외부로 누설되어
+      //         주변 텍스트/버튼 antialiasing 시머링을 유발하는 문제 차단
+      style={{ boxShadow: '2px 2px 12px rgba(0,0,0,0.06)', contain: 'layout paint style', isolation: 'isolate' }}>
       {/* Badge */}
       <div className="mb-3">{getBadge()}</div>
 
@@ -303,7 +307,7 @@ const AttendanceCard = ({
         {/* Late segment (orange) */}
         {lateSegmentWidth > 0 && (
           <div
-            className="absolute left-0 top-0 h-full transition-[width] duration-1000 ease-linear"
+            className="absolute left-0 top-0 h-full transition-[width] duration-300 ease-out"
             style={{
               width: `${Math.min(progress, lateSegmentWidth)}%`,
               backgroundColor: "hsl(var(--progress-late))",
@@ -313,7 +317,7 @@ const AttendanceCard = ({
         {/* Work before break (green) */}
         {workBeforeBreakWidth > 0 && (
           <div
-            className="absolute top-0 h-full transition-[width] duration-1000 ease-linear"
+            className="absolute top-0 h-full transition-[width] duration-300 ease-out"
             style={{
               left: `${greenStart}%`,
               width: `${workBeforeBreakWidth}%`,
@@ -324,7 +328,7 @@ const AttendanceCard = ({
         {/* Break segment (purple) */}
         {breakWidth > 0 && (
           <div
-            className="absolute top-0 h-full transition-[left,width] duration-1000 ease-linear"
+            className="absolute top-0 h-full transition-[left,width] duration-300 ease-out"
             style={{
               left: `${breakStartPoint}%`,
               width: `${breakWidth}%`,
@@ -335,7 +339,7 @@ const AttendanceCard = ({
         {/* Work after break (green) */}
         {workAfterBreakWidth > 0 && (
           <div
-            className="absolute top-0 h-full transition-[left,width] duration-1000 ease-linear"
+            className="absolute top-0 h-full transition-[left,width] duration-300 ease-out"
             style={{
               left: `${breakEndPoint}%`,
               width: `${workAfterBreakWidth}%`,

@@ -54,20 +54,21 @@ export default function StoreDelete() {
   };
 
   return (
-    <div className="min-h-screen bg-background max-w-lg mx-auto">
+    <div className="min-h-screen bg-background max-w-[430px] mx-auto font-[Pretendard]" style={{ backgroundColor: '#FFFFFF' }}>
       <div className="pb-24">
-      {/* Header */}
-      <div className="flex items-center h-14 px-5 border-b border-border sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => step === "caution" ? navigate(-1) : setStep("caution")} className="mr-2">
-          <ChevronLeft className="w-6 h-6 text-foreground" />
+      {/* Header — 표준 통일 디자인 */}
+      <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
+        <button onClick={() => step === "caution" ? navigate(-1) : setStep("caution")} className="pressable p-1">
+          <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
-        <h1 className="text-[18px] font-bold text-foreground">매장 삭제</h1>
+        <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>매장 삭제</h1>
       </div>
+      <div className="border-b border-border" />
 
       {step === "caution" ? (
-        <div className="">
+        <div>
           <div className="px-5 py-6">
-            <h2 className="text-[22px] font-bold text-foreground leading-tight">
+            <h2 className="text-[22px] font-bold text-foreground leading-tight tracking-[-0.02em]">
               매장 삭제 전<br />유의사항을 확인해 주세요
             </h2>
 
@@ -90,7 +91,7 @@ export default function StoreDelete() {
           <div className="px-5 pb-8">
             <button
               onClick={() => setAgreed(!agreed)}
-              className="flex items-start gap-3 mb-4"
+              className="pressable flex items-start gap-3 mb-4"
             >
               <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 ${agreed ? "bg-primary border-primary" : "border-border"}`}>
                 {agreed && <Check className="w-4 h-4 text-primary-foreground" />}
@@ -103,14 +104,14 @@ export default function StoreDelete() {
             <div className="flex gap-3">
               <button
                 onClick={() => navigate(-1)}
-                className="flex-1 py-3.5 rounded-xl border border-border text-[15px] text-foreground font-medium"
+                className="pressable flex-1 h-[56px] rounded-2xl border border-border text-[16px] text-foreground font-semibold"
               >
                 취소
               </button>
               <button
                 onClick={() => setStep("confirm")}
                 disabled={!agreed}
-                className="flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-bold disabled:opacity-40"
+                className={`pressable flex-1 h-[56px] rounded-2xl text-[16px] font-semibold ${agreed ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
               >
                 계속하기
               </button>
@@ -118,9 +119,9 @@ export default function StoreDelete() {
           </div>
         </div>
       ) : (
-        <div className="">
+        <div>
           <div className="px-5 py-6">
-            <h2 className="text-[22px] font-bold text-foreground leading-tight">
+            <h2 className="text-[22px] font-bold text-foreground leading-tight tracking-[-0.02em]">
               삭제할 매장 정보를<br />다시 한 번 확인해 주세요
             </h2>
 
@@ -145,13 +146,13 @@ export default function StoreDelete() {
             <div className="flex gap-3">
               <button
                 onClick={() => navigate(-1)}
-                className="flex-1 py-3.5 rounded-xl border border-border text-[15px] text-foreground font-medium"
+                className="pressable flex-1 h-[56px] rounded-2xl border border-border text-[16px] text-foreground font-semibold"
               >
                 취소
               </button>
               <button
                 onClick={() => setDeleteDialog(true)}
-                className="flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-[15px] font-bold"
+                className="pressable flex-1 h-[56px] rounded-2xl bg-primary text-primary-foreground text-[16px] font-semibold"
               >
                 삭제하기
               </button>

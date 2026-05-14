@@ -133,7 +133,7 @@ const AttendanceMapDialog = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 flex items-center justify-center bg-black/50 touch-none sheet-overlay"
       style={{ zIndex: 50 }}
       onClick={onCancel}
     >
@@ -179,6 +179,7 @@ const AttendanceMapDialog = ({
         {/* Buttons */}
         <div style={{ display: 'flex', gap: '8px', padding: '16px' }}>
           <button
+            className="pressable"
             onClick={onCancel}
             style={{ flex: 1, height: '48px', backgroundColor: '#DBDCDF', color: '#70737B', borderRadius: '10px', fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer' }}
           >

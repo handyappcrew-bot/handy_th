@@ -63,14 +63,14 @@ const TimePickerSheet = ({ open, title, value, onClose, onConfirm }: TimePickerS
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={onClose}>
       <div
         className="w-full max-w-lg rounded-t-3xl bg-card px-6 pb-8 pt-6 shadow-xl animate-in slide-in-from-bottom"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-foreground">{title}</h2>
-          <button onClick={onClose} className="p-1">
+          <button onClick={onClose} className="pressable p-1">
             <X className="h-5 w-5 text-foreground" />
           </button>
         </div>
@@ -137,7 +137,7 @@ const TimePickerSheet = ({ open, title, value, onClose, onConfirm }: TimePickerS
 
         <button
           onClick={() => onConfirm(`${selectedHour}:${selectedMinute}`)}
-          className="w-full h-14 rounded-2xl text-lg font-semibold bg-primary text-primary-foreground mt-4"
+          className="pressable w-full h-14 rounded-2xl text-lg font-semibold bg-primary text-primary-foreground mt-4"
         >
           확인
         </button>
@@ -180,14 +180,14 @@ const MinutePickerSheet = ({ open, value, onClose, onConfirm }: MinutePickerShee
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={onClose}>
       <div
         className="w-full max-w-lg rounded-t-3xl bg-card px-6 pb-8 pt-6 shadow-xl animate-in slide-in-from-bottom"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-foreground">휴게 시간 선택</h2>
-          <button onClick={onClose} className="p-1">
+          <button onClick={onClose} className="pressable p-1">
             <X className="h-5 w-5 text-foreground" />
           </button>
         </div>
@@ -220,7 +220,7 @@ const MinutePickerSheet = ({ open, value, onClose, onConfirm }: MinutePickerShee
 
         <button
           onClick={() => onConfirm(selected)}
-          className="w-full h-14 rounded-2xl text-lg font-semibold bg-primary text-primary-foreground mt-4"
+          className="pressable w-full h-14 rounded-2xl text-lg font-semibold bg-primary text-primary-foreground mt-4"
         >
           확인
         </button>
@@ -247,14 +247,14 @@ const ReasonInputSheet = ({ open, value, onClose, onConfirm }: ReasonInputSheetP
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={onClose}>
       <div
         className="w-full max-w-lg rounded-t-3xl bg-card px-6 pb-8 pt-6 shadow-xl animate-in slide-in-from-bottom"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-foreground">변경 요청 사유 입력</h2>
-          <button onClick={onClose} className="p-1">
+          <button onClick={onClose} className="pressable p-1">
             <X className="h-5 w-5 text-foreground" />
           </button>
         </div>
@@ -264,7 +264,7 @@ const ReasonInputSheet = ({ open, value, onClose, onConfirm }: ReasonInputSheetP
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, 50))}
             placeholder="변경 사유를 입력해 주세요"
-            className="w-full border border-border rounded-xl px-4 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground resize-none h-[200px] focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full border border-border rounded-xl px-4 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground resize-none h-[200px] focus:outline-none focus:border-primary"
           />
         </div>
         <p className="text-right text-[13px] text-muted-foreground mb-6">{text.length}/50</p>
@@ -378,6 +378,7 @@ const AttendanceRecordEdit = () => {
     try {
       await requestWorkLogChange({
         store_id: Number(localStorage.getItem("currentStoreId") ?? 1),
+        employee_id: Number(localStorage.getItem("currentStoreMemberId") ?? 1),
         type: isMissingWork ? "근무 누락" : isBreakChange ? "휴게 시간 변경" : "출·퇴근 시간 변경",
         date: dateStr,
         origin_start: isMissingWork ? undefined : detail?.startTime,
@@ -445,7 +446,7 @@ const AttendanceRecordEdit = () => {
     <div className="mx-auto min-h-screen max-w-lg bg-white flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => step === "detail" ? setStep("reason") : navigate(-1)} className="p-1">
+        <button onClick={() => step === "detail" ? setStep("reason") : navigate(-1)} className="pressable p-1">
           <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
         <h1 className="text-lg font-bold text-foreground">{isMissingWorkFlow ? "근무 기록 수정" : "근무 기록 수정 요청"}</h1>
@@ -468,7 +469,7 @@ const AttendanceRecordEdit = () => {
             </p>
             <button
               onClick={() => setReasonSheetOpen(true)}
-              className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 text-left"
+              className="pressable w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 text-left"
             >
               <span className={`text-[15px] ${selectedReason ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                 {selectedReason ? selectedReasonLabel : "수정 요청 사유 선택"}
@@ -490,7 +491,7 @@ const AttendanceRecordEdit = () => {
             <p className="text-sm text-muted-foreground mb-2">
               출근 시간 <span className="text-[hsl(var(--destructive))]">*</span>
             </p>
-            <button onClick={() => openTimePicker("start")} className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-4 text-left">
+            <button onClick={() => openTimePicker("start")} className="pressable w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-4 text-left">
               <span className={`text-[15px] ${startTime ? "text-foreground" : "text-muted-foreground"}`}>
                 {startTime ? formatAmPm(startTime) : "출근 시간 선택"}
               </span>
@@ -500,7 +501,7 @@ const AttendanceRecordEdit = () => {
             <p className="text-sm text-muted-foreground mb-2">
               퇴근 시간 <span className="text-[hsl(var(--destructive))]">*</span>
             </p>
-            <button onClick={() => openTimePicker("end")} className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-4 text-left">
+            <button onClick={() => openTimePicker("end")} className="pressable w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-4 text-left">
               <span className={`text-[15px] ${endTime ? "text-foreground" : "text-muted-foreground"}`}>
                 {endTime ? formatAmPm(endTime) : "퇴근 시간 선택"}
               </span>
@@ -508,13 +509,13 @@ const AttendanceRecordEdit = () => {
             </button>
 
             <p className="text-sm text-muted-foreground mb-2">휴게 시간</p>
-            <button onClick={() => setMinutePickerOpen(true)} className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-4 text-left">
+            <button onClick={() => setMinutePickerOpen(true)} className="pressable w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-4 text-left">
               <span className="text-[15px] text-foreground">{breakMinutes}</span>
               <span className="text-[15px] text-muted-foreground">분</span>
             </button>
 
             <p className="text-sm text-muted-foreground mb-2">변경 요청 사유</p>
-            <button onClick={() => openReasonInput("unregistered")} className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 text-left">
+            <button onClick={() => openReasonInput("unregistered")} className="pressable w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 text-left">
               <span className={`text-[15px] ${changeReason ? "text-foreground" : "text-muted-foreground"}`}>
                 {changeReason || "변경 요청 사유 입력"}
               </span>
@@ -535,13 +536,13 @@ const AttendanceRecordEdit = () => {
             <p className="text-sm text-muted-foreground mb-2">
               등록 휴게 시간 변경 <span className="text-[hsl(var(--destructive))]">*</span>
             </p>
-            <button onClick={() => setMinutePickerOpen(true)} className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-6 text-left">
+            <button onClick={() => setMinutePickerOpen(true)} className="pressable w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-6 text-left">
               <span className="text-[15px] text-[hsl(var(--status-late))] font-medium">{breakMinutes}</span>
               <span className="text-[15px] text-muted-foreground">분</span>
             </button>
 
             <p className="text-sm text-muted-foreground mb-2">변경 요청 사유</p>
-            <button onClick={() => openReasonInput("break")} className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 text-left">
+            <button onClick={() => openReasonInput("break")} className="pressable w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 text-left">
               <span className={`text-[15px] ${breakReason ? "text-foreground" : "text-muted-foreground"}`}>
                 {breakReason || "변경 요청 사유 입력"}
               </span>
@@ -562,7 +563,7 @@ const AttendanceRecordEdit = () => {
             <p className="text-sm text-muted-foreground mb-2">
               출근 시간 변경 <span className="text-[hsl(var(--destructive))]">*</span>
             </p>
-            <button onClick={() => openTimePicker("start")} className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-6 text-left">
+            <button onClick={() => openTimePicker("start")} className="pressable w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-6 text-left">
               <span className="text-[15px] text-foreground">{formatAmPm(startTime)}</span>
               <ChevronDown className="h-5 w-5 text-muted-foreground" />
             </button>
@@ -570,13 +571,13 @@ const AttendanceRecordEdit = () => {
             <p className="text-sm text-muted-foreground mb-2">
               퇴근 시간 변경 <span className="text-[hsl(var(--destructive))]">*</span>
             </p>
-            <button onClick={() => openTimePicker("end")} className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-6 text-left">
+            <button onClick={() => openTimePicker("end")} className="pressable w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 mb-6 text-left">
               <span className="text-[15px] text-[hsl(var(--status-late))]">{formatAmPm(endTime)}</span>
               <ChevronDown className="h-5 w-5 text-muted-foreground" />
             </button>
 
             <p className="text-sm text-muted-foreground mb-2">변경 요청 사유</p>
-            <button onClick={() => openReasonInput("change")} className="w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 text-left">
+            <button onClick={() => openReasonInput("change")} className="pressable w-full flex items-center justify-between border border-border rounded-xl px-4 py-3.5 text-left">
               <span className={`text-[15px] ${changeReason ? "text-foreground" : "text-muted-foreground"}`}>
                 {changeReason || "변경 요청 사유 입력"}
               </span>
@@ -631,14 +632,14 @@ const AttendanceRecordEdit = () => {
 
       {/* Reason selection bottom sheet */}
       {reasonSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={() => setReasonSheetOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setReasonSheetOpen(false)}>
           <div
             className="w-full max-w-lg rounded-t-3xl bg-card px-6 pb-8 pt-6 shadow-xl animate-in slide-in-from-bottom"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-foreground">수정 요청 사유 선택</h2>
-              <button onClick={() => setReasonSheetOpen(false)} className="p-1">
+              <button onClick={() => setReasonSheetOpen(false)} className="pressable p-1">
                 <X className="h-5 w-5 text-foreground" />
               </button>
             </div>
@@ -647,7 +648,7 @@ const AttendanceRecordEdit = () => {
                 <button
                   key={option.value}
                   onClick={() => { setSelectedReason(option.value); setReasonSheetOpen(false); }}
-                  className={`w-full text-left px-4 py-4 rounded-xl text-[15px] font-medium flex items-center justify-between ${selectedReason === option.value ? "bg-[hsl(var(--secondary))] text-primary" : "text-foreground"}`}
+                  className={`pressable w-full text-left px-4 py-4 rounded-xl text-[15px] font-medium flex items-center justify-between ${selectedReason === option.value ? "bg-[hsl(var(--secondary))] text-primary" : "text-foreground"}`}
                 >
                   <span>{option.label}</span>
                   {selectedReason === option.value && <Check className="h-5 w-5 text-primary" />}

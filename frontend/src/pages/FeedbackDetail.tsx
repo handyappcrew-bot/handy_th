@@ -30,7 +30,7 @@ const FeedbackDetail = () => {
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#FFFFFF' }}>
       {/* Header */}
       <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => navigate(-1)} className="p-1">
+        <button onClick={() => navigate(-1)} className="pressable p-1">
           <ChevronLeft className="w-6 h-6 text-foreground" />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>건의 내역 상세</h1>

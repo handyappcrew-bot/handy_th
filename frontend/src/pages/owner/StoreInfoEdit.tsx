@@ -21,7 +21,7 @@ function FieldDrawer({ open, onOpenChange, title, placeholder, value, onConfirm,
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 20px 20px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B" }}>{title}</h2>
@@ -51,7 +51,7 @@ function BusinessTypeDrawer({ open, onOpenChange, onSelect, currentValue }: {
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 20px 20px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B" }}>업종 선택하기</h2>
@@ -62,7 +62,7 @@ function BusinessTypeDrawer({ open, onOpenChange, onSelect, currentValue }: {
             const isSelected = type === selected;
             return (
               <button key={type}
-                className={`w-full text-left px-4 py-3.5 rounded-xl text-[15px] flex items-center justify-between ${isSelected ? "bg-primary/10 text-primary font-medium" : "text-foreground"}`}
+                className={`pressable w-full text-left px-4 py-3.5 rounded-xl text-[15px] flex items-center justify-between ${isSelected ? "bg-primary/10 text-primary font-medium" : "text-foreground"}`}
                 onClick={() => setSelected(type)}>
                 <span>{type}</span>
                 {isSelected && <Check className="w-5 h-5 text-primary" />}
@@ -70,6 +70,7 @@ function BusinessTypeDrawer({ open, onOpenChange, onSelect, currentValue }: {
             );
           })}
           <button onClick={() => { onSelect(selected); onOpenChange(false); }}
+            className="pressable"
             style={{ width: "100%", height: "56px", borderRadius: "16px", backgroundColor: "#4261FF", border: "none", fontSize: "16px", fontWeight: 700, color: "#FFFFFF", cursor: "pointer", marginTop: "12px" }}>
             입력완료
           </button>
@@ -221,6 +222,7 @@ export default function StoreInfoEdit() {
           <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "#FFFFFF", borderTop: "1px solid #F7F7F8" }}>
             <div style={{ maxWidth: "512px", margin: "0 auto", padding: "16px 20px" }}>
               <button onClick={() => setConfirmOpen(true)}
+                className="pressable"
                 style={{ width: "100%", height: "56px", borderRadius: "16px", backgroundColor: "#4261FF", border: "none", fontSize: "16px", fontWeight: 700, color: "#FFFFFF", cursor: "pointer" }}>
                 매장 정보 수정하기
               </button>
@@ -234,13 +236,13 @@ export default function StoreInfoEdit() {
         <FieldDrawer open={drawerType === "ownerName"} onOpenChange={o => !o && setDrawerType(null)} title="대표자명 입력하기" placeholder="대표자명 입력" value={ownerName} onConfirm={setOwnerName} />
         <FieldDrawer open={drawerType === "phone"} onOpenChange={o => !o && setDrawerType(null)} title="대표번호 입력하기" placeholder="'-' 포함 입력" value={phone} onConfirm={setPhone} inputType="tel" />
         {confirmOpen && createPortal(
-          <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center" onClick={() => setConfirmOpen(false)}>
+          <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center" onClick={() => setConfirmOpen(false)}>
             <div style={{ width: "calc(100% - 48px)", maxWidth: "320px", backgroundColor: "#FFFFFF", borderRadius: "20px", display: "flex", flexDirection: "column", alignItems: "center", padding: "28px 16px 16px" }} onClick={e => e.stopPropagation()}>
               <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#19191B", textAlign: "center", marginBottom: "8px" }}>매장 정보 수정</h3>
               <p style={{ fontSize: "14px", color: "#70737B", textAlign: "center", lineHeight: "1.6", marginBottom: "20px" }}>입력한 내용으로 매장 정보를 수정하시겠어요?</p>
               <div style={{ display: "flex", gap: "10px", width: "100%" }}>
-                <button onClick={() => setConfirmOpen(false)} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#70737B" }}>취소</button>
-                <button onClick={handleSave} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF" }}>수정하기</button>
+                <button className="pressable" onClick={() => setConfirmOpen(false)} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, border: "none", cursor: "pointer", backgroundColor: "#DBDCDF", color: "#70737B" }}>취소</button>
+                <button className="pressable" onClick={handleSave} style={{ flex: 1, height: "56px", borderRadius: "10px", fontSize: "16px", fontWeight: 700, border: "none", cursor: "pointer", backgroundColor: "#4261FF", color: "#FFFFFF" }}>수정하기</button>
               </div>
             </div>
           </div>,

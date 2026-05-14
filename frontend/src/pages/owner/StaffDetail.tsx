@@ -209,6 +209,7 @@ export default function StaffDetail() {
               <p style={{ fontSize: '14px', fontWeight: 700, color: '#4261FF', margin: '0 0 4px 0' }}>계약 정보가 등록되지 않았어요</p>
               <p style={{ fontSize: '13px', fontWeight: 400, color: '#70737B', margin: '0 0 12px 0', lineHeight: '1.5' }}>고용 형태 · 급여 · 근무일 정보를 등록해야<br />급여 계산과 일정 관리가 가능해요</p>
               <button onClick={() => goEdit('계약정보')}
+                className="pressable"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', height: '36px', paddingLeft: '14px', paddingRight: '14px', borderRadius: '8px', backgroundColor: '#4261FF', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
                 지금 계약 정보 등록하기 →
               </button>
@@ -256,7 +257,7 @@ export default function StaffDetail() {
                   </>
                 ) : (
                   <InfoRow label={staff.salaryType === '월급 (연봉 포함)' ? '월급' : staff.salaryType}>
-                    <button onClick={() => goEdit('계약정보')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', border: '1px dashed #FF3D3D', cursor: 'pointer', background: 'none' }}>
+                    <button className="pressable" onClick={() => goEdit('계약정보')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', border: '1px dashed #FF3D3D', cursor: 'pointer', background: 'none' }}>
                       <span style={{ fontSize: '13px', fontWeight: 600, color: '#FF3D3D' }}>급여 미입력</span>
                       <span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600, backgroundColor: '#FFF3E0', padding: '2px 8px', borderRadius: '99px' }}>입력하기 →</span>
                     </button>
@@ -268,7 +269,7 @@ export default function StaffDetail() {
                 <InfoRow label="급여 지급 주기">{staff.payCycle}</InfoRow>
               )}
 
-              <InfoRow label="급여일">{staff.payDay || <button onClick={() => goEdit('계약정보')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', border: '1px dashed #FF3D3D', cursor: 'pointer', background: 'none' }}><span style={{ fontSize: '13px', fontWeight: 600, color: '#FF3D3D' }}>급여일 미등록</span><span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600, backgroundColor: '#FFF3E0', padding: '2px 8px', borderRadius: '99px' }}>등록하기 →</span></button>}</InfoRow>
+              <InfoRow label="급여일">{staff.payDay || <button className="pressable" onClick={() => goEdit('계약정보')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', border: '1px dashed #FF3D3D', cursor: 'pointer', background: 'none' }}><span style={{ fontSize: '13px', fontWeight: 600, color: '#FF3D3D' }}>급여일 미등록</span><span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600, backgroundColor: '#FFF3E0', padding: '2px 8px', borderRadius: '99px' }}>등록하기 →</span></button>}</InfoRow>
             </>
           ) : (
             <InfoRow label="급여 정보">
@@ -320,7 +321,7 @@ export default function StaffDetail() {
                 ))}
               </div>
             ) : (
-              <button onClick={() => goEdit('계약정보')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', border: '1px dashed #FF3D3D', cursor: 'pointer', background: 'none' }}><span style={{ fontSize: '13px', fontWeight: 600, color: '#FF3D3D' }}>근무일 미등록</span><span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600, backgroundColor: '#FFF3E0', padding: '2px 8px', borderRadius: '99px' }}>등록하기 →</span></button>
+              <button className="pressable" onClick={() => goEdit('계약정보')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', border: '1px dashed #FF3D3D', cursor: 'pointer', background: 'none' }}><span style={{ fontSize: '13px', fontWeight: 600, color: '#FF3D3D' }}>근무일 미등록</span><span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600, backgroundColor: '#FFF3E0', padding: '2px 8px', borderRadius: '99px' }}>등록하기 →</span></button>
             )}
           </InfoRow>
             </>
@@ -342,6 +343,7 @@ export default function StaffDetail() {
                   <p style={{ fontSize: '14px', fontWeight: 700, color: '#FF8F00', margin: '0 0 4px 0' }}>세금 항목이 설정되지 않았어요</p>
                   <p style={{ fontSize: '13px', fontWeight: 400, color: '#70737B', margin: '0 0 12px 0', lineHeight: '1.5' }}>소득세·4대보험 항목을 설정하지 않으면<br />급여에서 세금이 공제되지 않아요</p>
                   <button onClick={() => goEdit('세금')}
+                    className="pressable"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', height: '36px', paddingLeft: '14px', paddingRight: '14px', borderRadius: '8px', backgroundColor: '#FF8F00', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
                     지금 세금 설정하기 →
                   </button>
@@ -362,7 +364,7 @@ export default function StaffDetail() {
                       ))}
                     </div>
                   ) : (
-                    <button onClick={() => goEdit('세금')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', backgroundColor: '#FFF3F3', border: '1px dashed #FF3D3D', cursor: 'pointer', background: 'none' }}>
+                    <button className="pressable" onClick={() => goEdit('세금')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', backgroundColor: '#FFF3F3', border: '1px dashed #FF3D3D', cursor: 'pointer', background: 'none' }}>
                       <span style={{ fontSize: '13px', fontWeight: 600, color: '#FF3D3D' }}>소득세 항목 미설정</span>
                       <span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600, backgroundColor: '#FFF3E0', padding: '2px 8px', borderRadius: '99px' }}>설정하기 →</span>
                     </button>
@@ -381,7 +383,7 @@ export default function StaffDetail() {
                         ))}
                       </div>
                     ) : (
-                      <button onClick={() => goEdit('세금')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', backgroundColor: '#FFF3F3', border: '1px dashed #FF3D3D', cursor: 'pointer', background: 'none' }}>
+                      <button className="pressable" onClick={() => goEdit('세금')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', backgroundColor: '#FFF3F3', border: '1px dashed #FF3D3D', cursor: 'pointer', background: 'none' }}>
                         <span style={{ fontSize: '13px', fontWeight: 600, color: '#FF3D3D' }}>4대보험 항목 미설정</span>
                         <span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600, backgroundColor: '#FFF3E0', padding: '2px 8px', borderRadius: '99px' }}>설정하기 →</span>
                       </button>
@@ -475,6 +477,7 @@ export default function StaffDetail() {
           <InfoRow label="은행">{staff.bank}</InfoRow>
           <InfoRow label="계좌번호" mb={16}>
             <button onClick={() => handleCopy(staff.accountNumber)}
+              className="pressable"
               style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '16px', fontWeight: 500, color: '#4261FF', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
               {staff.accountNumber}
               <Copy style={{ width: '14px', height: '14px' }} />
@@ -499,17 +502,17 @@ export default function StaffDetail() {
           <SectionHeader title="계약서" onEdit={() => goEdit('계약서')} isRegistered={!!(staff.resume || staff.laborContract || staff.healthCert)} readonly={isGhost} />
           <InfoRow label="이력서">
             {staff.resume
-              ? <button onClick={() => setImagePreview(staff.resume)} style={{ color: '#4261FF', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em' }}>{staff.resume}</button>
+              ? <button className="pressable" onClick={() => setImagePreview(staff.resume)} style={{ color: '#4261FF', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em' }}>{staff.resume}</button>
               : <span style={{ color: '#9EA3AD' }}>미등록</span>}
           </InfoRow>
           <InfoRow label="근로계약서">
             {staff.laborContract
-              ? <button onClick={() => setImagePreview(staff.laborContract)} style={{ color: '#4261FF', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em' }}>{staff.laborContract}</button>
+              ? <button className="pressable" onClick={() => setImagePreview(staff.laborContract)} style={{ color: '#4261FF', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em' }}>{staff.laborContract}</button>
               : <span style={{ color: '#9EA3AD' }}>미등록</span>}
           </InfoRow>
           <InfoRow label="보건증" mb={16}>
             {staff.healthCert
-              ? <button onClick={() => setImagePreview(staff.healthCert)} style={{ color: '#4261FF', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em' }}>{staff.healthCert}</button>
+              ? <button className="pressable" onClick={() => setImagePreview(staff.healthCert)} style={{ color: '#4261FF', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em' }}>{staff.healthCert}</button>
               : <span style={{ color: '#9EA3AD' }}>미등록</span>}
           </InfoRow>
         </div>
@@ -526,6 +529,7 @@ export default function StaffDetail() {
                 <span style={{ display: 'inline-flex', alignItems: 'center', height: '24px', padding: '0 10px', borderRadius: '6px', backgroundColor: '#EAECEF', fontSize: '13px', fontWeight: 600, color: '#70737B' }}>앱 탈퇴</span>
               </div>
               <button onClick={() => goEdit('근무상태')}
+                className="pressable"
                 style={{ width: '100%', height: '52px', borderRadius: '14px', backgroundColor: '#19191B', border: 'none', fontSize: '16px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', letterSpacing: '-0.02em' }}>
                 퇴사 처리하기 →
               </button>
@@ -538,12 +542,13 @@ export default function StaffDetail() {
       </div>
 
       {completionPopup && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80" onClick={handleCompletionConfirm}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50" onClick={handleCompletionConfirm}>
           <div style={{ width: "calc(100% - 48px)", maxWidth: "320px", backgroundColor: "#FFFFFF", borderRadius: "24px", padding: "32px 24px 20px", display: "flex", flexDirection: "column", alignItems: "center" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: "48px", marginBottom: "12px" }}>🎉</div>
             <h3 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B", textAlign: "center", marginBottom: "8px" }}>직원 등록 완료!</h3>
             <p style={{ fontSize: "14px", color: "#70737B", textAlign: "center", lineHeight: "1.7", marginBottom: "24px", whiteSpace: "pre-line" }}>{"모든 정보가 등록되었어요.\n이제 급여 계산과 일정 관리를\n시작할 수 있어요."}</p>
             <button onClick={() => { handleCompletionConfirm(); navigate("/owner/staff"); }}
+              className="pressable"
               style={{ width: "100%", height: "52px", borderRadius: "12px", backgroundColor: "#4261FF", border: "none", fontSize: "16px", fontWeight: 700, color: "#FFFFFF", cursor: "pointer", marginBottom: "10px" }}>
               직원 관리하러 가기 →
             </button>
@@ -557,7 +562,7 @@ export default function StaffDetail() {
       )}
 
       {imagePreview && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 touch-none" onClick={() => setImagePreview("")}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setImagePreview("")}>
           <div style={{ width: "calc(100% - 48px)", maxWidth: "420px", backgroundColor: "#FFFFFF", borderRadius: "20px", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #F0F0F0" }}>
               <span style={{ fontSize: "16px", fontWeight: 700, color: "#19191B", letterSpacing: "-0.02em" }}>{imagePreview}</span>

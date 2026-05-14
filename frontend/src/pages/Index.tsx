@@ -111,7 +111,6 @@ const Index = () => {
       try {
         const [me, stores] = await Promise.all([getMe(), getMyStores()]);
         setMemberName(me.name);
-        localStorage.setItem("currentUserName", me.name);
         const mapped: AccountType[] = stores.map((s: any) => ({
           id: String(s.store_member_id),
           storeId: s.store_id,
@@ -120,16 +119,22 @@ const Index = () => {
           employeeType: s.employee_type ?? "",
         }));
         setAccounts(mapped); // 여기 추가
-        const savedStoreId = localStorage.getItem("currentStoreId");
-        const savedAccount = savedStoreId ? mapped.find(a => String(a.storeId) === savedStoreId) : null;
         const employeeAccount = mapped.find(a => a.role === "employee");
-        const firstAccount = savedAccount ?? employeeAccount ?? mapped[0] ?? null;
+        const firstAccount = employeeAccount ?? mapped[0] ?? null;
         setSelectedAccount(firstAccount);
         localStorage.setItem("currentRole", firstAccount?.role ?? "employee");
         localStorage.setItem("currentStoreId", String(firstAccount?.storeId ?? ""));
-        localStorage.setItem("currentEmployeeId", String(firstAccount?.id ?? ""));
       } catch (err) {
-        navigate("/");
+        if (import.meta.env.PROD) {
+          navigate("/");
+        } else {
+          // 로컬 개발: 백엔드 없이 화면 렌더링용 임시 계정
+          const mock: AccountType = { id: "1", storeId: 1, storeName: "테스트 매장", role: "employee", employeeType: "알바생" };
+          setSelectedAccount(mock);
+          setAccounts([mock]);
+          localStorage.setItem("currentRole", "employee");
+          localStorage.setItem("currentStoreId", "1");
+        }
       } finally {
         setAuthLoaded(true);
       }
@@ -202,7 +207,6 @@ const Index = () => {
   const handleAccountSelect = (account: AccountType) => {
     localStorage.setItem("currentRole", account.role);
     localStorage.setItem("currentStoreId", String(account.storeId));
-    localStorage.setItem("currentEmployeeId", String(account.id));
     if (account.role === "owner") {
       navigate("/owner/home", { state: { storeMemberId: account.id } });
     } else {

@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, ChevronDown, X, Check } from "lucide-react";
-import { staffStore } from "@/lib/staffStore";
 
 const SHIFT_BADGE: Record<string, string> = {
   "오픈": "bg-shift-open-bg text-shift-open",
@@ -10,6 +9,10 @@ const SHIFT_BADGE: Record<string, string> = {
   "마감": "bg-shift-close-bg text-shift-close",
 };
 
+const PAYSLIP_STAFF = [
+  { name: "김정민", shifts: ["오픈"], type: "정규직", workDays: "월, 화, 수, 목, 금", birth: "2001.01.17", phone: "010-5713-0208", avatarColor: "#5C4033", status: "지급 전" as const },
+  { name: "정수민", shifts: ["오픈"], type: "정규직", workDays: "월, 화, 수, 목, 금", birth: "2001.01.17", phone: "010-5713-0208", avatarColor: "#F4D03F", status: "지급 전" as const },
+];
 
 function InfoRow({ label, children }: { label: string | React.ReactNode; children: React.ReactNode }) {
   return (
@@ -35,33 +38,20 @@ function Divider({ thick }: { thick?: boolean }) {
 export default function PayslipDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const staffName = searchParams.get("name") || "";
-  const payslipId = searchParams.get("id");
-  const pyParam = searchParams.get("py");
-  const pmParam = searchParams.get("pm");
+  const staffName = searchParams.get("name") || "김정민";
   const isPaid = searchParams.get("paid") === "true";
   const isEditing = searchParams.get("editing") === "true";
+  const isModified = searchParams.get("modified") === "true";
   const from = searchParams.get("from");
+  const changesRaw = searchParams.get("changes");
+  const changes: Record<string, { label: string; from: string; to: string }> = changesRaw ? (() => { try { return JSON.parse(decodeURIComponent(changesRaw)); } catch { return {}; } })() : {};
   const [expanded, setExpanded] = useState(false);
   const [staffPickerOpen, setStaffPickerOpen] = useState(false);
+  const transferKey = `payslip_transferred_2025_10_${staffName}`;
+  const [transferredAt, setTransferredAt] = useState<string | null>(() => localStorage.getItem(transferKey));
+  const saveTransfer = (val: string | null) => { setTransferredAt(val); if (val) localStorage.setItem(transferKey, val); else localStorage.removeItem(transferKey); };
   const [transferConfirmOpen, setTransferConfirmOpen] = useState(false);
-  const [payslip, setPayslip] = useState<any>(null);
-  const [isTransferred, setIsTransferred] = useState(false);
-  const [transferredAt, setTransferredAt] = useState<string | null>(null);
-  const storeId = localStorage.getItem("currentStoreId");
-
-  useEffect(() => {
-    if (!payslipId || !storeId) return;
-    fetch(`/api/owner/store/${storeId}/payslips/${payslipId}`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (!data) return;
-        setPayslip(data);
-        setIsTransferred(data.is_transferred);
-        setTransferredAt(data.transferred_at || null);
-      })
-      .catch(() => {});
-  }, [payslipId, storeId]);
+  const isTransferred = !!transferredAt;
 
   const fmtTransferTime = (iso: string) => {
     const d = new Date(iso);
@@ -69,8 +59,8 @@ export default function PayslipDetail() {
     return `${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 이체 완료`;
   };
 
-  const publishedAtRaw = payslip?.published_at || null;
-  const isActuallyPublished = !isEditing && (isPaid || !!payslip?.is_published);
+  const publishedAtRaw = localStorage.getItem(`payslip_published_${staffName}`) || searchParams.get("publishedAt");
+  const isActuallyPublished = !isEditing && (isPaid || !!publishedAtRaw);
 
   const formatPublishedAt = (iso: string) => {
     const d = new Date(iso);
@@ -82,98 +72,94 @@ export default function PayslipDetail() {
     return `${yyyy}.${mm}.${dd} ${hh}:${min}`;
   };
 
-  const fmt = (n: number) => n.toLocaleString();
-  const minToHourStr = (min: number) => {
-    const h = Math.floor(min / 60);
-    const m = min % 60;
-    return m === 0 ? `${h}시간` : `${h}시간 ${m}분`;
-  };
-
-  const allStaff = staffStore.getAll();
-  const staffData = allStaff.find(s => s.name === (payslip?.name || staffName)) ?? allStaff.find(s => s.name === staffName);
-  const staff = {
-    name: payslip?.name || staffName,
-    shifts: staffData ? [...new Set(staffData.workSchedule.flatMap(w => w.shifts))] : [] as string[],
-    type: payslip?.employee_type || staffData?.employmentType || "-",
-    avatarColor: staffData?.avatarColor || "#4261FF",
-    birth: payslip?.birth || '-',
-    phone: payslip?.phone || '-',
-  };
+  const staff = PAYSLIP_STAFF.find(s => s.name === staffName) || PAYSLIP_STAFF[0];
 
   const contractInfo = {
-    payDay: payslip?.salary_day ? `${payslip.salary_day}일` : '-',
-    workSchedule: staffData?.workSchedule.map(w => ({ day: w.day, time: w.shifts.join('/'), shifts: w.shifts })) || [],
-    hourlyWage: payslip?.hourly_rate ? `${Number(payslip.hourly_rate).toLocaleString()}원` : '-',
-    bank: payslip?.bank || '-',
-    account: payslip?.account_number || '-',
+    payDay: "15일",
+    workSchedule: [
+      { day: "월", time: "08:00 ~ 16:00", shifts: ["오픈", "미들"] },
+      { day: "화", time: "08:00 ~ 22:00", shifts: ["오픈", "미들", "마감"] },
+      { day: "수", time: "08:00 ~ 16:00", shifts: ["오픈", "미들"] },
+      { day: "목", time: "08:00 ~ 16:00", shifts: ["오픈", "미들"] },
+    ],
+    hourlyWage: "11,000원",
+    bank: "신한은행",
+    account: "333333333333",
   };
 
-  const fmt0 = (n: number) => n.toLocaleString();
+  const parseAmt = (s: string) => parseInt(s.replace(/,/g, ''), 10) || 0;
+  const fmt = (n: number) => n.toLocaleString();
 
-  const basePay      = payslip?.base_pay ?? 0;
-  const overtimePay  = payslip?.overtime_pay ?? 0;
-  const nightPay     = payslip?.night_pay ?? 0;
-  const holidayPay   = payslip?.holiday_pay ?? 0;
-  const weeklyAllow  = payslip?.weekly_leave_pay ?? 0;
-  const otherAllow   = payslip?.other_allowance ?? 0;
-  const incomeTaxVal = payslip?.income_tax ?? 0;
-  const localTaxVal  = payslip?.local_income_tax ?? 0;
-  const pensionVal   = payslip?.national_pension ?? 0;
-  const healthVal    = payslip?.health_insurance ?? 0;
-  const ltcVal       = payslip?.long_term_care ?? 0;
-  const employVal    = payslip?.employment_insurance ?? 0;
+  const BASE = {
+    basePay: "1,617,000", overtimePay: "88,000", nightPay: "44,000",
+    holidayPay: "55,000",
+    weeklyAllowance: "319,000", otherAllowance: "0",
+    incomeTax: "2,430", localTax: "243", nationalPension: "95,731",
+    healthInsurance: "75,436", longTermCare: "9,762", employmentInsurance: "928",
+  };
 
-  const totalPayNum      = payslip?.total_pay ?? (basePay + overtimePay + nightPay + holidayPay + weeklyAllow + otherAllow);
-  const incomeTaxTotalNum = incomeTaxVal + localTaxVal;
-  const socialTotalNum   = pensionVal + healthVal + ltcVal + employVal;
-  const totalDeductionNum = payslip?.total_deduction ?? (incomeTaxTotalNum + socialTotalNum);
-  const netSalaryNum     = payslip?.net_pay ?? (totalPayNum - totalDeductionNum);
+  const get = (key: keyof typeof BASE) => changes[key]?.to ?? BASE[key];
 
-  const periodStr = payslip
-    ? `${payslip.pay_period_start.replace(/-/g,'.')} - ${payslip.pay_period_end.replace(/-/g,'.')}`
-    : pyParam && pmParam ? `${pyParam}.${String(pmParam).padStart(2,'0')}.01 - ${pyParam}.${String(pmParam).padStart(2,'0')}.말일` : '-';
+  const basePay      = get("basePay");
+  const overtimePay  = get("overtimePay");
+  const nightPay     = get("nightPay");
+  const holidayPay   = get("holidayPay");
+  const weeklyAllow  = get("weeklyAllowance");
+  const otherAllow   = get("otherAllowance");
+  const incomeTaxVal = get("incomeTax");
+  const localTaxVal  = get("localTax");
+  const pensionVal   = get("nationalPension");
+  const healthVal    = get("healthInsurance");
+  const ltcVal       = get("longTermCare");
+  const employVal    = get("employmentInsurance");
+
+  const totalPayNum      = parseAmt(basePay) + parseAmt(overtimePay) + parseAmt(nightPay) + parseAmt(holidayPay) + parseAmt(weeklyAllow) + parseAmt(otherAllow);
+  const incomeTaxTotalNum = parseAmt(incomeTaxVal) + parseAmt(localTaxVal);
+  const socialTotalNum   = parseAmt(pensionVal) + parseAmt(healthVal) + parseAmt(ltcVal) + parseAmt(employVal);
+  const totalDeductionNum = incomeTaxTotalNum + socialTotalNum;
+  const netSalaryNum     = totalPayNum - totalDeductionNum;
 
   const salaryInfo = {
-    period: periodStr,
-    totalPayment: `${fmt0(totalPayNum)}원`,
-    totalDeduction: `${fmt0(totalDeductionNum)}원`,
-    netSalary: fmt0(netSalaryNum),
+    period: "2025.10.01 - 2025.10.31",
+    totalPayment: `${fmt(totalPayNum)}원`,
+    totalDeduction: `${fmt(totalDeductionNum)}원`,
+    netSalary: fmt(netSalaryNum),
   };
 
   const workDetail = {
-    workDays: payslip ? `${payslip.work_days}일` : '-',
-    actualHours: payslip ? minToHourStr(payslip.actual_work_minutes) : '-',
-    overtimeHours: payslip ? minToHourStr(payslip.overtime_minutes) : '-',
-    nightHours: payslip ? minToHourStr(payslip.night_minutes || 0) : '-',
-    holidayHours: payslip ? minToHourStr(payslip.holiday_minutes || 0) : '-',
-    weeklyAllowanceHours: payslip ? minToHourStr(payslip.weekly_leave_minutes || 0) : '-',
-    weeklyNote: "",
-    totalPayHours: payslip ? minToHourStr((payslip.actual_work_minutes || 0) + (payslip.overtime_minutes || 0) + (payslip.weekly_leave_minutes || 0)) : '-',
+    workDays: "23일",
+    actualHours: "147시간",
+    overtimeHours: "8시간",
+    nightHours: "4시간",
+    holidayHours: "4시간 30분",
+    weeklyAllowanceHours: "29시간",
+    weeklyNote: "(1일 평균 근로시간 5.8 × 5주)",
+    totalPayHours: "192시간 30분",
   };
 
   const payDetail = {
-    basePay: { amount: `${fmt0(basePay)}원`, note: `(${minToHourStr(payslip?.actual_work_minutes || 0)})` },
-    overtimePay: { amount: `${fmt0(overtimePay)}원`, note: `(${minToHourStr(payslip?.overtime_minutes || 0)})` },
-    nightPay: { amount: `${fmt0(nightPay)}원`, note: `(${minToHourStr(payslip?.night_minutes || 0)})` },
-    holidayPay: { amount: `${fmt0(holidayPay)}원`, note: `(${minToHourStr(payslip?.holiday_minutes || 0)})` },
-    weeklyAllowance: { amount: `${fmt0(weeklyAllow)}원`, note: `(${minToHourStr(payslip?.weekly_leave_minutes || 0)})` },
-    otherAllowance: { amount: `${fmt0(otherAllow)}원`, label: "(인센티브)" },
-    totalPayment: `${fmt0(totalPayNum)}원`,
+    basePay: { amount: `${basePay}원`, note: "(147시간)" },
+    overtimePay: { amount: `${overtimePay}원`, note: "(8시간)" },
+    nightPay: { amount: `${nightPay}원`, note: "(4시간)" },
+    holidayPay: { amount: `${holidayPay}원`, note: "(4시간 30분)" },
+    weeklyAllowance: { amount: `${weeklyAllow}원`, note: "(29시간)" },
+    otherAllowance: { amount: `${otherAllow}원`, label: "(인센티브)" },
+    totalPayment: `${fmt(totalPayNum)}원`,
   };
 
   const deductionDetail = {
-    incomeTax: `${fmt0(incomeTaxVal)}원`,
-    localTax: `${fmt0(localTaxVal)}원`,
-    incomeTaxTotal: `${fmt0(incomeTaxTotalNum)}원`,
-    nationalPension: { amount: `${fmt0(pensionVal)}원`, note: "(근로자 부담 4.5%)" },
-    healthInsurance: { amount: `${fmt0(healthVal)}원`, note: "(근로자 부담 3.545%)" },
-    longTermCare: { amount: `${fmt0(ltcVal)}원`, note: "(건강보험료의 12.81%)" },
-    employmentInsurance: { amount: `${fmt0(employVal)}원`, note: "(근로자 부담 0.9%)" },
-    socialTotal: `${fmt0(socialTotalNum)}원`,
-    totalDeduction: `${fmt0(totalDeductionNum)}원`,
+    incomeTax: `${incomeTaxVal}원`,
+    localTax: `${localTaxVal}원`,
+    incomeTaxTotal: `${fmt(incomeTaxTotalNum)}원`,
+    nationalPension: { amount: `${pensionVal}원`, note: "(근로자 부담 4.5%)" },
+    healthInsurance: { amount: `${healthVal}원`, note: "(근로자 부담 3.545%)" },
+    longTermCare: { amount: `${ltcVal}원`, note: "(건강보험료의 12.81%)" },
+    employmentInsurance: { amount: `${employVal}원`, note: "(근로자 부담 0.9%)" },
+    socialTotal: `${fmt(socialTotalNum)}원`,
+    totalDeduction: `${fmt(totalDeductionNum)}원`,
   };
 
-  const cumulativeSalary = { period: periodStr, amount: `${fmt0(netSalaryNum)}원` };
+  const cumulativeSalary = { period: "2025.10.01 - 2025.10.31", amount: "3,450,000원" };
 
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto">
@@ -222,6 +208,7 @@ export default function PayslipDetail() {
               <span style={{ fontSize: '13px', fontWeight: 500, color: '#92400E', lineHeight: '1.5' }}>급여 이체 후 이체 확인 버튼을<br />눌러주세요</span>
             </div>
             <button
+              className="pressable"
               onClick={() => setTransferConfirmOpen(true)}
               style={{ flexShrink: 0, height: '34px', padding: '0 14px', borderRadius: '8px', border: 'none', backgroundColor: '#FFB300', fontSize: '13px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               이체 확인
@@ -299,6 +286,7 @@ export default function PayslipDetail() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '14px', fontWeight: 700, color: '#19191B' }}>지급될 급여</span>
+                  {isModified && <span style={{ fontSize: '11px', fontWeight: 700, color: '#FF8F00', backgroundColor: '#FFF3E0', padding: '2px 8px', borderRadius: '99px' }}>수정됨</span>}
                 </div>
                 <span style={{ fontSize: '12px', color: '#9EA3AD' }}>({salaryInfo.period})</span>
               </div>
@@ -311,7 +299,7 @@ export default function PayslipDetail() {
             </div>
           </div>
           {!expanded ? (
-            <button onClick={() => setExpanded(true)} className="w-full flex items-center justify-center gap-1" style={{ fontSize: '14px', color: '#9EA3AD', padding: '16px 20px' }}>
+            <button onClick={() => setExpanded(true)} className="pressable w-full flex items-center justify-center gap-1" style={{ fontSize: '14px', color: '#9EA3AD', padding: '16px 20px' }}>
               상세 보기 <ChevronDown className="w-4 h-4" />
             </button>
           ) : (
@@ -342,24 +330,47 @@ export default function PayslipDetail() {
               <div style={{ padding: '16px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                   <h3 style={{ fontSize: 'clamp(18px, 5vw, 20px)', fontWeight: 700, color: '#19191B', letterSpacing: '-0.02em', margin: 0 }}>지급 내역</h3>
+                  {isModified && <span style={{ fontSize: '11px', fontWeight: 700, color: '#FF8F00', backgroundColor: '#FFF3E0', padding: '2px 8px', borderRadius: '99px' }}>수정됨</span>}
                 </div>
                 <InfoRow label="기본급">
-                  <div>{payDetail.basePay.amount}<span style={{ fontSize: '13px', color: '#9EA3AD' }}>{payDetail.basePay.note}</span></div>
+                  <div>
+                    {payDetail.basePay.amount}<span style={{ fontSize: '13px', color: '#9EA3AD' }}>{payDetail.basePay.note}</span>
+                    {changes.basePay && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}><span style={{ fontSize: '12px', color: '#9EA3AD' }}>{changes.basePay.from}원</span><span style={{ fontSize: '11px', color: '#9EA3AD' }}>→</span><span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600 }}>{changes.basePay.to}원으로 수정</span></div>}
+                  </div>
                 </InfoRow>
                 <InfoRow label="연장수당">
-                  <div>{payDetail.overtimePay.amount}<span style={{ fontSize: '13px', color: '#9EA3AD' }}>{payDetail.overtimePay.note}</span></div>
+                  <div>
+                    {payDetail.overtimePay.amount}<span style={{ fontSize: '13px', color: '#9EA3AD' }}>{payDetail.overtimePay.note}</span>
+                    <br /><span style={{ fontSize: '12px', color: '#9EA3AD' }}>시급 11,000원 × 1.5배 (법정 기준)</span>
+                    {changes.overtimePay && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}><span style={{ fontSize: '12px', color: '#9EA3AD' }}>{changes.overtimePay.from}원</span><span style={{ fontSize: '11px', color: '#9EA3AD' }}>→</span><span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600 }}>{changes.overtimePay.to}원으로 수정</span></div>}
+                  </div>
                 </InfoRow>
                 <InfoRow label="야간수당">
-                  <div>{payDetail.nightPay.amount}<span style={{ fontSize: '13px', color: '#9EA3AD' }}>{payDetail.nightPay.note}</span></div>
+                  <div>
+                    {payDetail.nightPay.amount}<span style={{ fontSize: '13px', color: '#9EA3AD' }}>{payDetail.nightPay.note}</span>
+                    <br /><span style={{ fontSize: '12px', color: '#9EA3AD' }}>시급 11,000원 × 0.5배 추가 (법정 기준)</span>
+                    {changes.nightPay && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}><span style={{ fontSize: '12px', color: '#9EA3AD' }}>{changes.nightPay.from}원</span><span style={{ fontSize: '11px', color: '#9EA3AD' }}>→</span><span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600 }}>{changes.nightPay.to}원으로 수정</span></div>}
+                  </div>
                 </InfoRow>
                 <InfoRow label="휴일수당">
-                  <div>{payDetail.holidayPay.amount}<span style={{ fontSize: '13px', color: '#9EA3AD' }}>{payDetail.holidayPay.note}</span></div>
+                  <div>
+                    {payDetail.holidayPay.amount}<span style={{ fontSize: '13px', color: '#9EA3AD' }}>{payDetail.holidayPay.note}</span>
+                    <br /><span style={{ fontSize: '12px', color: '#9EA3AD' }}>시급 11,000원 × 1.5배 (8시간 이내, 법정 기준)</span>
+                    {changes.holidayPay && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}><span style={{ fontSize: '12px', color: '#9EA3AD' }}>{changes.holidayPay.from}원</span><span style={{ fontSize: '11px', color: '#9EA3AD' }}>→</span><span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600 }}>{changes.holidayPay.to}원으로 수정</span></div>}
+                  </div>
                 </InfoRow>
                 <InfoRow label="주휴수당">
-                  <div>{payDetail.weeklyAllowance.amount}<span style={{ fontSize: '13px', color: '#9EA3AD' }}>{payDetail.weeklyAllowance.note}</span></div>
+                  <div>
+                    {payDetail.weeklyAllowance.amount}<span style={{ fontSize: '13px', color: '#9EA3AD' }}>{payDetail.weeklyAllowance.note}</span>
+                    <br /><span style={{ fontSize: '12px', color: '#9EA3AD' }}>1일 평균 근로시간 5.8 × 5주 (주 15시간 이상 기준)</span>
+                    {changes.weeklyAllowance && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}><span style={{ fontSize: '12px', color: '#9EA3AD' }}>{changes.weeklyAllowance.from}원</span><span style={{ fontSize: '11px', color: '#9EA3AD' }}>→</span><span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600 }}>{changes.weeklyAllowance.to}원으로 수정</span></div>}
+                  </div>
                 </InfoRow>
                 <InfoRow label={<>기타 수당<br /><span style={{ fontSize: '12px', color: '#9EA3AD' }}>{payDetail.otherAllowance.label}</span></>}>
-                  <div>{payDetail.otherAllowance.amount}</div>
+                  <div>
+                    {payDetail.otherAllowance.amount}
+                    {changes.otherAllowance && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}><span style={{ fontSize: '12px', color: '#9EA3AD' }}>{changes.otherAllowance.from}원</span><span style={{ fontSize: '11px', color: '#9EA3AD' }}>→</span><span style={{ fontSize: '12px', color: '#FF8F00', fontWeight: 600 }}>{changes.otherAllowance.to}원으로 수정</span></div>}
+                  </div>
                 </InfoRow>
                 <InfoRow label="지급액 합계"><span style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>{payDetail.totalPayment}</span></InfoRow>
               </div>
@@ -414,7 +425,7 @@ export default function PayslipDetail() {
                 </p>
               </div>
 
-              <button onClick={() => setExpanded(false)} className="w-full flex items-center justify-center gap-1" style={{ fontSize: '14px', color: '#9EA3AD', padding: '12px 20px 16px' }}>
+              <button onClick={() => setExpanded(false)} className="pressable w-full flex items-center justify-center gap-1" style={{ fontSize: '14px', color: '#9EA3AD', padding: '12px 20px 16px' }}>
                 닫기 <ChevronDown className="w-4 h-4 rotate-180" />
               </button>
             </>
@@ -432,6 +443,7 @@ export default function PayslipDetail() {
                     : <p style={{ fontSize: '13px', color: '#9EA3AD' }}>명세서 전송과 별개로 이체 여부를 기록해요</p>}
                 </div>
                 <button
+                  className="pressable"
                   onClick={() => { if (!isTransferred) setTransferConfirmOpen(true); }}
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '40px', padding: '0 14px', borderRadius: '10px', border: `1px solid ${isTransferred ? 'rgba(16,201,125,0.3)' : '#DBDCDF'}`, backgroundColor: isTransferred ? 'rgba(16,201,125,0.08)' : '#FFFFFF', fontSize: '14px', fontWeight: 600, color: isTransferred ? '#10C97D' : '#70737B', cursor: 'pointer' }}>
                   {isTransferred && <Check style={{ width: '14px', height: '14px' }} />}
@@ -449,18 +461,20 @@ export default function PayslipDetail() {
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "#FFFFFF", borderTop: "1px solid #F7F7F8" }}>
           <div style={{ maxWidth: "512px", margin: "0 auto", padding: "16px 20px", display: "flex", gap: "8px" }}>
             {isActuallyPublished ? (
-              <button disabled style={{ width: '100%', height: '56px', backgroundColor: '#F7F7F8', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#AAB4BF', cursor: 'default' }}>
+              <button disabled style={{ width: '100%', height: '56px', backgroundColor: '#DBDCDF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#FFFFFF', cursor: 'default' }}>
                 급여 명세서 발급 완료
               </button>
             ) : (
               <>
                 <button
-                  onClick={() => navigate(`/owner/salary/payslip/edit?id=${payslipId}&name=${encodeURIComponent(staff.name)}&py=${pyParam}&pm=${pmParam}`)}
+                  className="pressable"
+                  onClick={() => navigate(`/owner/salary/payslip/edit?name=${encodeURIComponent(staff.name)}`)}
                   style={{ width: '122px', height: '56px', flexShrink: 0, backgroundColor: '#DEEBFF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#4261FF', cursor: 'pointer' }}>
                   수정하기
                 </button>
                 <button
-                  onClick={() => navigate(`/owner/salary/payslip/publish?id=${payslipId}&name=${encodeURIComponent(staff.name)}&py=${pyParam}&pm=${pmParam}`)}
+                  className="pressable"
+                  onClick={() => navigate(`/owner/salary/payslip/publish?name=${encodeURIComponent(staff.name)}${isModified ? "&modified=true" : ""}${changesRaw ? "&changes=" + encodeURIComponent(changesRaw) : ""}`)}
                   style={{ flex: 1, height: '56px', backgroundColor: '#4261FF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer' }}>
                   급여명세서 미리보기
                 </button>
@@ -473,21 +487,13 @@ export default function PayslipDetail() {
 
       {/* 이체 완료 확인 팝업 */}
       {transferConfirmOpen && createPortal(
-        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center" onClick={() => setTransferConfirmOpen(false)}>
+        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center touch-none sheet-overlay" onClick={() => setTransferConfirmOpen(false)}>
           <div style={{ width: 'calc(100% - 48px)', maxWidth: '320px', backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '28px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#19191B', textAlign: 'center', marginBottom: '8px', letterSpacing: '-0.02em' }}>이체 완료 처리</h3>
             <p style={{ fontSize: '14px', color: '#70737B', textAlign: 'center', marginBottom: '24px', lineHeight: '1.6', letterSpacing: '-0.02em' }}>{staffName}님 급여를 실제로<br />이체하셨나요?</p>
             <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-              <button onClick={() => setTransferConfirmOpen(false)} style={{ flex: 1, height: '52px', borderRadius: '14px', border: 'none', fontSize: '15px', fontWeight: 700, color: '#70737B', backgroundColor: '#F7F7F8', cursor: 'pointer', letterSpacing: '-0.02em' }}>취소</button>
-              <button onClick={() => {
-                setTransferConfirmOpen(false);
-                const now = new Date().toISOString();
-                setIsTransferred(true);
-                setTransferredAt(now);
-                if (payslipId && storeId) {
-                  fetch(`/api/owner/store/${storeId}/payslips/${payslipId}/transfer`, { method: 'POST', credentials: 'include' }).catch(() => {});
-                }
-              }} style={{ flex: 1, height: '52px', borderRadius: '14px', border: 'none', fontSize: '15px', fontWeight: 700, color: '#FFFFFF', backgroundColor: '#4261FF', cursor: 'pointer', letterSpacing: '-0.02em' }}>이체 완료</button>
+              <button className="pressable" onClick={() => setTransferConfirmOpen(false)} style={{ flex: 1, height: '52px', borderRadius: '14px', border: 'none', fontSize: '15px', fontWeight: 700, color: '#70737B', backgroundColor: '#F7F7F8', cursor: 'pointer', letterSpacing: '-0.02em' }}>취소</button>
+              <button className="pressable" onClick={() => { setTransferConfirmOpen(false); saveTransfer(new Date().toISOString()); }} style={{ flex: 1, height: '52px', borderRadius: '14px', border: 'none', fontSize: '15px', fontWeight: 700, color: '#FFFFFF', backgroundColor: '#4261FF', cursor: 'pointer', letterSpacing: '-0.02em' }}>이체 완료</button>
             </div>
           </div>
         </div>,
@@ -496,7 +502,7 @@ export default function PayslipDetail() {
 
       {/* 직원 선택 바텀시트 */}
       {staffPickerOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50" onClick={() => setStaffPickerOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setStaffPickerOpen(false)}>
           <div className="w-full max-w-lg rounded-t-2xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
             <div className="px-6 pt-6">
               <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
@@ -507,14 +513,11 @@ export default function PayslipDetail() {
               </div>
               <div className="flex items-center justify-between" style={{ marginBottom: '4px', marginTop: '4px' }}>
                 <span style={{ fontSize: '14px', color: '#AAB4BF' }}>발급 대기 직원</span>
-                <span style={{ fontSize: '14px', color: '#AAB4BF' }}>총 {allStaff.length}명</span>
+                <span style={{ fontSize: '14px', color: '#AAB4BF' }}>총 {PAYSLIP_STAFF.filter(s => s.status === "지급 전").length}명</span>
               </div>
             </div>
             <div className="overflow-y-auto py-[10px]" style={{ maxHeight: '60vh' }}>
-              {allStaff.map((s, i) => {
-                const sShifts = [...new Set(s.workSchedule.flatMap(w => w.shifts))];
-                const sWorkDays = s.workSchedule.map(w => w.day).join(', ') || '-';
-                return (
+              {PAYSLIP_STAFF.filter(s => s.status === "지급 전").map((s, i) => (
                 <button key={i} onClick={() => { setStaffPickerOpen(false); navigate(`/owner/salary/payslip?name=${encodeURIComponent(s.name)}`); }}
                   className="pressable w-full flex items-center justify-between px-6 py-[10px]"
                   style={{ backgroundColor: s.name === staff.name ? '#F0F4FF' : '#FFFFFF' }}>
@@ -523,16 +526,15 @@ export default function PayslipDetail() {
                     <div className="text-left">
                       <div className="flex items-center gap-1.5" style={{ marginBottom: '2px' }}>
                         <span style={{ fontSize: '14px', fontWeight: 500, color: s.name === staff.name ? '#4261FF' : '#19191B' }}>{s.name}</span>
-                        {sShifts.map(sh => <span key={sh} className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${SHIFT_BADGE[sh] || ''}`}>{sh}</span>)}
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground">{s.employmentType}</span>
+                        {s.shifts.map(sh => <span key={sh} className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${SHIFT_BADGE[sh] || ''}`}>{sh}</span>)}
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground">{s.type}</span>
                       </div>
-                      <span style={{ fontSize: '12px', color: '#AAB4BF' }}>{sWorkDays}</span>
+                      <span style={{ fontSize: '12px', color: '#AAB4BF' }}>{s.workDays}</span>
                     </div>
                   </div>
                   {s.name === staff.name && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4261FF', flexShrink: 0 }} />}
                 </button>
-                );
-              })}
+              ))}
             </div>
           </div>
         </div>,

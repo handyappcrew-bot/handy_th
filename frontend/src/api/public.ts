@@ -38,9 +38,46 @@ export async function codeVerify(phone: string, code: string) {
     const response = await fetch(`${BASE_URL}/api/auth/signup/code/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify({ phone, code })
     });
     if (!response.ok) throw new Error("인증번호 검증 실패");
+    return response.json();
+}
+
+// 회원가입 (multipart/form-data)
+export type SignupPayload = {
+    phone: string;
+    name: string;
+    birth: string;
+    gender: string;
+    type?: "general" | "social";
+    agreedTerms: boolean;
+    password?: string;
+    image?: File | null;
+};
+
+export async function signup(payload: SignupPayload) {
+    const formData = new FormData();
+    formData.append("phone", payload.phone);
+    formData.append("name", payload.name);
+    formData.append("birth", payload.birth);
+    formData.append("gender", payload.gender);
+    formData.append("type", payload.type ?? "general");
+    formData.append("agreed_terms", String(payload.agreedTerms));
+    if (payload.password) formData.append("password", payload.password);
+    if (payload.image) formData.append("image", payload.image);
+
+    const response = await fetch(`${BASE_URL}/api/auth/signup`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+    });
+    if (!response.ok) {
+        let detail = "회원가입 실패";
+        try { detail = (await response.json()).detail ?? detail; } catch { /* 빈 응답 무시 */ }
+        throw new Error(detail);
+    }
     return response.json();
 }
 
@@ -49,6 +86,7 @@ export async function codeResend(phone: string) {
     const response = await fetch(`${BASE_URL}/api/auth/signup/code/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify({ phone })
     });
     if (!response.ok) throw new Error("인증번호 재전송 실패");
@@ -78,11 +116,13 @@ export async function getNoticeDetail(id: number) {
 
 // 고객 건의 추가
 export async function postFeedback(
+    member_id: number,
     title: string,
     content: string,
     images: string[]  // base64 data URL[]
 ) {
     const formData = new FormData();
+    formData.append("member_id", String(member_id));
     formData.append("title", title);
     formData.append("content", content);
 
@@ -98,8 +138,8 @@ export async function postFeedback(
 
     const response = await fetch(`${BASE_URL}/api/common/feedback`, {
         method: "POST",
-        body: formData,
         credentials: 'include',
+        body: formData,
     });
     if (!response.ok) throw new Error("건의 등록 실패");
     return response.json();
@@ -119,9 +159,12 @@ export async function getNotification(unread_only = false, store_id: number) {
     return response.json();
 }
 
-// 알림 읽음 처리 
+// 알림 읽음 처리
 export async function markNotificationRead(id: string) {
-    await fetch(`${BASE_URL}/api/common/notification/${id}/read`, { method: 'PATCH' });
+    await fetch(`${BASE_URL}/api/common/notification/${id}/read`, {
+        method: 'PATCH',
+        credentials: 'include',
+    });
 }
 
 // 회원탈퇴 사유 추가
@@ -129,6 +172,7 @@ export async function addWithdrawalReason(member_id: number, reason: string) {
     const response = await fetch(`${BASE_URL}/api/common/withdrawal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify({ member_id, reason })
     });
     if (!response.ok) throw new Error("회원 탈퇴 추가 실패");
@@ -137,7 +181,9 @@ export async function addWithdrawalReason(member_id: number, reason: string) {
 
 // 회원탈퇴 상태 변경
 export async function UpdateWithdrawalMember(member_id: number) {
-    const response = await fetch(`${BASE_URL}/api/auth/withdrawal/${member_id}`);
+    const response = await fetch(`${BASE_URL}/api/auth/withdrawal/${member_id}`, {
+        credentials: 'include',
+    });
     if (!response.ok) throw new Error("회원 탈퇴 처리 실패");
     return response.json();
 }

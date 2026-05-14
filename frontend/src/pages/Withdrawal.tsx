@@ -28,7 +28,7 @@ const Withdrawal = () => {
   if (completed) return (
     <div className="min-h-screen bg-white max-w-lg mx-auto flex flex-col">
       <div className="sticky top-0 z-10 flex items-center gap-2 px-2 pt-4 pb-2" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => navigate(-1)} className="p-1">
+        <button onClick={() => navigate(-1)} className="pressable p-1">
           <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>회원 탈퇴</h1>
@@ -43,7 +43,7 @@ const Withdrawal = () => {
         </p>
       </div>
       <div className="px-5 pb-8">
-        <button onClick={() => navigate("/")} className="w-full rounded-2xl py-4 font-semibold"
+        <button onClick={() => navigate("/")} className="pressable w-full rounded-2xl py-4 font-semibold"
           style={{ backgroundColor: '#4261FF', color: '#FFFFFF', fontSize: '16px' }}>
           확인
         </button>
@@ -55,7 +55,7 @@ const Withdrawal = () => {
     <div className="min-h-screen bg-white max-w-lg mx-auto flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-10 flex items-center gap-2 px-2 pt-4 pb-2" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={goBack} className="p-1">
+        <button onClick={goBack} className="pressable p-1">
           <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>회원 탈퇴</h1>
@@ -95,7 +95,7 @@ const Withdrawal = () => {
             </div>
 
             {/* 동의 체크박스 */}
-            <button onClick={() => setAgreed(!agreed)} className="flex items-start gap-3 w-full text-left">
+            <button onClick={() => setAgreed(!agreed)} className="pressable flex items-start gap-3 w-full text-left">
               <div className="flex-shrink-0 flex items-center justify-center"
                 style={{ width: '24px', height: '24px', borderRadius: '6px', marginTop: '2px', backgroundColor: agreed ? '#4261FF' : '#FFFFFF', border: agreed ? '2px solid #4261FF' : '2px solid #DBDCDF' }}>
                 {agreed && (
@@ -123,7 +123,7 @@ const Withdrawal = () => {
 
             <div className="space-y-6">
               {reasons.map((reason) => (
-                <button key={reason} onClick={() => setSelectedReason(reason)} className="flex items-center gap-3 w-full text-left">
+                <button key={reason} onClick={() => setSelectedReason(reason)} className="pressable flex items-center gap-3 w-full text-left">
                   <div className="flex items-center justify-center flex-shrink-0"
                     style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: selectedReason === reason ? '#4261FF' : '#FFFFFF', border: selectedReason === reason ? '2px solid #4261FF' : '2px solid #DBDCDF' }}>
                     {selectedReason === reason && (
@@ -144,8 +144,8 @@ const Withdrawal = () => {
                   value={otherText}
                   onChange={(e) => { if (e.target.value.length <= 100) setOtherText(e.target.value); }}
                   placeholder="기타 사유 입력 (필수)"
-                  className="w-full rounded-xl px-4 py-3 focus:outline-none resize-none"
-                  style={{ height: '120px', border: '1px solid #DBDCDF', fontSize: '15px', color: '#19191B', letterSpacing: '-0.02em' }}
+                  className="w-full rounded-xl border border-border px-4 py-3 focus:outline-none focus:border-primary resize-none"
+                  style={{ height: '120px', fontSize: '15px', color: '#19191B', letterSpacing: '-0.02em' }}
                 />
                 <p className="text-right" style={{ fontSize: '14px', color: '#AAB4BF', marginTop: '4px' }}>{otherText.length}/100</p>
               </div>
@@ -156,7 +156,7 @@ const Withdrawal = () => {
 
       {/* 하단 버튼 */}
       <div className="px-5 pb-8 flex gap-3">
-        <button onClick={goBack} className="flex-1 rounded-2xl py-4 font-semibold"
+        <button onClick={goBack} className="pressable flex-1 rounded-2xl py-4 font-semibold"
           style={{ backgroundColor: '#E8F3FF', color: '#4261FF', fontSize: '16px' }}>
           {step === 1 ? "취소" : "이전"}
         </button>
@@ -166,8 +166,8 @@ const Withdrawal = () => {
             else if (canWithdraw) setConfirmDialogOpen(true);
           }}
           disabled={step === 1 ? !agreed : !canWithdraw}
-          className="flex-1 rounded-2xl py-4 font-semibold"
-          style={{ backgroundColor: (step === 1 ? agreed : canWithdraw) ? '#4261FF' : '#E5E7EB', color: (step === 1 ? agreed : canWithdraw) ? '#FFFFFF' : '#9CA3AF', fontSize: '16px' }}>
+          className="pressable flex-1 rounded-2xl py-4 font-semibold"
+          style={{ backgroundColor: (step === 1 ? agreed : canWithdraw) ? '#4261FF' : '#DBDCDF', color: '#FFFFFF', fontSize: '16px' }}>
           {step === 1 ? "다음" : "탈퇴하기"}
         </button>
       </div>

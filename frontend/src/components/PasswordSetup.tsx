@@ -54,7 +54,7 @@ const PasswordSetup = ({ onNext }: PasswordSetupProps) => {
 
     return (
         <div className="flex flex-col min-h-screen px-5 pt-14 pb-8">
-            <button className="self-start -ml-1 p-1 text-primary">
+            <button className="pressable self-start -ml-1 p-1 text-primary">
                 <ChevronLeft className="w-7 h-7" />
             </button>
 
@@ -83,7 +83,7 @@ const PasswordSetup = ({ onNext }: PasswordSetupProps) => {
                         className="flex-1 bg-transparent text-[16px] text-foreground placeholder:text-muted-foreground outline-none"
                         maxLength={PASSWORD_MAX}
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="ml-2 text-muted-foreground">
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="pressable ml-2 text-muted-foreground">
                         {showPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                     </button>
                 </div>
@@ -109,7 +109,7 @@ const PasswordSetup = ({ onNext }: PasswordSetupProps) => {
                         className="flex-1 bg-transparent text-[16px] text-foreground placeholder:text-muted-foreground outline-none"
                         maxLength={PASSWORD_MAX}
                     />
-                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="ml-2 text-muted-foreground">
+                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="pressable ml-2 text-muted-foreground">
                         {showConfirm ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                     </button>
                 </div>

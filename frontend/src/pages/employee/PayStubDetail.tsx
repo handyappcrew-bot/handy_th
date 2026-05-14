@@ -1,104 +1,263 @@
-import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 
-interface Payslip {
-  id: number;
+interface PayStubData {
   year: number;
   month: number;
-  name: string;
-  pay_period_start: string;
-  pay_period_end: string;
-  pay_date: string | null;
-  work_days: number;
-  actual_work_minutes: number;
-  overtime_minutes: number;
-  night_minutes: number;
-  holiday_minutes: number;
-  weekly_leave_minutes: number;
-  base_pay: number;
-  overtime_pay: number;
-  night_pay: number;
-  holiday_pay: number;
-  weekly_leave_pay: number;
-  other_allowance: number;
-  income_tax: number;
-  local_income_tax: number;
-  national_pension: number;
-  health_insurance: number;
-  long_term_care: number;
-  employment_insurance: number;
-  total_pay: number;
-  total_deduction: number;
-  net_pay: number;
-  hourly_rate: number | null;
+  periodStart: string;
+  periodEnd: string;
+  userName: string;
+  netPay: number;
+  hasSocialInsurance: boolean;
+  work: {
+    workDays: number;
+    actualHours: number;
+    overtimeHours: number;
+    nightHours: number;
+    holidayHours: number;
+    weeklyHolidayHours: number;
+    weeklyHolidayCalc: string;
+    totalPayHours: number;
+  };
+  payment: {
+    basePay: number;
+    basePayHours: number;
+    overtimePay: number;
+    overtimePayHours: number;
+    nightPay: number;
+    nightPayHours: number;
+    holidayPay: number;
+    holidayPayHours: number;
+    weeklyHolidayPay: number;
+    weeklyHolidayPayHours: number;
+    incentive: number;
+    totalPayment: number;
+  };
+  deduction: {
+    incomeTax: number;
+    incomeTaxNote: string;
+    localIncomeTax: number;
+    localIncomeTaxNote: string;
+    incomeTaxTotal: number;
+    nationalPension?: number;
+    nationalPensionNote?: string;
+    healthInsurance?: number;
+    healthInsuranceNote?: string;
+    longTermCare?: number;
+    longTermCareNote?: string;
+    employmentInsurance?: number;
+    employmentInsuranceNote?: string;
+    socialTotal?: number;
+    totalDeduction: number;
+  };
+  cumulativeSalary: { period: string; amount: number };
+  comment: string;
 }
 
-const minToHourStr = (min: number) => {
-  if (!min) return "0분";
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h === 0) return `${m}분`;
-  if (m === 0) return `${h}시간`;
-  return `${h}시간 ${m}분`;
+const MOCK_STUBS: Record<string, PayStubData> = {
+  "1": {
+    year: 2025,
+    month: 10,
+    periodStart: "2025.10.01",
+    periodEnd: "2025.10.31",
+    userName: "김정민",
+    netPay: 2357190,
+    hasSocialInsurance: false,
+    work: {
+      workDays: 23,
+      actualHours: 147,
+      overtimeHours: 8,
+      nightHours: 4,
+      holidayHours: 5,
+      weeklyHolidayHours: 29,
+      weeklyHolidayCalc: "1일 평균 근로시간 5.8 × 5주",
+      totalPayHours: 193,
+    },
+    payment: {
+      basePay: 1778000,
+      basePayHours: 147,
+      overtimePay: 132000,
+      overtimePayHours: 8,
+      nightPay: 22000,
+      nightPayHours: 4,
+      holidayPay: 82500,
+      holidayPayHours: 5,
+      weeklyHolidayPay: 349000,
+      weeklyHolidayPayHours: 29,
+      incentive: 0,
+      totalPayment: 2363500,
+    },
+    deduction: {
+      incomeTax: 6055,
+      incomeTaxNote: "근로자 부담 3%",
+      localIncomeTax: 255,
+      localIncomeTaxNote: "근로자 부담 0.3%",
+      incomeTaxTotal: 6310,
+      totalDeduction: 6310,
+    },
+    cumulativeSalary: { period: "2025.10.01 - 2025.10.31", amount: 3450000 },
+    comment: "이번달도 고생 많으셨습니다. 감사합니다.",
+  },
+  "3": {
+    year: 2025,
+    month: 10,
+    periodStart: "2025.10.01",
+    periodEnd: "2025.10.31",
+    userName: "김정민",
+    netPay: 2357190,
+    hasSocialInsurance: false,
+    work: {
+      workDays: 23,
+      actualHours: 147,
+      overtimeHours: 8,
+      nightHours: 4,
+      holidayHours: 5,
+      weeklyHolidayHours: 29,
+      weeklyHolidayCalc: "1일 평균 근로시간 5.8 × 5주",
+      totalPayHours: 193,
+    },
+    payment: {
+      basePay: 1778000,
+      basePayHours: 147,
+      overtimePay: 132000,
+      overtimePayHours: 8,
+      nightPay: 22000,
+      nightPayHours: 4,
+      holidayPay: 82500,
+      holidayPayHours: 5,
+      weeklyHolidayPay: 349000,
+      weeklyHolidayPayHours: 29,
+      incentive: 0,
+      totalPayment: 2363500,
+    },
+    deduction: {
+      incomeTax: 6055,
+      incomeTaxNote: "근로자 부담 3%",
+      localIncomeTax: 255,
+      localIncomeTaxNote: "근로자 부담 0.3%",
+      incomeTaxTotal: 6310,
+      totalDeduction: 6310,
+    },
+    cumulativeSalary: { period: "2025.10.01 - 2025.10.31", amount: 3450000 },
+    comment: "이번달도 고생 많으셨습니다. 감사합니다.",
+  },
+  "2": {
+    year: 2025,
+    month: 10,
+    periodStart: "2025.10.01",
+    periodEnd: "2025.10.31",
+    userName: "김정민",
+    netPay: 2178970,
+    hasSocialInsurance: true,
+    work: {
+      workDays: 23,
+      actualHours: 147,
+      overtimeHours: 8,
+      nightHours: 4,
+      holidayHours: 5,
+      weeklyHolidayHours: 29,
+      weeklyHolidayCalc: "1일 평균 근로시간 5.8 × 5주",
+      totalPayHours: 193,
+    },
+    payment: {
+      basePay: 1778000,
+      basePayHours: 147,
+      overtimePay: 132000,
+      overtimePayHours: 8,
+      nightPay: 22000,
+      nightPayHours: 4,
+      holidayPay: 82500,
+      holidayPayHours: 5,
+      weeklyHolidayPay: 349000,
+      weeklyHolidayPayHours: 29,
+      incentive: 0,
+      totalPayment: 2363500,
+    },
+    deduction: {
+      incomeTax: 2430,
+      incomeTaxNote: "약 0.5~1.5%",
+      localIncomeTax: 243,
+      localIncomeTaxNote: "소득세의 10%",
+      incomeTaxTotal: 2673,
+      nationalPension: 95731,
+      nationalPensionNote: "근로자 부담 4.5%",
+      healthInsurance: 75436,
+      healthInsuranceNote: "근로자 부담 3.545%",
+      longTermCare: 9762,
+      longTermCareNote: "건강보험료의 12.81%",
+      employmentInsurance: 928,
+      employmentInsuranceNote: "근로자 부담 0.9%",
+      socialTotal: 181857,
+      totalDeduction: 184530,
+    },
+    cumulativeSalary: { period: "2025.10.01 - 2025.10.31", amount: 3450000 },
+    comment: "이번달도 고생 많으셨습니다. 감사합니다.",
+  },
+  "4": {
+    year: 2025,
+    month: 10,
+    periodStart: "2025.10.01",
+    periodEnd: "2025.10.31",
+    userName: "김정민",
+    netPay: 2178970,
+    hasSocialInsurance: true,
+    work: {
+      workDays: 23,
+      actualHours: 147,
+      overtimeHours: 8,
+      nightHours: 4,
+      holidayHours: 5,
+      weeklyHolidayHours: 29,
+      weeklyHolidayCalc: "1일 평균 근로시간 5.8 × 5주",
+      totalPayHours: 193,
+    },
+    payment: {
+      basePay: 1778000,
+      basePayHours: 147,
+      overtimePay: 132000,
+      overtimePayHours: 8,
+      nightPay: 22000,
+      nightPayHours: 4,
+      holidayPay: 82500,
+      holidayPayHours: 5,
+      weeklyHolidayPay: 349000,
+      weeklyHolidayPayHours: 29,
+      incentive: 0,
+      totalPayment: 2363500,
+    },
+    deduction: {
+      incomeTax: 2430,
+      incomeTaxNote: "약 0.5~1.5%",
+      localIncomeTax: 243,
+      localIncomeTaxNote: "소득세의 10%",
+      incomeTaxTotal: 2673,
+      nationalPension: 95731,
+      nationalPensionNote: "근로자 부담 4.5%",
+      healthInsurance: 75436,
+      healthInsuranceNote: "근로자 부담 3.545%",
+      longTermCare: 9762,
+      longTermCareNote: "건강보험료의 12.81%",
+      employmentInsurance: 928,
+      employmentInsuranceNote: "근로자 부담 0.9%",
+      socialTotal: 181857,
+      totalDeduction: 184530,
+    },
+    cumulativeSalary: { period: "2025.10.01 - 2025.10.31", amount: 3450000 },
+    comment: "이번달도 고생 많으셨습니다. 감사합니다.",
+  },
 };
 
 const SectionDivider = () => <div className="h-2 bg-[#F7F7F8]" />;
-
-const Row = ({
-  label,
-  value,
-  bold,
-}: {
-  label: string;
-  value: string;
-  bold?: boolean;
-}) => (
-  <div className="flex items-center justify-between">
-    <span className={`text-[15px] ${bold ? "font-bold text-foreground" : "text-muted-foreground"}`}>
-      {label}
-    </span>
-    <span className={`text-[15px] ${bold ? "font-bold text-foreground" : "text-foreground"}`}>
-      {value}
-    </span>
-  </div>
+const SubSectionTitle = ({ children }: { children: React.ReactNode }) => (
+  <p style={{ fontSize: '16px', fontWeight: 700, color: '#19191B', letterSpacing: '-0.02em', marginBottom: '10px', marginTop: '4px' }}>{children}</p>
 );
 
 const PayStubDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [payslip, setPayslip] = useState<Payslip | null>(null);
-  const [loading, setLoading] = useState(true);
+  const stub = MOCK_STUBS[id || "1"];
 
-  useEffect(() => {
-    const storeId = localStorage.getItem("currentStoreId");
-    if (!storeId || !id) return;
-
-    fetch(`/api/employee/payslips/${id}?store_id=${storeId}`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        setPayslip(data);
-        setLoading(false);
-        if (data) {
-          const viewed: string[] = JSON.parse(localStorage.getItem("viewedPayslips") || "[]");
-          if (!viewed.includes(String(id))) {
-            viewed.push(String(id));
-            localStorage.setItem("viewedPayslips", JSON.stringify(viewed));
-          }
-        }
-      })
-      .catch(() => setLoading(false));
-  }, [id]);
-
-  if (loading) {
-    return (
-      <div className="mx-auto min-h-screen max-w-lg bg-white flex items-center justify-center">
-        <p className="text-muted-foreground">불러오는 중...</p>
-      </div>
-    );
-  }
-
-  if (!payslip) {
+  if (!stub) {
     return (
       <div className="mx-auto min-h-screen max-w-lg bg-white flex items-center justify-center">
         <p className="text-muted-foreground">급여명세서를 찾을 수 없습니다.</p>
@@ -106,113 +265,253 @@ const PayStubDetail = () => {
     );
   }
 
-  const hasSocialInsurance = (payslip.national_pension ?? 0) > 0;
-  const periodStart = payslip.pay_period_start?.replace(/-/g, '.') || '-';
-  const periodEnd = payslip.pay_period_end?.replace(/-/g, '.') || '-';
-  const totalWorkMin = (payslip.actual_work_minutes ?? 0) + (payslip.overtime_minutes ?? 0) + (payslip.night_minutes ?? 0) + (payslip.holiday_minutes ?? 0);
-  const totalPayMin = totalWorkMin + (payslip.weekly_leave_minutes ?? 0);
-
   return (
     <div className="mx-auto min-h-screen max-w-lg bg-white">
+      {/* Header */}
       <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => navigate("/employee/salary")} className="p-1">
+        <button onClick={() => navigate("/employee/salary")} className="pressable p-1">
           <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
-        <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>급여명세서</h1>
+        <h1 style={{fontSize:'20px',fontWeight:700,letterSpacing:'-0.02em',color:'#19191B'}}>급여명세서</h1>
       </div>
 
+      {/* Title section */}
       <div className="px-5 pt-4 pb-5">
         <p className="text-lg font-bold text-foreground">
-          {payslip.year}년 {payslip.month}월{" "}
+          {stub.year}년 {stub.month}월{" "}
           <span className="text-sm font-normal text-muted-foreground">
-            ({periodStart} - {periodEnd})
+            ({stub.periodStart} - {stub.periodEnd})
           </span>
         </p>
         <p className="text-lg font-bold text-foreground mt-0.5">
-          {payslip.name}님의 급여명세서
+          {stub.userName}님의 급여명세서
         </p>
         <div className="mt-4 text-right">
           <p className="text-xs text-primary">실 지급액</p>
           <p className="text-2xl font-bold text-primary">
-            {(payslip.net_pay ?? 0).toLocaleString()}원
+            {stub.netPay.toLocaleString()}원
           </p>
         </div>
       </div>
 
       <SectionDivider />
 
+      {/* 근무 내역 */}
       <div className="px-5 py-5">
         <h2 className="text-lg font-bold text-foreground mb-4">근무 내역</h2>
         <div className="space-y-2.5">
-          <Row label="근로일수" value={`${payslip.work_days ?? 0}일`} />
-          <Row label="실근로시간" value={minToHourStr(totalWorkMin)} />
-          <Row label="주휴수당시간" value={minToHourStr(payslip.weekly_leave_minutes ?? 0)} />
-          <Row label="총 지급시간" value={minToHourStr(totalPayMin)} bold />
+          <Row label="근로일수" value={`${stub.work.workDays}일`} />
+          <Row label="실근로시간" value={`${stub.work.actualHours}시간`} />
+          <Row label="연장근로시간" value={`${stub.work.overtimeHours}시간`} />
+          <Row label="야간근로시간" value={`${stub.work.nightHours}시간`} />
+          <Row label="휴일근로시간" value={`${stub.work.holidayHours}시간`} />
+          <div>
+            <Row label="주휴수당시간" value={`${stub.work.weeklyHolidayHours}시간`} />
+            <p className="ml-[100px] text-xs text-muted-foreground mt-0.5">
+              ({stub.work.weeklyHolidayCalc})
+            </p>
+          </div>
+          <Row label="총 지급시간" value={`${stub.work.totalPayHours}시간`} />
         </div>
       </div>
 
       <SectionDivider />
 
+      {/* 지급 내역 */}
       <div className="px-5 py-5">
         <h2 className="text-lg font-bold text-foreground mb-4">지급 내역</h2>
         <div className="space-y-2.5">
-          <Row label="기본급" value={`${(payslip.base_pay ?? 0).toLocaleString()}원`} />
-          {(payslip.overtime_pay ?? 0) > 0 && (
-            <Row label="연장수당" value={`${payslip.overtime_pay.toLocaleString()}원`} />
-          )}
-          {(payslip.night_pay ?? 0) > 0 && (
-            <Row label="야간수당" value={`${payslip.night_pay.toLocaleString()}원`} />
-          )}
-          {(payslip.holiday_pay ?? 0) > 0 && (
-            <Row label="휴일수당" value={`${payslip.holiday_pay.toLocaleString()}원`} />
-          )}
-          {(payslip.weekly_leave_pay ?? 0) > 0 && (
-            <Row label="주휴수당" value={`${payslip.weekly_leave_pay.toLocaleString()}원`} />
-          )}
-          {(payslip.other_allowance ?? 0) > 0 && (
-            <Row label="기타수당" value={`${payslip.other_allowance.toLocaleString()}원`} />
-          )}
-          <Row label="지급 합계" value={`${(payslip.total_pay ?? 0).toLocaleString()}원`} bold />
+          <Row
+            label="기본급"
+            value={`${stub.payment.basePay.toLocaleString()}원`}
+            sub={`(${stub.payment.basePayHours}시간)`}
+          />
+          <Row
+            label="연장수당"
+            value={`${stub.payment.overtimePay.toLocaleString()}원`}
+            sub={`(${stub.payment.overtimePayHours}시간)`}
+            note="시급 × 1.5배 (법정 기준)"
+          />
+          <Row
+            label="야간수당"
+            value={`${stub.payment.nightPay.toLocaleString()}원`}
+            sub={`(${stub.payment.nightPayHours}시간)`}
+            note="시급 × 0.5배 추가 (법정 기준)"
+          />
+          <Row
+            label="휴일수당"
+            value={`${stub.payment.holidayPay.toLocaleString()}원`}
+            sub={`(${stub.payment.holidayPayHours}시간)`}
+            note="시급 × 1.5배 (8시간 이내, 법정 기준)"
+          />
+          <Row
+            label="주휴수당"
+            value={`${stub.payment.weeklyHolidayPay.toLocaleString()}원`}
+            sub={`(${stub.payment.weeklyHolidayPayHours}시간)`}
+          />
+          <Row
+            label="기타 수당"
+            labelSub="(인센티브)"
+            value={`${stub.payment.incentive.toLocaleString()}원`}
+          />
+          <Row
+            label="지급액 합계"
+            value={`${stub.payment.totalPayment.toLocaleString()}원`}
+            bold
+          />
         </div>
       </div>
 
       <SectionDivider />
 
+      {/* 공제 내역 */}
       <div className="px-5 py-5">
         <h2 className="text-lg font-bold text-foreground mb-4">공제 내역</h2>
-        <div className="space-y-2.5">
-          <Row label="소득세" value={`${(payslip.income_tax ?? 0).toLocaleString()}원`} />
-          <Row label="지방소득세" value={`${(payslip.local_income_tax ?? 0).toLocaleString()}원`} />
-          {hasSocialInsurance && (
-            <>
-              <Row label="국민연금" value={`${(payslip.national_pension ?? 0).toLocaleString()}원`} />
-              <Row label="건강보험" value={`${(payslip.health_insurance ?? 0).toLocaleString()}원`} />
-              <Row label="장기요양보험" value={`${(payslip.long_term_care ?? 0).toLocaleString()}원`} />
-              <Row label="고용보험" value={`${(payslip.employment_insurance ?? 0).toLocaleString()}원`} />
-            </>
-          )}
-          <Row label="총 공제액" value={`${(payslip.total_deduction ?? 0).toLocaleString()}원`} bold />
+
+        <SubSectionTitle>소득세</SubSectionTitle>
+        <div className="space-y-2.5 mb-2">
+          <Row
+            label="소득세"
+            value={`${stub.deduction.incomeTax.toLocaleString()}원`}
+            sub={`(${stub.deduction.incomeTaxNote})`}
+          />
+          <Row
+            label="지방소득세"
+            value={`${stub.deduction.localIncomeTax.toLocaleString()}원`}
+            sub={`(${stub.deduction.localIncomeTaxNote})`}
+          />
+        </div>
+        <Row
+          label="소득세 합계"
+          value={`${stub.deduction.incomeTaxTotal.toLocaleString()}원`}
+          bold
+        />
+
+        {stub.hasSocialInsurance && (
+          <>
+            <div className="h-px bg-[#F0F0F0] my-3" />
+            <SubSectionTitle>4대 보험</SubSectionTitle>
+            <div className="space-y-2.5 mb-2">
+              <Row
+                label="국민연금"
+                value={`${stub.deduction.nationalPension?.toLocaleString()}원`}
+                sub={`(${stub.deduction.nationalPensionNote})`}
+              />
+              <Row
+                label="건강보험"
+                value={`${stub.deduction.healthInsurance?.toLocaleString()}원`}
+                sub={`(${stub.deduction.healthInsuranceNote})`}
+              />
+              <Row
+                label="장기요양보험"
+                value={`${stub.deduction.longTermCare?.toLocaleString()}원`}
+                sub={`(${stub.deduction.longTermCareNote})`}
+              />
+              <Row
+                label="고용보험"
+                value={`${stub.deduction.employmentInsurance?.toLocaleString()}원`}
+                sub={`(${stub.deduction.employmentInsuranceNote})`}
+              />
+            </div>
+            <Row
+              label="4대보험 합계"
+              value={`${stub.deduction.socialTotal?.toLocaleString()}원`}
+              bold
+            />
+          </>
+        )}
+
+        <div className="h-px bg-[#F0F0F0] my-3" />
+        <Row
+          label="총 공제액"
+          value={`${stub.deduction.totalDeduction.toLocaleString()}원`}
+          bold
+        />
+      </div>
+
+      <SectionDivider />
+
+      {/* 누적 급여 */}
+      <div className="px-5 py-5">
+        <div style={{ backgroundColor: '#F0F4FF', borderRadius: '14px', padding: '14px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 500, color: '#19191B' }}>지급까지 누적 급여</span>
+            <span style={{ fontSize: '12px', color: '#9EA3AD' }}>({stub.cumulativeSalary.period})</span>
+          </div>
+          <p style={{ textAlign: 'right', fontSize: '22px', fontWeight: 700, color: '#4261FF', margin: 0 }}>
+            {stub.cumulativeSalary.amount.toLocaleString()}원
+          </p>
         </div>
       </div>
 
-      {!hasSocialInsurance && (
-        <>
-          <SectionDivider />
-          <div className="bg-[#F7F7F8] px-5 py-5">
-            <p className="text-xs leading-relaxed text-primary">
-              본 급여명세서는 주당 소정근로시간이 15시간 미만이거나
-              법정 4대보험 적용 대상에 해당하지 않는 근로자에
-              대한 급여 내역으로, 국민연금, 건강보험, 장기요양보험,
-              고용보험은 공제되지 않았으며, 근로소득세 및 지방소득세만
-              공제되었습니다.
-            </p>
-          </div>
-        </>
+      <SectionDivider />
+
+      {/* 전달 코멘트 */}
+      <div className="px-5 py-5">
+        <h2 className="text-lg font-bold text-foreground mb-3">전달 코멘트</h2>
+        <p className="text-[15px] text-foreground">{stub.comment}</p>
+      </div>
+
+      {/* 하단 안내문 */}
+      {!stub.hasSocialInsurance ? (
+        <div className="bg-[#F7F7F8] px-5 py-5">
+          <p className="text-xs leading-relaxed text-primary">
+            본 급여명세서는 주당 소정근로시간이 15시간 미만이거나
+            법정 4대보험 적용 대상에 해당하지 않는 근로자에
+            대한 급여 내역으로, 국민연금, 건강보험, 장기요양보험,
+            고용보험은 공제되지 않았으며, 근로소득세 및 지방소득세만
+            공제되었습니다.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-[#F7F7F8] px-5 py-5">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            본 급여명세서는 국민연금(4.5%), 건강보험(3.545%), 장기요양보험(건강보험료의 12.81%), 고용보험(0.9%) 등 법정 4대 보험 요율을 적용하여 공제하였으며, 근로소득세 및 지방소득세가 함께 공제되었습니다.
+          </p>
+        </div>
       )}
 
       <div className="h-8" />
     </div>
   );
 };
+
+const Row = ({
+  label,
+  labelSub,
+  value,
+  sub,
+  note,
+  bold,
+}: {
+  label: string;
+  labelSub?: string;
+  value: string;
+  sub?: string;
+  note?: string;
+  bold?: boolean;
+}) => (
+  <div className="flex items-start">
+    <div className="w-[100px] shrink-0">
+      <span className={`text-[15px] ${bold ? "font-bold text-foreground" : "text-muted-foreground"}`}>
+        {label}
+      </span>
+      {labelSub && (
+        <span className="block text-xs text-muted-foreground">{labelSub}</span>
+      )}
+    </div>
+    <div>
+      <span className={`text-[15px] ${bold ? "font-bold text-foreground" : "text-foreground"}`}>
+        {value}
+      </span>
+      {sub && (
+        <span className="text-xs text-muted-foreground ml-0.5">{sub}</span>
+      )}
+      {note && (
+        <div className="text-xs text-muted-foreground mt-0.5">{note}</div>
+      )}
+    </div>
+  </div>
+);
 
 export default PayStubDetail;

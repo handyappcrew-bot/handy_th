@@ -46,7 +46,7 @@ const ConfirmDialog = ({ open, onOpenChange, title, description, buttons }: Conf
         )}
         <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
           {buttons.map((btn, i) => (
-            <button key={i} onClick={btn.onClick} style={btnStyle(btn.variant)}>
+            <button className="pressable" key={i} onClick={btn.onClick} style={btnStyle(btn.variant)}>
               {btn.label}
             </button>
           ))}

@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Info, X } from "lucide-react";
-import BottomNav from "@/components/home/employee/BottomNav";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { getEmployeePayslips } from "@/api/employeePayslip";
 
 interface DayPay {
   date: number;
@@ -33,9 +34,16 @@ interface PayStub {
   payDate: string;
 }
 
-const WORK_PATTERNS: Record<number, { timeRange: string; totalHours: string; workPay: number; overtimeMinutes?: number; incentive?: number }> = {};
+const WORK_PATTERNS: Record<number, { timeRange: string; totalHours: string; workPay: number; overtimeMinutes?: number; incentive?: number }> = {
+  1: { timeRange: "08:00 - 13:00", totalHours: "5시간", workPay: 5.0 },
+  2: { timeRange: "08:00 - 13:00", totalHours: "5시간", workPay: 5.0 },
+  3: { timeRange: "13:00 - 17:30", totalHours: "5시간", workPay: 4.5 },
+  4: { timeRange: "13:00 - 17:40", totalHours: "5시간", workPay: 5.1, overtimeMinutes: 10, incentive: 15000 },
+};
 
-const WEEKLY_HOLIDAY_PAY: Record<number, number> = {};
+const WEEKLY_HOLIDAY_PAY: Record<number, number> = {
+  1: 3.9,
+};
 
 const buildCalendar = (year: number, month: number): DayPay[][] => {
   const firstDay = new Date(year, month - 1, 1).getDay();
@@ -91,6 +99,7 @@ const buildCalendar = (year: number, month: number): DayPay[][] => {
   return weeks;
 };
 
+const MOCK_PAY_STUBS: PayStub[] = [];
 
 const WEEKDAY_HEADERS = ["일", "월", "화", "수", "목", "금", "토"];
 const NOW_YEAR = new Date().getFullYear();
@@ -105,33 +114,35 @@ const SalaryManagement = () => {
   const [salaryInfoOpen, setSalaryInfoOpen] = useState(false);
   const [calYear, setCalYear] = useState(NOW_YEAR);
   const [calMonth, setCalMonth] = useState(NOW_MONTH);
-  const [payStubs, setPayStubs] = useState<PayStub[]>([]);
-  const [hourlyRate, setHourlyRate] = useState<number | null>(null);
 
   useEffect(() => {
-    const storeId = localStorage.getItem("currentStoreId");
-    if (!storeId) return;
+    if (bottomSheetOpen) {
+      document.body.setAttribute('data-overlay-open', 'true');
+    } else {
+      document.body.removeAttribute('data-overlay-open');
+    }
+    return () => { document.body.removeAttribute('data-overlay-open'); };
+  }, [bottomSheetOpen]);
 
-    fetch(`/api/employee/payslips?store_id=${storeId}`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : [])
-      .then((data: any[]) => {
-        const viewedIds = new Set<string>(JSON.parse(localStorage.getItem("viewedPayslips") || "[]"));
-        const stubs: PayStub[] = data.map(p => ({
+  const [payStubs, setPayStubs] = useState<PayStub[]>(MOCK_PAY_STUBS);
+
+  useEffect(() => {
+    const storeId = parseInt(localStorage.getItem("currentStoreId") || "0");
+    if (!storeId) return;
+    getEmployeePayslips(storeId)
+      .then((records: any[]) => {
+        const mapped: PayStub[] = records.map(p => ({
           id: String(p.id),
           year: p.year,
           month: p.month,
-          status: viewedIds.has(String(p.id)) ? "확인 완료" : "미확인",
-          netPay: p.net_pay,
-          periodStart: p.pay_period_start?.replace(/-/g, '.') || '-',
-          periodEnd: p.pay_period_end?.replace(/-/g, '.') || '-',
-          payDate: p.pay_date?.replace(/-/g, '.') || '-',
+          status: localStorage.getItem(`payslip_confirmed_${p.id}`) ? "확인 완료" : "미확인",
+          netPay: Math.round(p.net_pay || 0),
+          periodStart: (p.pay_period_start || "").replace(/-/g, "."),
+          periodEnd: (p.pay_period_end || "").replace(/-/g, "."),
+          payDate: (p.pay_date || "").replace(/-/g, "."),
         }));
-        setPayStubs(stubs);
-      }).catch(() => {});
-
-    fetch(`/api/employee/mypage?store_id=${storeId}`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.hourly_rate) setHourlyRate(data.hourly_rate); })
+        setPayStubs(mapped);
+      })
       .catch(() => {});
   }, []);
 
@@ -205,18 +216,18 @@ const SalaryManagement = () => {
     <div className="mx-auto min-h-screen max-w-lg bg-white pb-20">
       <div className="sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
         <div className="flex items-center gap-2 px-2 pt-4 pb-2">
-          <button onClick={() => navigate("/employee/home")} className="p-1">
+          <button onClick={() => navigate("/employee/home")} className="pressable p-1">
             <ChevronLeft className="h-6 w-6 text-foreground" />
           </button>
           <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>급여 관리</h1>
         </div>
         <div className="flex border-b border-border px-5" style={{ gap: '36px' }}>
-          <button onClick={() => setActiveTab("calendar")} className="py-3 relative"
+          <button onClick={() => setActiveTab("calendar")} className="pressable py-3 relative"
             style={{ fontSize: '16px', fontWeight: activeTab === "calendar" ? 700 : 500, letterSpacing: '-0.02em', color: activeTab === "calendar" ? '#4261FF' : '#AAB4BF' }}>
             급여 캘린더
             {activeTab === "calendar" && <div className="absolute bottom-0 left-0 w-full h-[3px] rounded-full" style={{ backgroundColor: '#4261FF' }} />}
           </button>
-          <button onClick={() => setActiveTab("payStub")} className="py-3 relative"
+          <button onClick={() => setActiveTab("payStub")} className="pressable py-3 relative"
             style={{ fontSize: '16px', fontWeight: activeTab === "payStub" ? 700 : 500, letterSpacing: '-0.02em', color: activeTab === "payStub" ? '#4261FF' : '#AAB4BF' }}>
             급여 명세서{unconfirmedCount > 0 ? ` ${unconfirmedCount}건` : ""}
             {activeTab === "payStub" && <div className="absolute bottom-0 left-0 w-full h-[3px] rounded-full" style={{ backgroundColor: '#4261FF' }} />}
@@ -235,7 +246,7 @@ const SalaryManagement = () => {
               <div className="flex items-center justify-between" style={{ marginTop: '8px' }}>
                 <p style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>{calMonth}월 예상 급여</p>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => setSalaryInfoOpen(true)}>
+                  <button className="pressable" onClick={() => setSalaryInfoOpen(true)}>
                     <Info className="h-[18px] w-[18px]" style={{ color: '#4261FF' }} />
                   </button>
                   <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#4261FF' }}>{totalPayRaw.toLocaleString()}원</span>
@@ -250,7 +261,7 @@ const SalaryManagement = () => {
               </div>
               <div className="flex items-center justify-between">
                 <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '-0.02em', color: '#AAB4BF' }}>시급</span>
-                <span style={{ fontSize: '14px', fontWeight: 400, letterSpacing: '-0.02em', color: '#70737B' }}>{hourlyRate !== null ? `${hourlyRate.toLocaleString()} 원` : '-'}</span>
+                <span style={{ fontSize: '14px', fontWeight: 400, letterSpacing: '-0.02em', color: '#70737B' }}>11,000 원</span>
               </div>
             </div>
           </div>
@@ -260,15 +271,15 @@ const SalaryManagement = () => {
           {/* 월/년 네비게이션 + 월간/일간 토글 */}
           <div className="flex items-center justify-between px-5 py-4">
             <div className="flex items-center gap-1">
-              <button onClick={goPrevMonth} className="p-1"><ChevronLeft className="h-5 w-5 text-foreground" /></button>
+              <button onClick={goPrevMonth} className="pressable p-1"><ChevronLeft className="h-5 w-5 text-foreground" /></button>
               <span style={{ fontSize: '17px', fontWeight: 700, color: '#19191B' }}>{calYear}년 {calMonth}월</span>
               <button onClick={goNextMonth} className="p-1" disabled={isCurrentMonth}>
                 <ChevronRight className="h-5 w-5" style={{ color: isCurrentMonth ? '#D1D5DB' : '#19191B' }} />
               </button>
             </div>
             <div className="flex">
-              <button onClick={() => setViewMode("monthly")} style={{ width: '36px', height: '22px', borderRadius: '4px 0 0 4px', backgroundColor: viewMode === "monthly" ? '#93989E' : '#F7F7F8', fontSize: '12px', fontWeight: 600, letterSpacing: '-0.02em', color: viewMode === "monthly" ? '#FFFFFF' : '#93989E' }}>월간</button>
-              <button onClick={() => setViewMode("daily")} style={{ width: '36px', height: '22px', borderRadius: '0 4px 4px 0', backgroundColor: viewMode === "daily" ? '#93989E' : '#F7F7F8', fontSize: '12px', fontWeight: 600, letterSpacing: '-0.02em', color: viewMode === "daily" ? '#FFFFFF' : '#93989E' }}>일간</button>
+              <button className="pressable" onClick={() => setViewMode("monthly")} style={{ width: '36px', height: '22px', borderRadius: '4px 0 0 4px', backgroundColor: viewMode === "monthly" ? '#93989E' : '#F7F7F8', fontSize: '12px', fontWeight: 600, letterSpacing: '-0.02em', color: viewMode === "monthly" ? '#FFFFFF' : '#93989E' }}>월간</button>
+              <button className="pressable" onClick={() => setViewMode("daily")} style={{ width: '36px', height: '22px', borderRadius: '0 4px 4px 0', backgroundColor: viewMode === "daily" ? '#93989E' : '#F7F7F8', fontSize: '12px', fontWeight: 600, letterSpacing: '-0.02em', color: viewMode === "daily" ? '#FFFFFF' : '#93989E' }}>일간</button>
             </div>
           </div>
 
@@ -295,17 +306,22 @@ const SalaryManagement = () => {
                             </span>
                           </div>
                           {day.workPay && !day.isOutside && (
-                            <button onClick={() => handleDayClick(day)} style={{ width: '40px', height: '17px', borderRadius: '4px', backgroundColor: '#F7F7F8', fontSize: '12px', fontWeight: 500, letterSpacing: '-0.02em', color: '#AAB4BF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginBottom: day.weeklyHolidayPay ? '4px' : '0' }}>
+                            <button className="pressable" onClick={() => handleDayClick(day)} style={{ width: '40px', height: '17px', borderRadius: '4px', backgroundColor: '#F7F7F8', fontSize: '12px', fontWeight: 500, letterSpacing: '-0.02em', color: '#AAB4BF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginBottom: day.weeklyHolidayPay ? '4px' : '0' }}>
                               {day.workPay}만
                             </button>
                           )}
                           {day.weeklyHolidayPay && !day.isOutside && (
-                            <button onClick={() => handleDayClick(day)} style={{ width: '40px', height: '17px', borderRadius: '4px', backgroundColor: '#E8F3FF', fontSize: '12px', fontWeight: 500, letterSpacing: '-0.02em', color: '#7488FE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <button className="pressable" onClick={() => handleDayClick(day)} style={{ width: '40px', height: '17px', borderRadius: '4px', backgroundColor: '#E8F3FF', fontSize: '12px', fontWeight: 500, letterSpacing: '-0.02em', color: '#7488FE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {day.weeklyHolidayPay}만
                             </button>
                           )}
                           {day.isPayday && !day.isOutside && (
-                            <span style={{ fontSize: '14px', marginTop: day.workPay ? '2px' : '0' }}>🪙</span>
+                            <span style={{ marginTop: day.workPay ? '2px' : '0', display: 'flex' }}>
+                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <circle cx="8" cy="8" r="7.5" fill="#FFB300"/>
+                                <circle cx="8" cy="8" r="5.5" fill="#FFCA28" opacity="0.6"/>
+                              </svg>
+                            </span>
                           )}
                         </div>
                       );
@@ -333,7 +349,7 @@ const SalaryManagement = () => {
           )}
         </div>
       ) : (
-        <div className="pb-8" style={{ backgroundColor: '#F7F7F8' }}>
+        <div className="pb-8" style={{ backgroundColor: '#F7F7F8', minHeight: '100vh' }}>
           <div className="px-5 pt-5 pb-3">
             <span className="inline-flex items-center justify-center h-[28px] rounded-full px-4" style={{ border: '1px solid #4261FF', backgroundColor: '#E8F3FF', fontSize: '14px', fontWeight: 600, color: '#4261FF' }}>
               총 {payStubs.length}건
@@ -341,7 +357,7 @@ const SalaryManagement = () => {
           </div>
           <div className="space-y-3 px-5">
             {payStubs.map((stub) => (
-              <button key={stub.id} onClick={() => navigate(`/employee/salary/pay-stub/${stub.id}`)} className="w-full rounded-2xl bg-white p-5 text-left" style={{ boxShadow: '2px 2px 12px rgba(0,0,0,0.06)' }}>
+              <button key={stub.id} onClick={() => navigate(`/employee/salary/pay-stub/${stub.id}`)} className="pressable w-full rounded-2xl bg-white p-5 text-left" style={{ boxShadow: '2px 2px 12px rgba(0,0,0,0.06)' }}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <span className="text-lg shrink-0">📁</span>
@@ -373,18 +389,18 @@ const SalaryManagement = () => {
       )}
 
       {/* 급여 상세 바텀시트 */}
-      {bottomSheetOpen && selectedDay?.detail && (() => {
+      {bottomSheetOpen && selectedDay?.detail && createPortal((() => {
         const hasWeekly = !!selectedDay.weeklyHolidayPay;
         const weeklyAmount = hasWeekly ? Math.round((selectedDay.weeklyHolidayPay || 0) * 10000) : 0;
         const totalAmount = selectedDay.detail.salary + (selectedDay.detail.incentive || 0) + weeklyAmount;
         return (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={() => setBottomSheetOpen(false)}>
-            <div className="w-full max-w-lg rounded-t-3xl bg-white px-6 pt-6 shadow-xl animate-in slide-in-from-bottom" style={{ paddingBottom: 'calc(100px + env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setBottomSheetOpen(false)}>
+            <div className="w-full max-w-[430px] rounded-t-[20px] bg-white px-6 pt-6 pb-8 shadow-xl animate-in slide-in-from-bottom" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>
                   {calYear}년 {calMonth}월 {selectedDay.date}일 ({selectedDay.dayOfWeek})
                 </h2>
-                <button onClick={() => setBottomSheetOpen(false)} className="p-1">
+                <button onClick={() => setBottomSheetOpen(false)} className="pressable p-1">
                   <X className="h-5 w-5 text-foreground" />
                 </button>
               </div>
@@ -424,18 +440,18 @@ const SalaryManagement = () => {
             </div>
           </div>
         );
-      })()}
+      })(), document.body)}
 
       {/* 예상 급여 안내 다이얼로그 */}
-      {salaryInfoOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setSalaryInfoOpen(false)}>
+      {salaryInfoOpen && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setSalaryInfoOpen(false)}>
           <div style={{ maxWidth: '335px', width: 'calc(100% - 40px)', backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '24px 20px 20px' }} onClick={e => e.stopPropagation()}>
             <div className="relative flex items-center justify-center mb-4">
               <div className="flex items-center gap-1.5">
                 <Info className="h-[18px] w-[18px]" style={{ color: '#AAB4BF' }} />
                 <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>이번 달 예상 급여</span>
               </div>
-              <button onClick={() => setSalaryInfoOpen(false)} className="absolute right-0">
+              <button onClick={() => setSalaryInfoOpen(false)} className="pressable absolute right-0">
                 <X className="h-5 w-5" style={{ color: '#292B2E' }} />
               </button>
             </div>
@@ -443,7 +459,8 @@ const SalaryManagement = () => {
               매달 1일부터 어제까지<br />근무를 기준으로 계산해요<br />세금을 공제한 예상 급여를 보여줘요
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* <BottomNav activeTab="salary" onTabChange={() => { }} /> */}

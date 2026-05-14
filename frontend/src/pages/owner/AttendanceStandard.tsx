@@ -26,7 +26,7 @@ function SelectDrawer({ open, onOpenChange, title, subtitle, options, currentVal
   };
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 20px 20px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B" }}>{title}</h2>
@@ -40,7 +40,7 @@ function SelectDrawer({ open, onOpenChange, title, subtitle, options, currentVal
             return (
               <div key={opt}>
                 <button onClick={() => { if (isCustomOpt && allowCustomInput) setShowCustom(true); else { onSelect(opt); onOpenChange(false); } }}
-                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-[15px] transition-colors ${selected ? "bg-primary/10 text-primary font-medium" : "text-foreground"}`}>
+                  className={`pressable w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-[15px] transition-colors ${selected ? "bg-primary/10 text-primary font-medium" : "text-foreground"}`}>
                   <span>{opt}</span>
                   {selected && <Check className="w-5 h-5 text-primary" />}
                 </button>
@@ -89,7 +89,7 @@ function ScrollPickerDrawer({ open, onOpenChange, title, options, currentValue, 
   };
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 touch-none" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => onOpenChange(false)}>
       <div style={{ width: "100%", maxWidth: "512px", borderRadius: "20px 20px 0 0", backgroundColor: "#FFFFFF" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 20px 20px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#19191B" }}>{title}</h2>
@@ -131,6 +131,7 @@ function ToggleChips({ label, value, options, onChange, subText }: {
           const active = value === opt;
           return (
             <button key={opt} onClick={() => onChange(opt)}
+              className="pressable"
               style={{ flex: 1, height: '44px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, border: active ? '2px solid #4261FF' : '1px solid #DBDCDF', backgroundColor: active ? '#F0F4FF' : '#FFFFFF', color: active ? '#4261FF' : '#70737B', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
               {active && <Check style={{ width: '14px', height: '14px' }} />}
               {opt}
@@ -153,7 +154,7 @@ function FieldButton({ label, value, placeholder, onClick, focused, onFocus, onB
         {label} <span style={{ color: '#FF3D3D' }}>*</span>
       </label>
       <button onClick={onClick} onMouseDown={onFocus} onMouseUp={onBlur} onMouseLeave={onBlur} onTouchStart={onFocus} onTouchEnd={onBlur}
-        className="w-full flex items-center justify-between bg-background"
+        className="pressable w-full flex items-center justify-between bg-background"
         style={{ height: '52px', padding: '0 20px', border: focused ? '2px solid #4261FF' : '1px solid #DBDCDF', borderRadius: '10px', transition: 'border 0.15s', marginBottom: subText ? '6px' : '0' }}>
         <span className={value ? "text-foreground" : "text-muted-foreground"} style={{ fontSize: '15px' }}>{value || placeholder}</span>
         <ChevronDown className="w-5 h-5 text-muted-foreground" />
@@ -355,6 +356,7 @@ export default function AttendanceStandard() {
                         <p style={{ fontSize: '12px', color: '#AAB4BF', margin: '2px 0 0' }}>예: 9시간 근무 → 초과 1시간에 수당 발생</p>
                       </div>
                       <button onClick={() => setOvertimeDaily(overtimeDaily === "지급" ? "미지급" : "지급")}
+                        className="pressable"
                         style={{ width: '48px', height: '28px', borderRadius: '14px', border: 'none', cursor: 'pointer', backgroundColor: overtimeDaily === "지급" ? '#4261FF' : '#DBDCDF', position: 'relative', transition: 'background-color 0.2s', flexShrink: 0 }}>
                         <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#FFFFFF', position: 'absolute', top: '3px', left: overtimeDaily === "지급" ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                       </button>
@@ -370,6 +372,7 @@ export default function AttendanceStandard() {
                         <p style={{ fontSize: '12px', color: '#AAB4BF', margin: '2px 0 0' }}>예: 주 43시간 근무 → 초과 3시간에 수당 발생</p>
                       </div>
                       <button onClick={() => setOvertimeWeekly(overtimeWeekly === "지급" ? "미지급" : "지급")}
+                        className="pressable"
                         style={{ width: '48px', height: '28px', borderRadius: '14px', border: 'none', cursor: 'pointer', backgroundColor: overtimeWeekly === "지급" ? '#4261FF' : '#DBDCDF', position: 'relative', transition: 'background-color 0.2s', flexShrink: 0 }}>
                         <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#FFFFFF', position: 'absolute', top: '3px', left: overtimeWeekly === "지급" ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                       </button>
@@ -387,7 +390,7 @@ export default function AttendanceStandard() {
                       수당 지급 비율 <span style={{ color: '#FF3D3D' }}>*</span>
                     </label>
                     <button onClick={() => setOvertimeRateOpen(true)} onMouseDown={() => setFocusedField("overtimeRate")} onMouseUp={() => setFocusedField(null)} onMouseLeave={() => setFocusedField(null)} onTouchStart={() => setFocusedField("overtimeRate")} onTouchEnd={() => setFocusedField(null)}
-                      className="w-full flex items-center justify-between bg-background"
+                      className="pressable w-full flex items-center justify-between bg-background"
                       style={{ height: '52px', padding: '0 20px', border: focusedField === "overtimeRate" ? '2px solid #4261FF' : '1px solid #DBDCDF', borderRadius: '10px', transition: 'border 0.15s', marginBottom: '8px' }}>
                       <span style={{ fontSize: '15px', color: '#19191B' }}>{overtimeRate}</span>
                       <ChevronDown className="w-5 h-5 text-muted-foreground" />
@@ -416,6 +419,7 @@ export default function AttendanceStandard() {
                         const isSelected = overtimeUnit === opt.value;
                         return (
                           <button key={opt.value} onClick={() => setOvertimeUnit(opt.value)}
+                            className="pressable"
                             style={{ flex: 1, height: '44px', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s', border: isSelected ? '2px solid #4261FF' : '1.5px solid #DBDCDF', backgroundColor: isSelected ? '#F0F4FF' : '#FFFFFF', fontSize: '13px', fontWeight: 700, color: isSelected ? '#4261FF' : '#19191B' }}>
                             {opt.label}
                           </button>
@@ -439,7 +443,7 @@ export default function AttendanceStandard() {
                       수당 지급 비율 <span style={{ color: '#FF3D3D' }}>*</span>
                     </label>
                     <button onClick={() => setNightRateOpen(true)} onMouseDown={() => setFocusedField("nightRate")} onMouseUp={() => setFocusedField(null)} onMouseLeave={() => setFocusedField(null)} onTouchStart={() => setFocusedField("nightRate")} onTouchEnd={() => setFocusedField(null)}
-                      className="w-full flex items-center justify-between bg-background"
+                      className="pressable w-full flex items-center justify-between bg-background"
                       style={{ height: '52px', padding: '0 20px', border: focusedField === "nightRate" ? '2px solid #4261FF' : '1px solid #DBDCDF', borderRadius: '10px', transition: 'border 0.15s', marginBottom: '6px' }}>
                       <span style={{ fontSize: '15px', color: '#19191B' }}>{nightRate}</span>
                       <ChevronDown className="w-5 h-5 text-muted-foreground" />
@@ -462,6 +466,7 @@ export default function AttendanceStandard() {
                         const isSelected = nightUnit === opt.value;
                         return (
                           <button key={opt.value} onClick={() => setNightUnit(opt.value)}
+                            className="pressable"
                             style={{ flex: 1, height: '44px', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s', border: isSelected ? '2px solid #4261FF' : '1.5px solid #DBDCDF', backgroundColor: isSelected ? '#F0F4FF' : '#FFFFFF', fontSize: '13px', fontWeight: 700, color: isSelected ? '#4261FF' : '#19191B' }}>
                             {opt.label}
                           </button>
@@ -488,7 +493,7 @@ export default function AttendanceStandard() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span style={{ fontSize: '13px', color: '#70737B', whiteSpace: 'nowrap', width: '72px' }}>8시간 이내</span>
                         <button onClick={() => setHolidayRateUnder8Open(true)} onMouseDown={() => setFocusedField("holidayRateUnder8")} onMouseUp={() => setFocusedField(null)} onMouseLeave={() => setFocusedField(null)} onTouchStart={() => setFocusedField("holidayRateUnder8")} onTouchEnd={() => setFocusedField(null)}
-                          className="flex-1 flex items-center justify-between bg-background"
+                          className="pressable flex-1 flex items-center justify-between bg-background"
                           style={{ height: '48px', padding: '0 16px', border: focusedField === "holidayRateUnder8" ? '2px solid #4261FF' : '1px solid #DBDCDF', borderRadius: '10px', transition: 'border 0.15s' }}>
                           <span style={{ fontSize: '14px', color: '#19191B' }}>{holidayRateUnder8}</span>
                           <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -497,7 +502,7 @@ export default function AttendanceStandard() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span style={{ fontSize: '13px', color: '#70737B', whiteSpace: 'nowrap', width: '72px' }}>8시간 초과</span>
                         <button onClick={() => setHolidayRateOver8Open(true)} onMouseDown={() => setFocusedField("holidayRateOver8")} onMouseUp={() => setFocusedField(null)} onMouseLeave={() => setFocusedField(null)} onTouchStart={() => setFocusedField("holidayRateOver8")} onTouchEnd={() => setFocusedField(null)}
-                          className="flex-1 flex items-center justify-between bg-background"
+                          className="pressable flex-1 flex items-center justify-between bg-background"
                           style={{ height: '48px', padding: '0 16px', border: focusedField === "holidayRateOver8" ? '2px solid #4261FF' : '1px solid #DBDCDF', borderRadius: '10px', transition: 'border 0.15s' }}>
                           <span style={{ fontSize: '14px', color: '#19191B' }}>{holidayRateOver8}</span>
                           <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -522,6 +527,7 @@ export default function AttendanceStandard() {
                         const isSelected = holidayUnit === opt.value;
                         return (
                           <button key={opt.value} onClick={() => setHolidayUnit(opt.value)}
+                            className="pressable"
                             style={{ flex: 1, height: '44px', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s', border: isSelected ? '2px solid #4261FF' : '1.5px solid #DBDCDF', backgroundColor: isSelected ? '#F0F4FF' : '#FFFFFF', fontSize: '13px', fontWeight: 700, color: isSelected ? '#4261FF' : '#19191B' }}>
                             {opt.label}
                           </button>

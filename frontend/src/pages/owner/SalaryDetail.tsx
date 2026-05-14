@@ -11,15 +11,23 @@ const SHIFT_BADGE: Record<string, string> = {
   "마감": "bg-shift-close-bg text-shift-close",
 };
 
-import { staffStore } from "@/lib/staffStore";
-
-type SalaryType = "시급" | "월급" | "연봉";
-interface StaffEntry {
-  name: string; shifts: string[]; type: string; workDays: string;
-  salaryType: SalaryType; hourlyWage: number; monthlyWage?: number; annualWage?: number;
-  avatarColor: string;
-}
-const STAFF_LIST: StaffEntry[] = [];
+const STAFF_LIST = [
+  { name: "김정민", shifts: ["오픈"], type: "정규직", workDays: "월, 화, 수, 목, 금", salaryType: "시급" as const, hourlyWage: 10000, avatarColor: "#5C4033",
+    salary: { workHours: "43h", overtime: "+4h 30m", basePay: 430000, overtimePay: 15195, weeklyPay: 12196, nightPay: 0, incentive: 0, totalPay: 457391,
+      deductions: { incomeTax: 2060, localTax: 206, nationalPension: 20610, healthInsurance: 15550, longTermCare: 2010, employmentInsurance: 7770 } } },
+  { name: "문자영", shifts: ["오픈", "미들"], type: "알바생", workDays: "월, 화", salaryType: "시급" as const, hourlyWage: 11000, avatarColor: "#C0392B",
+    salary: { workHours: "20h", overtime: null, basePay: 220000, overtimePay: 0, weeklyPay: 0, nightPay: 16500, incentive: 0, totalPay: 236500,
+      deductions: { incomeTax: 1060, localTax: 106, nationalPension: 0, healthInsurance: 0, longTermCare: 0, employmentInsurance: 4015 } } },
+  { name: "정수민", shifts: ["미들"], type: "알바생", workDays: "월, 화, 수", salaryType: "월급" as const, monthlyWage: 1500000, avatarColor: "#F4D03F",
+    salary: { workHours: "60h", overtime: "+2h", basePay: 1500000, overtimePay: 27500, weeklyPay: 0, nightPay: 0, incentive: 50000, totalPay: 1577500,
+      deductions: { incomeTax: 25190, localTax: 2519, nationalPension: 71250, healthInsurance: 53925, longTermCare: 6970, employmentInsurance: 13500 } } },
+  { name: "김수민", shifts: ["미들"], type: "알바생", workDays: "화, 수", salaryType: "연봉" as const, annualWage: 36000000, avatarColor: "#2C3E50",
+    salary: { workHours: "80h", overtime: null, basePay: 3000000, overtimePay: 0, weeklyPay: 0, nightPay: 45000, incentive: 100000, totalPay: 3145000,
+      deductions: { incomeTax: 130000, localTax: 13000, nationalPension: 135000, healthInsurance: 102060, longTermCare: 13190, employmentInsurance: 27000 } } },
+  { name: "키키치", shifts: ["미들"], type: "알바생", workDays: "목", salaryType: "시급" as const, hourlyWage: 11000, avatarColor: "#8E44AD",
+    salary: { workHours: "8h", overtime: null, basePay: 88000, overtimePay: 0, weeklyPay: 0, nightPay: 0, incentive: 0, totalPay: 88000,
+      deductions: { incomeTax: 396, localTax: 39, nationalPension: 0, healthInsurance: 0, longTermCare: 0, employmentInsurance: 792 } } },
+];
 
 interface DailySalaryDetail {
   base: number; workTime?: string; breakTime?: string; baseHours?: string;
@@ -29,7 +37,18 @@ interface DailySalaryDetail {
   holiday?: number; holidayHours?: string;
 }
 
-const STAFF_INDIVIDUAL_SALARY_DETAIL: Record<number, DailySalaryDetail> = {};
+const STAFF_INDIVIDUAL_SALARY_DETAIL: Record<number, DailySalaryDetail> = {
+  1:  { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h" },
+  5:  { base: 40000, workTime: "08:00 - 14:00", breakTime: "30분", baseHours: "4h", overtimeExtra: "+1h", overtime: 5500, overtimeHours: "13:00 - 14:00 / (1h, 시급 10,000원 × 1.5배)" },
+  6:  { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", weekly: 8000, weeklyNote: "주 15시간 이상 근무, 1일 평균 근로시간 × 주수" },
+  7:  { base: 45000, workTime: "08:00 - 13:30", breakTime: "30분", baseHours: "4h 30m", holiday: 6000, holidayHours: "08:00 - 13:30 / (4h 30m, 시급 10,000원 × 1.5배)" },
+  8:  { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", night: 3000, nightHours: "22:00 - 23:00 / (1h, 시급 10,000원 × 0.5배 추가)" },
+  10: { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", incentive: 5000 },
+  13: { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", overtimeExtra: "+1h 12m", overtime: 6000, overtimeHours: "13:00 - 14:12 / (1h 12m, 시급 10,000원 × 1.5배)", incentive: 4000 },
+  14: { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", weekly: 9000, weeklyNote: "주 15시간 이상 근무, 1일 평균 근로시간 × 주수" },
+  15: { base: 40000, workTime: "08:00 - 13:00", breakTime: "30분", baseHours: "4h", night: 5000, nightHours: "22:00 - 23:00 / (1h, 시급 10,000원 × 0.5배 추가)" },
+  20: { base: 40000, workTime: "08:00 - 14:30", breakTime: "30분", baseHours: "4h", overtimeExtra: "+1h 30m", overtime: 7000, overtimeHours: "13:00 - 14:30 / (1h 30m, 시급 10,000원 × 1.5배)", weekly: 3000, weeklyNote: "주 15시간 이상 근무, 1일 평균 근로시간 × 주수" },
+};
 
 function InfoRow({ label, children }: { label: string | React.ReactNode; children: React.ReactNode }) {
   return (
@@ -56,63 +75,34 @@ export default function SalaryDetail() {
   const date = new Date(dateStr);
   const dayNum = date.getDate();
 
-  const allStaffData = staffStore.getAll();
-  const staffData = allStaffData.find(s => s.name === staffName) ?? allStaffData[0];
-  const staff: StaffEntry | undefined = staffData ? {
-    name: staffData.name,
-    shifts: [...new Set(staffData.workSchedule.flatMap(w => w.shifts))],
-    type: staffData.employmentType,
-    workDays: staffData.workSchedule.map(w => w.day).join(', ') || '-',
-    salaryType: staffData.salaryType.startsWith('시급') ? '시급' : '월급',
-    hourlyWage: staffData.salaryType.startsWith('시급') ? Number(staffData.salaryAmount.replace(/,/g, '')) || 0 : 0,
-    monthlyWage: !staffData.salaryType.startsWith('시급') ? Number(staffData.salaryAmount.replace(/,/g, '')) || 0 : undefined,
-    avatarColor: staffData.avatarColor,
-  } : undefined;
+  const staff = STAFF_LIST.find(s => s.name === staffName) || STAFF_LIST[0];
   const publishedAtRaw = typeof window !== 'undefined' ? localStorage.getItem(`payslip_published_${staffName}`) : null;
   
   const isPaidParam = searchParams.get("paid") === "true";
   const isPublished = isPaidParam;
   const fromParam = searchParams.get("from");
 
-  if (!staff) {
-    return (
-      <div className="min-h-screen bg-background max-w-lg mx-auto" style={{ backgroundColor: '#FFFFFF' }}>
-        <div className="pb-24">
-          <div className="sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-            <div className="flex items-center gap-2 px-2 pt-4 pb-2">
-              <button onClick={() => navigate(-1)} className="pressable p-1">
-                <ChevronLeft className="h-6 w-6 text-foreground" />
-              </button>
-              <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>급여 상세</h1>
-            </div>
-            <div className="border-b border-border" />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 20px' }}>
-            <p style={{ fontSize: '14px', color: '#9EA3AD' }}>급여 정보를 불러오는 중...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const formatPublishedAt = (iso: string) => {
     const d = new Date(iso);
     return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   };
 
-  const detail: DailySalaryDetail = STAFF_INDIVIDUAL_SALARY_DETAIL[dayNum] || { base: 0 };
+  const detail = STAFF_INDIVIDUAL_SALARY_DETAIL[dayNum] || {
+    base: staff.salaryType !== "시급" ? Math.round((staff as any).monthlyWage ? (staff as any).monthlyWage / 22 : (staff as any).annualWage / 264) : 0,
+    workTime: "08:00 - 13:00", breakTime: "30분"
+  };
 
   const monthDay = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${DAY_LABELS[date.getDay()]})`;
   const fmt = (n: number) => n.toLocaleString();
-  const hourlyWage = staff.salaryType === "시급" ? (staff.hourlyWage || 0) : 0;
+  const hourlyWage = staff.salaryType === "시급" ? (staff as any).hourlyWage : 0;
 
   const incentiveAmt = detail.incentive || 0;
   const totalPay = detail.base + (detail.overtime || 0) + (detail.weekly || 0) + (detail.night || 0) + incentiveAmt;
 
   const basePayLabel = () => {
     if (staff.salaryType === "시급") return `시급 ${fmt(hourlyWage)}원 기준`;
-    if (staff.salaryType === "월급") return `월급 ${fmt(staff.monthlyWage || 0)}원 (일할 계산)`;
-    return `연봉 ${((staff.annualWage || 0) / 10000).toFixed(0)}만원 (일할 계산)`;
+    if (staff.salaryType === "월급") return `월급 ${fmt((staff as any).monthlyWage)}원 (일할 계산)`;
+    return `연봉 ${((staff as any).annualWage / 10000).toFixed(0)}만원 (일할 계산)`;
   };
 
   const handleBack = () => {
@@ -165,7 +155,7 @@ export default function SalaryDetail() {
           </div>
           <InfoRow label="근무일">{staff.workDays}</InfoRow>
           <InfoRow label={staff.salaryType === "시급" ? "시급" : staff.salaryType === "월급" ? "월급" : "연봉"}>
-            {staff.salaryType === "시급" ? `${fmt(hourlyWage)}원` : staff.salaryType === "월급" ? `${fmt(staff.monthlyWage || 0)}원` : `${((staff.annualWage || 0) / 10000).toFixed(0)}만원`}
+            {staff.salaryType === "시급" ? `${fmt(hourlyWage)}원` : staff.salaryType === "월급" ? `${fmt((staff as any).monthlyWage)}원` : `${((staff as any).annualWage / 10000).toFixed(0)}만원`}
           </InfoRow>
           <InfoRow label="급여일">매월 15일</InfoRow>
         </div>
@@ -302,6 +292,7 @@ export default function SalaryDetail() {
             )}
             {isPublished ? (
               <button
+                className="pressable"
                 onClick={() => navigate(`/owner/salary/payslip/publish?name=${encodeURIComponent(staffName)}&published=true&from=detail${publishedAtRaw ? '&publishedAt=' + encodeURIComponent(publishedAtRaw) : ''}`)}
                 style={{ width: '100%', height: '56px', backgroundColor: '#4261FF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', letterSpacing: '-0.02em' }}>
                 급여명세서 보기
@@ -309,11 +300,13 @@ export default function SalaryDetail() {
             ) : (
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
+                  className="pressable"
                   onClick={() => navigate(`/owner/salary/detail/edit?name=${encodeURIComponent(staffName)}&date=${dateStr}`)}
                   style={{ flex: 1, height: '56px', backgroundColor: '#F0F4FF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#4261FF', cursor: 'pointer', letterSpacing: '-0.02em' }}>
                   급여 정보 수정하기
                 </button>
                 <button
+                  className="pressable"
                   onClick={() => navigate(`/owner/salary/payslip?name=${encodeURIComponent(staffName)}&from=detail`)}
                   style={{ flex: 1, height: '56px', backgroundColor: '#4261FF', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', letterSpacing: '-0.02em' }}>
                   급여명세서 확인

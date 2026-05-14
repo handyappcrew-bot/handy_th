@@ -85,7 +85,7 @@ function TimePicker({ open, onClose, title, value, onChange, allowOvernight = fa
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={onClose}>
       <div className="w-full max-w-lg rounded-t-3xl bg-card px-6 pb-8 pt-6 shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>{title}</h2>
@@ -302,7 +302,7 @@ export default function AttendanceEdit() {
   }) => {
     if (!open) return null;
     return createPortal(
-      <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={onClose}>
         <div style={{ width: '100%', maxWidth: '512px', borderRadius: '20px 20px 0 0', backgroundColor: '#FFFFFF', maxHeight: '60vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
           <div style={{ padding: '24px 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#19191B', letterSpacing: '-0.02em' }}>{title}</h2>
@@ -546,7 +546,7 @@ export default function AttendanceEdit() {
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {["급여 반영", "급여 미반영"].map(opt => {
                     const sel = salaryOption === opt;
-                    return <button key={opt} onClick={() => setSalaryOption(opt)} style={{ flex: 1, height: '48px', borderRadius: '10px', border: sel ? '2px solid #4261FF' : '1px solid #DBDCDF', backgroundColor: sel ? '#F0F4FF' : '#FFFFFF', fontSize: '14px', fontWeight: 600, color: sel ? '#4261FF' : '#70737B', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '-0.02em' }}>{opt}</button>;
+                    return <button key={opt} onClick={() => setSalaryOption(opt)} className="pressable" style={{ flex: 1, height: '48px', borderRadius: '10px', border: sel ? '2px solid #4261FF' : '1px solid #DBDCDF', backgroundColor: sel ? '#F0F4FF' : '#FFFFFF', fontSize: '14px', fontWeight: 600, color: sel ? '#4261FF' : '#70737B', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '-0.02em' }}>{opt}</button>;
                   })}
                 </div>
               )}
@@ -554,7 +554,7 @@ export default function AttendanceEdit() {
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {["수당 지급", "수당 미지급"].map(opt => {
                     const sel = salaryOption === opt;
-                    return <button key={opt} onClick={() => setSalaryOption(opt)} style={{ flex: 1, height: '48px', borderRadius: '10px', border: sel ? '2px solid #4261FF' : '1px solid #DBDCDF', backgroundColor: sel ? '#F0F4FF' : '#FFFFFF', fontSize: '14px', fontWeight: 600, color: sel ? '#4261FF' : '#70737B', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '-0.02em' }}>{opt}</button>;
+                    return <button key={opt} onClick={() => setSalaryOption(opt)} className="pressable" style={{ flex: 1, height: '48px', borderRadius: '10px', border: sel ? '2px solid #4261FF' : '1px solid #DBDCDF', backgroundColor: sel ? '#F0F4FF' : '#FFFFFF', fontSize: '14px', fontWeight: 600, color: sel ? '#4261FF' : '#70737B', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '-0.02em' }}>{opt}</button>;
                   })}
                 </div>
               )}
@@ -562,7 +562,7 @@ export default function AttendanceEdit() {
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {["급여 차감", "차감 없음"].map(opt => {
                     const sel = salaryOption === opt;
-                    return <button key={opt} onClick={() => setSalaryOption(opt)} style={{ flex: 1, height: '48px', borderRadius: '10px', border: sel ? '2px solid #4261FF' : '1px solid #DBDCDF', backgroundColor: sel ? '#F0F4FF' : '#FFFFFF', fontSize: '14px', fontWeight: 600, color: sel ? '#4261FF' : '#70737B', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '-0.02em' }}>{opt}</button>;
+                    return <button key={opt} onClick={() => setSalaryOption(opt)} className="pressable" style={{ flex: 1, height: '48px', borderRadius: '10px', border: sel ? '2px solid #4261FF' : '1px solid #DBDCDF', backgroundColor: sel ? '#F0F4FF' : '#FFFFFF', fontSize: '14px', fontWeight: 600, color: sel ? '#4261FF' : '#70737B', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '-0.02em' }}>{opt}</button>;
                   })}
                 </div>
               )}
@@ -575,6 +575,7 @@ export default function AttendanceEdit() {
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40, backgroundColor: '#FFFFFF', borderTop: '1px solid #F7F7F8' }}>
           <div style={{ maxWidth: '512px', margin: '0 auto', padding: '16px 20px' }}>
             <button onClick={() => !(isDisabled || isClockOutInvalid) && setConfirmOpen(true)}
+              className="pressable"
               style={{ width: '100%', height: '56px', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: (isDisabled || isClockOutInvalid) ? '#AAB4BF' : '#FFFFFF', backgroundColor: (isDisabled || isClockOutInvalid) ? '#F7F7F8' : '#4261FF', cursor: (isDisabled || isClockOutInvalid) ? 'default' : 'pointer' }}>
               근태 정보 수정하기
             </button>
@@ -599,15 +600,15 @@ export default function AttendanceEdit() {
       <TimePicker open={contractOutPickerOpen} onClose={() => setContractOutPickerOpen(false)} title="계약 퇴근 시간" value={contractOut} onChange={v => { setContractOut(v); setClockOut(v); }} minTime={contractIn} />
 
       {confirmOpen && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80" onClick={() => setConfirmOpen(false)}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50" onClick={() => setConfirmOpen(false)}>
           <div className="animate-in zoom-in-95" style={{ width: 'calc(100% - 48px)', maxWidth: '320px', backgroundColor: '#FFFFFF', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 16px 16px' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B', textAlign: 'center', marginBottom: '8px' }}>근태 정보 수정</h3>
             <p style={{ fontSize: '14px', color: '#70737B', textAlign: 'center', marginBottom: '20px', lineHeight: '1.6', letterSpacing: '-0.02em', whiteSpace: 'pre-line' }}>
               {"해당 직원의 근태 정보를 수정하시겠어요?\n수정 즉시 해당 직원의 근태 정보가\n변경 처리돼요"}
             </p>
             <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-              <button onClick={() => setConfirmOpen(false)} style={{ flex: 1, height: '52px', backgroundColor: '#F7F7F8', color: '#70737B', borderRadius: '12px', fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer', letterSpacing: '-0.02em' }}>취소</button>
-              <button onClick={handleConfirm} style={{ flex: 1, height: '52px', backgroundColor: '#4261FF', color: '#FFFFFF', borderRadius: '12px', fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer', letterSpacing: '-0.02em' }}>확인</button>
+              <button className="pressable" onClick={() => setConfirmOpen(false)} style={{ flex: 1, height: '52px', backgroundColor: '#F7F7F8', color: '#70737B', borderRadius: '12px', fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer', letterSpacing: '-0.02em' }}>취소</button>
+              <button className="pressable" onClick={handleConfirm} style={{ flex: 1, height: '52px', backgroundColor: '#4261FF', color: '#FFFFFF', borderRadius: '12px', fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer', letterSpacing: '-0.02em' }}>확인</button>
             </div>
           </div>
         </div>,

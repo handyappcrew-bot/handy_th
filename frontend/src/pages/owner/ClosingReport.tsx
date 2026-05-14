@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronDown, X, Upload, Check } from "lucide-react";
+import { ChevronLeft, ChevronDown, X, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -9,11 +10,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerClose,
-} from "@/components/ui/drawer";
 import { addClosingReport, checkClosingStatus } from "@/api/employee";
 
 const ClosingReport = () => {
@@ -53,8 +49,7 @@ const ClosingReport = () => {
 
   // 당일 매장의 마감 보고 현황 체크
 
-  // TODO: 추후 매장 토큰을 활용해 하드코딩 제거하기
-  const storeId = 1;
+  const storeId = Number(localStorage.getItem("currentStoreId") ?? 1);
   useEffect(() => {
     const fetchStatus = async () => {
       try {
@@ -89,7 +84,8 @@ const ClosingReport = () => {
     try {
       // 1. 데이터 가공 (문자열 -> 숫자)
       const payload = {
-        store_id: Number(localStorage.getItem("currentStoreId") ?? 1),
+        store_id: storeId,
+        employee_id: Number(localStorage.getItem("currentStoreMemberId") ?? 0),
         report_date: new Date().toISOString().slice(0, 10),
 
         card_sales: Number(cardSales) || 0,
@@ -146,50 +142,26 @@ const ClosingReport = () => {
   const renderInput = (label: string, value: string, onChange: (v: string) => void, placeholder = "숫자만 입력") => (
     <div className="mb-6">
       <label className="block text-[14px] font-medium text-[#6B7280] mb-2">{label}</label>
-      <div className="flex items-center bg-white border border-[#E5E7EB] rounded-[12px] px-4 h-[52px]">
+      <div className="flex items-center bg-white border border-[#E5E7EB] rounded-[12px] px-4 h-[52px] focus-within:border-[#4261FF] transition-colors">
         <input
           type="text"
           inputMode="numeric"
           placeholder={placeholder}
           value={displayValue(value)}
           onChange={(e) => handleNumberInput(e.target.value, onChange)}
-          className="flex-1 bg-transparent text-[16px] text-[#292B2E] placeholder:text-[#C5C7CA] outline-none"
+          className="flex-1 bg-transparent text-[16px] text-[#292B2E] placeholder:text-[#C5C7CA] outline-none focus:outline-none"
         />
         <span className="text-[16px] text-[#6B7280] ml-2">원</span>
       </div>
     </div>
   );
 
-  const sheetButtonStyle = (active = false) => ({
-    width: '100%',
-    height: '48px',
-    borderRadius: '10px',
-    backgroundColor: 'transparent',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingLeft: '16px',
-    paddingRight: '16px',
-    fontSize: '16px',
-    fontWeight: 500,
-    letterSpacing: '-0.02em',
-    color: '#19191B',
-    transition: 'background-color 0.1s',
-  } as React.CSSProperties);
-
-  const sheetMouseHandlers = {
-    onMouseDown: (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = '#E8F3FF'; e.currentTarget.style.color = '#4261FF'; const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement; if (icon) icon.style.display = 'block'; },
-    onMouseUp: (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#19191B'; const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement; if (icon) icon.style.display = 'none'; },
-    onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#19191B'; const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement; if (icon) icon.style.display = 'none'; },
-    onTouchStart: (e: React.TouchEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = '#E8F3FF'; e.currentTarget.style.color = '#4261FF'; const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement; if (icon) icon.style.display = 'block'; },
-    onTouchEnd: (e: React.TouchEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#19191B'; const icon = e.currentTarget.querySelector('.check-icon') as HTMLElement; if (icon) icon.style.display = 'none'; },
-  };
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={handleBack} className="p-1">
+        <button onClick={handleBack} className="pressable p-1">
           <ChevronLeft className="w-6 h-6 text-foreground" />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>마감 보고</h1>
@@ -221,20 +193,20 @@ const ClosingReport = () => {
               <div className="flex gap-3" style={{ boxSizing: 'border-box', width: '100%' }}>
                 <button
                   onClick={() => setShowCashDiffSheet(true)}
-                  className="flex items-center justify-between bg-white border border-[#E5E7EB] rounded-[12px] h-[52px] flex-shrink-0"
+                  className="pressable flex items-center justify-between bg-white border border-[#E5E7EB] rounded-[12px] h-[52px] flex-shrink-0"
                   style={{ width: '80px', padding: '0 10px', boxSizing: 'border-box' }}
                 >
                   <span className={`text-[16px] whitespace-nowrap ${cashDiffType ? "text-[#292B2E]" : "text-[#C5C7CA]"}`}>{cashDiffType || "선택"}</span>
                   <ChevronDown className="w-4 h-4 text-[#6B7280]" />
                 </button>
-                <div className="flex items-center bg-white border border-[#E5E7EB] rounded-[12px] h-[52px] px-4" style={{ flex: 1, minWidth: 0, boxSizing: 'border-box' }}>
+                <div className="flex items-center bg-white border border-[#E5E7EB] rounded-[12px] h-[52px] px-4 focus-within:border-[#4261FF] transition-colors" style={{ flex: 1, minWidth: 0, boxSizing: 'border-box' }}>
                   <input
                     type="text"
                     inputMode="numeric"
                     placeholder="(금액)숫자만 입력"
                     value={displayValue(cashDiffAmount)}
                     onChange={(e) => handleNumberInput(e.target.value, setCashDiffAmount)}
-                    className="flex-1 bg-transparent text-[16px] text-[#292B2E] placeholder:text-[#C5C7CA] outline-none min-w-0"
+                    className="flex-1 bg-transparent text-[16px] text-[#292B2E] placeholder:text-[#C5C7CA] outline-none focus:outline-none min-w-0"
                   />
                   <span className="text-[16px] text-[#6B7280] ml-2">원</span>
                 </div>
@@ -251,7 +223,7 @@ const ClosingReport = () => {
             <div className="flex justify-center mt-8">
               <button
                 onClick={() => setShowReceiptSheet(true)}
-                className="w-[180px] h-[180px] rounded-[12px] overflow-hidden flex flex-col items-center justify-center"
+                className="pressable w-[180px] h-[180px] rounded-[12px] overflow-hidden flex flex-col items-center justify-center"
                 style={{ backgroundColor: '#D9D9D9' }}
               >
                 {receiptImage ? (
@@ -266,7 +238,7 @@ const ClosingReport = () => {
             </div>
             {receiptImage && (
               <div className="flex justify-center mt-3">
-                <button onClick={() => setReceiptImage(null)} className="text-[13px] text-[#8E8E93] underline">사진 삭제</button>
+                <button onClick={() => setReceiptImage(null)} className="pressable text-[13px] text-[#8E8E93] underline">사진 삭제</button>
               </div>
             )}
           </>
@@ -278,7 +250,7 @@ const ClosingReport = () => {
             <label className="block text-[14px] font-medium text-[#6B7280] mb-2">추가 전달 내용(선택)</label>
             <button
               onClick={() => { setMessageSheetText(additionalMessage); setShowMessageSheet(true); }}
-              className="w-full bg-white border border-[#E5E7EB] rounded-[12px] px-4 py-4 text-left min-h-[52px]"
+              className="pressable w-full bg-white border border-[#E5E7EB] rounded-[12px] px-4 py-4 text-left min-h-[52px]"
             >
               <span className={`text-[16px] ${additionalMessage ? "text-[#292B2E]" : "text-[#C5C7CA]"}`}>{additionalMessage || "전달내용 입력"}</span>
             </button>
@@ -288,107 +260,103 @@ const ClosingReport = () => {
       </div>
 
       {/* Bottom Button */}
-      <div className="fixed bottom-0 left-0 right-0 px-5 pb-8 pt-3 bg-white">
-        {step < 4 ? (
-          <button onClick={handleNext} className="w-full h-[56px] rounded-[14px] text-white text-[17px] font-semibold" style={{ backgroundColor: '#4261FF' }}>다음</button>
-        ) : (
-          <button onClick={handleSubmit} className="w-full h-[56px] rounded-[14px] text-white text-[17px] font-semibold" style={{ backgroundColor: '#4261FF' }}>보고 완료하기</button>
-        )}
-      </div>
+      {createPortal(
+        <div className="fixed bottom-0 left-0 right-0 px-5 pb-8 pt-3 bg-white">
+          {step < 4 ? (
+            <button onClick={handleNext} className="pressable w-full h-[56px] rounded-[14px] text-white text-[17px] font-semibold" style={{ backgroundColor: '#4261FF' }}>다음</button>
+          ) : (
+            <button onClick={handleSubmit} className="pressable w-full h-[56px] rounded-[14px] text-white text-[17px] font-semibold" style={{ backgroundColor: '#4261FF' }}>보고 완료하기</button>
+          )}
+        </div>,
+        document.body
+      )}
 
       <input ref={albumInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
 
       {/* 현금 과부족 유형 선택 */}
-      <Drawer open={showCashDiffSheet} onOpenChange={setShowCashDiffSheet}>
-        <DrawerContent className="[&>div:first-child]:hidden" style={{ width: '100%', height: '212px', borderRadius: '20px 20px 0 0', backgroundColor: '#FFFFFF', padding: '0' }}>
-          <div style={{ paddingLeft: '16px', paddingRight: '16px' }}>
-            <div className="flex items-center justify-between" style={{ paddingTop: '30px', paddingBottom: '20px', paddingLeft: '4px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>현금 과부족 유형 선택</h2>
-              <DrawerClose asChild>
-                <button style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+      {showCashDiffSheet && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowCashDiffSheet(false)}>
+          <div className="w-full max-w-[430px] rounded-t-[20px] bg-white animate-in slide-in-from-bottom" onClick={e => e.stopPropagation()}>
+            <div style={{ paddingLeft: '20px', paddingRight: '20px' }}>
+              <div className="flex items-center justify-between" style={{ paddingTop: '30px', paddingBottom: '20px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>현금 과부족 유형 선택</h2>
+                <button className="pressable p-1" onClick={() => setShowCashDiffSheet(false)}>
                   <X style={{ width: '20px', height: '20px', color: '#19191B' }} strokeWidth={2.5} />
                 </button>
-              </DrawerClose>
-            </div>
-            <div className="flex flex-col" style={{ gap: '4px', paddingBottom: '16px' }}>
-              {["부족", "초과"].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => { setCashDiffType(type); setShowCashDiffSheet(false); }}
-                  {...sheetMouseHandlers}
-                  style={sheetButtonStyle()}
-                >
-                  <span>{type}</span>
-                  <Check className="check-icon" style={{ display: 'none', width: '16px', height: '16px', color: '#4261FF' }} />
-                </button>
-              ))}
+              </div>
+              <div className="flex flex-col" style={{ gap: '4px', paddingBottom: '20px' }}>
+                {["부족", "초과"].map((type) => (
+                  <button key={type} onClick={() => { setCashDiffType(type); setShowCashDiffSheet(false); }} className="pressable"
+                    style={{ width: '100%', height: '48px', borderRadius: '10px', display: 'flex', alignItems: 'center', paddingLeft: '4px', fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#19191B' }}>
+                    {type}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </DrawerContent>
-      </Drawer>
+        </div>,
+        document.body
+      )}
 
       {/* 마감 영수증 업로드 */}
-      <Drawer open={showReceiptSheet} onOpenChange={setShowReceiptSheet}>
-        <DrawerContent className="[&>div:first-child]:hidden" style={{ width: '100%', height: '212px', borderRadius: '20px 20px 0 0', backgroundColor: '#FFFFFF', padding: '0' }}>
-          <div style={{ paddingLeft: '16px', paddingRight: '16px' }}>
-            <div className="flex items-center justify-between" style={{ paddingTop: '30px', paddingBottom: '20px', paddingLeft: '4px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>마감 영수증 업로드</h2>
-              <DrawerClose asChild>
-                <button style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+      {showReceiptSheet && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowReceiptSheet(false)}>
+          <div className="w-full max-w-[430px] rounded-t-[20px] bg-white animate-in slide-in-from-bottom" onClick={e => e.stopPropagation()}>
+            <div style={{ paddingLeft: '20px', paddingRight: '20px' }}>
+              <div className="flex items-center justify-between" style={{ paddingTop: '30px', paddingBottom: '20px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>마감 영수증 업로드</h2>
+                <button className="pressable p-1" onClick={() => setShowReceiptSheet(false)}>
                   <X style={{ width: '20px', height: '20px', color: '#19191B' }} strokeWidth={2.5} />
                 </button>
-              </DrawerClose>
-            </div>
-            <div className="flex flex-col" style={{ gap: '4px', paddingBottom: '16px' }}>
-              {[
-                { label: '앨범에서 선택하기', ref: albumInputRef },
-                { label: '카메라 촬영하기', ref: cameraInputRef },
-              ].map(({ label, ref }) => (
-                <button
-                  key={label}
-                  onClick={() => ref.current?.click()}
-                  {...sheetMouseHandlers}
-                  style={sheetButtonStyle()}
-                >
-                  <span>{label}</span>
-                  <Check className="check-icon" style={{ display: 'none', width: '16px', height: '16px', color: '#4261FF' }} />
-                </button>
-              ))}
+              </div>
+              <div className="flex flex-col" style={{ gap: '4px', paddingBottom: '20px' }}>
+                {[
+                  { label: '앨범에서 선택하기', ref: albumInputRef },
+                  { label: '카메라 촬영하기', ref: cameraInputRef },
+                ].map(({ label, ref }) => (
+                  <button key={label} onClick={() => ref.current?.click()} className="pressable"
+                    style={{ width: '100%', height: '48px', borderRadius: '10px', display: 'flex', alignItems: 'center', paddingLeft: '4px', fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#19191B' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </DrawerContent>
-      </Drawer>
+        </div>,
+        document.body
+      )}
 
       {/* 추가 전달 내용 입력 */}
-      <Drawer open={showMessageSheet} onOpenChange={setShowMessageSheet}>
-        <DrawerContent className="[&>div:first-child]:hidden" style={{ width: '100%', borderRadius: '20px 20px 0 0', backgroundColor: '#FFFFFF', padding: '0' }}>
-          <div style={{ paddingLeft: '16px', paddingRight: '16px' }}>
-            <div className="flex items-center justify-between" style={{ paddingTop: '30px', paddingBottom: '20px', paddingLeft: '4px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>추가 전달 내용 입력</h2>
-              <DrawerClose asChild>
-                <button style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}>
+      {showMessageSheet && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setShowMessageSheet(false)}>
+          <div className="w-full max-w-[430px] rounded-t-[20px] bg-white animate-in slide-in-from-bottom" onClick={e => e.stopPropagation()}>
+            <div style={{ paddingLeft: '20px', paddingRight: '20px' }}>
+              <div className="flex items-center justify-between" style={{ paddingTop: '30px', paddingBottom: '20px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>추가 전달 내용 입력</h2>
+                <button className="pressable p-1" onClick={() => setShowMessageSheet(false)}>
                   <X style={{ width: '20px', height: '20px', color: '#19191B' }} strokeWidth={2.5} />
                 </button>
-              </DrawerClose>
-            </div>
-            <div className="border border-[#E5E7EB] rounded-[12px] p-4 mb-2">
-              <textarea
-                placeholder="변경 사유를 입력해 주세요"
-                value={messageSheetText}
-                onChange={(e) => { if (e.target.value.length <= 50) setMessageSheetText(e.target.value); }}
-                maxLength={50}
-                className="w-full h-[160px] resize-none text-[16px] text-[#292B2E] placeholder:text-[#C5C7CA] outline-none bg-transparent"
-              />
-            </div>
-            <p className="text-right text-[13px] text-[#8E8E93] mb-6">{messageSheetText.length}/50</p>
-            <div className="flex gap-3" style={{ paddingBottom: '16px' }}>
-              <button onClick={() => setShowMessageSheet(false)} className="flex-1 font-semibold text-sm" style={{ height: '56px', backgroundColor: '#DEEBFF', color: '#4261FF', borderRadius: '10px' }}>취소</button>
-              <button onClick={handleMessageSheetSubmit} className="flex-1 font-semibold text-sm" style={{ height: '56px', backgroundColor: '#4261FF', color: '#FFFFFF', borderRadius: '10px' }}>입력하기</button>
+              </div>
+              <div className="border border-[#E5E7EB] rounded-[12px] p-4 mb-2 focus-within:border-[#4261FF] transition-colors">
+                <textarea
+                  placeholder="변경 사유를 입력해 주세요"
+                  value={messageSheetText}
+                  onChange={(e) => { if (e.target.value.length <= 50) setMessageSheetText(e.target.value); }}
+                  maxLength={50}
+                  className="w-full h-[160px] resize-none text-[16px] text-[#292B2E] placeholder:text-[#C5C7CA] outline-none focus:outline-none bg-transparent"
+                />
+              </div>
+              <p className="text-right text-[13px] text-[#8E8E93] mb-6">{messageSheetText.length}/50</p>
+              <div className="flex gap-3" style={{ paddingBottom: '20px' }}>
+                <button onClick={() => setShowMessageSheet(false)} className="pressable flex-1 font-semibold text-sm" style={{ height: '56px', backgroundColor: '#DEEBFF', color: '#4261FF', borderRadius: '10px' }}>취소</button>
+                <button onClick={handleMessageSheetSubmit} className="pressable flex-1 font-semibold text-sm" style={{ height: '56px', backgroundColor: '#4261FF', color: '#FFFFFF', borderRadius: '10px' }}>입력하기</button>
+              </div>
             </div>
           </div>
-        </DrawerContent>
-      </Drawer>
+        </div>,
+        document.body
+      )}
 
       <ConfirmDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog} title="마감 보고하기"
         description={<>마감 보고를 진행하시겠어요?<br />작성한 내용은 사장님께 전달돼요.</>}

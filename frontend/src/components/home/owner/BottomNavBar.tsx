@@ -14,26 +14,37 @@ const NAV_ITEMS = [
   { path: "/owner/profile", label: "내 정보", icon: User },
 ];
 
+const DRAG_THRESHOLD = 5;
+
 export default function BottomNavBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const navRef = useRef<HTMLDivElement>(null);
+  const isMouseDown = useRef(false);
   const isDragging = useRef(false);
   const startX = useRef(0);
   const scrollLeft = useRef(0);
 
   const onMouseDown = (e: React.MouseEvent) => {
-    isDragging.current = true;
+    isMouseDown.current = true;
+    isDragging.current = false;
     startX.current = e.pageX - (navRef.current?.offsetLeft ?? 0);
     scrollLeft.current = navRef.current?.scrollLeft ?? 0;
   };
   const onMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging.current) return;
-    e.preventDefault();
+    if (!isMouseDown.current) return;
     const x = e.pageX - (navRef.current?.offsetLeft ?? 0);
+    if (!isDragging.current) {
+      if (Math.abs(x - startX.current) < DRAG_THRESHOLD) return;
+      isDragging.current = true;
+    }
+    e.preventDefault();
     navRef.current!.scrollLeft = scrollLeft.current - (x - startX.current);
   };
-  const onMouseUp = () => { isDragging.current = false; };
+  const onMouseUp = () => {
+    isDragging.current = false;
+    isMouseDown.current = false;
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card">

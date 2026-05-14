@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, X, Calendar as CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -236,9 +237,12 @@ const ScheduleChangeRequest = () => {
             <h2 className="text-[22px] font-bold text-foreground leading-tight">일정을 선택해 주세요</h2>
           </div>
           {renderCalendar(weeks, currentYear, currentMonth, selectedScheduleDate, (key) => { if (MY_SCHEDULE[key]) setSelectedScheduleDate(key); }, true)}
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg px-5 pb-8 pt-4 bg-white z-40">
-            <button disabled={!selectedScheduleDate} onClick={() => setStep("form")} className="pressable w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: selectedScheduleDate ? '#4261FF' : '#E5E7EB', color: selectedScheduleDate ? '#FFFFFF' : '#9CA3AF' }}>다음</button>
-          </div>
+          {createPortal(
+            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg px-5 pb-8 pt-4 bg-white z-40">
+              <button disabled={!selectedScheduleDate} onClick={() => setStep("form")} className="pressable w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: selectedScheduleDate ? '#4261FF' : '#DBDCDF', color: selectedScheduleDate ? '#FFFFFF' : '#FFFFFF' }}>다음</button>
+            </div>,
+            document.body
+          )}
         </div>
       )}
 
@@ -261,34 +265,37 @@ const ScheduleChangeRequest = () => {
           <div className="h-px bg-border mx-5 my-5" />
           <div className="px-5" style={{ marginBottom: '30px' }}>
             <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '16px' }}>변경할 날짜 <span style={{ color: '#FF3D3D' }}>*</span></p>
-            <button onClick={() => setStep("select-change-date")} className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
+            <button onClick={() => setStep("select-change-date")} className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
               <span className="text-[15px]" style={{ color: changeDate ? '#19191B' : '#AAB4BF' }}>{changeDate ? formatDateDisplay(changeDate) : "날짜를 선택해 주세요"}</span>
               <CalendarIcon className="h-5 w-5 text-muted-foreground" />
             </button>
           </div>
           <div className="px-5" style={{ marginBottom: '30px' }}>
             <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '16px' }}>출근 시간 <span style={{ color: '#FF3D3D' }}>*</span></p>
-            <button onClick={() => setClockInPickerOpen(true)} className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
+            <button onClick={() => setClockInPickerOpen(true)} className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
               <span className="text-[15px]" style={{ color: clockIn ? '#19191B' : '#AAB4BF' }}>{clockIn || "출근 시간 선택"}</span>
               <ChevronDown className="h-5 w-5 text-muted-foreground" />
             </button>
           </div>
           <div className="px-5" style={{ marginBottom: '30px' }}>
             <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '16px' }}>퇴근 시간 <span style={{ color: '#FF3D3D' }}>*</span></p>
-            <button onClick={() => setClockOutPickerOpen(true)} className="w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
+            <button onClick={() => setClockOutPickerOpen(true)} className="pressable w-full flex items-center justify-between bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
               <span className="text-[15px]" style={{ color: clockOut ? '#19191B' : '#AAB4BF' }}>{clockOut || "퇴근 시간 선택"}</span>
               <ChevronDown className="h-5 w-5 text-muted-foreground" />
             </button>
           </div>
           <div className="px-5" style={{ marginBottom: '30px' }}>
             <p className="text-[16px] font-medium" style={{ color: '#70737B', marginBottom: '16px' }}>변경 요청 사유</p>
-            <button onClick={() => { setReasonDraft(reason); setReasonSheetOpen(true); }} className="w-full flex items-center bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
+            <button onClick={() => { setReasonDraft(reason); setReasonSheetOpen(true); }} className="pressable w-full flex items-center bg-background" style={{ height: '52px', padding: '0 20px', border: '1px solid #DBDCDF', borderRadius: '10px' }}>
               <span className="text-[15px]" style={{ color: reason ? '#19191B' : '#AAB4BF' }}>{reason || "변경 사유 입력"}</span>
             </button>
           </div>
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg px-5 pb-8 pt-4 bg-white z-40">
-            <button disabled={!isFormValid} onClick={() => setConfirmDialogOpen(true)} className="pressable w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: isFormValid ? '#4261FF' : '#E5E7EB', color: isFormValid ? '#FFFFFF' : '#9CA3AF' }}>일정 변경 요청하기</button>
-          </div>
+          {createPortal(
+            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg px-5 pb-8 pt-4 bg-white z-40">
+              <button disabled={!isFormValid} onClick={() => setConfirmDialogOpen(true)} className="pressable w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: isFormValid ? '#4261FF' : '#DBDCDF', color: isFormValid ? '#FFFFFF' : '#FFFFFF' }}>일정 변경 요청하기</button>
+            </div>,
+            document.body
+          )}
         </div>
       )}
 
@@ -299,9 +306,12 @@ const ScheduleChangeRequest = () => {
             <h2 className="text-[22px] font-bold text-foreground leading-tight">선택해 주세요</h2>
           </div>
           {renderCalendar(changeDateWeeks, changeDateYear, changeDateMonth, changeDate, (key) => { setChangeDate(key); }, false)}
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg px-5 pb-8 pt-4 bg-white z-40">
-            <button disabled={!changeDate} onClick={() => setStep("form")} className="pressable w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: changeDate ? '#4261FF' : '#E5E7EB', color: changeDate ? '#FFFFFF' : '#9CA3AF' }}>다음</button>
-          </div>
+          {createPortal(
+            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg px-5 pb-8 pt-4 bg-white z-40">
+              <button disabled={!changeDate} onClick={() => setStep("form")} className="pressable w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: changeDate ? '#4261FF' : '#DBDCDF', color: changeDate ? '#FFFFFF' : '#FFFFFF' }}>다음</button>
+            </div>,
+            document.body
+          )}
         </div>
       )}
 
@@ -340,12 +350,12 @@ const ScheduleChangeRequest = () => {
             <button onClick={() => setReasonSheetOpen(false)} className="pressable"><X className="h-6 w-6 text-foreground" /></button>
           </div>
           <div className="relative">
-            <textarea value={reasonDraft} onChange={(e) => { if (e.target.value.length <= 50) setReasonDraft(e.target.value); }} placeholder="변경 사유를 입력해 주세요" className="w-full min-h-[180px] rounded-xl border border-input bg-white px-4 py-3 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#4261FF] focus:border-transparent resize-none" maxLength={50} />
+            <textarea value={reasonDraft} onChange={(e) => { if (e.target.value.length <= 50) setReasonDraft(e.target.value); }} placeholder="변경 사유를 입력해 주세요" className="w-full min-h-[180px] rounded-xl border border-border bg-white px-4 py-3 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary resize-none" maxLength={50} />
             <span className="absolute bottom-3 right-3 text-[13px] text-muted-foreground">{reasonDraft.length}/50</span>
           </div>
           <div className="flex mt-6" style={{ gap: '10px' }}>
             <button onClick={() => setReasonSheetOpen(false)} className="pressable flex-1 rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: '#DEEBFF', color: '#4261FF' }}>취소</button>
-            <button disabled={!reasonDraft.trim()} onClick={() => { setReason(reasonDraft.trim()); setReasonSheetOpen(false); }} className="pressable flex-1 rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: reasonDraft.trim() ? '#4261FF' : '#E5E7EB', color: reasonDraft.trim() ? '#FFFFFF' : '#9CA3AF' }}>입력하기</button>
+            <button disabled={!reasonDraft.trim()} onClick={() => { setReason(reasonDraft.trim()); setReasonSheetOpen(false); }} className="pressable flex-1 rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: reasonDraft.trim() ? '#4261FF' : '#DBDCDF', color: reasonDraft.trim() ? '#FFFFFF' : '#FFFFFF' }}>입력하기</button>
           </div>
         </SheetContent>
       </Sheet>

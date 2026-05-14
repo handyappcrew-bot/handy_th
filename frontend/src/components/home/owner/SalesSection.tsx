@@ -57,7 +57,7 @@ export default function SalesSection({ date, totalSales, salesAmount, laborCost 
       {/* Header */}
       <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
         <h2 style={{ fontSize: 'clamp(18px, 5.3vw, 20px)', fontWeight: 700, color: '#19191B', letterSpacing: '-0.02em' }}>매출 현황</h2>
-        <button onClick={() => navigate("/owner/sales")} className="flex items-center gap-0.5 text-[13px] text-muted-foreground">
+        <button onClick={() => navigate("/owner/sales")} className="pressable flex items-center gap-0.5 text-[13px] text-muted-foreground">
           매출관리
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -67,6 +67,7 @@ export default function SalesSection({ date, totalSales, salesAmount, laborCost 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
         {tabs.map((tab) => (
           <button
+            className="pressable"
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{

@@ -58,7 +58,7 @@ export const EmployeeCard = ({ employee, onClick }: EmployeeCardProps) => {
               </span>
               <span>
                 <span className="text-foreground/70">급여일</span>{' '}
-                <span className="font-medium text-foreground">{employee.payDay}</span>
+                <span className="font-medium text-foreground">{employee.payDay}일</span>
               </span>
             </div>
             <div>
@@ -81,7 +81,7 @@ export const EmployeeCard = ({ employee, onClick }: EmployeeCardProps) => {
         ) : (
           <p className="text-sm text-muted-foreground">{employee.note}</p>
         )}
-        <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+        <button className="pressable p-2 text-muted-foreground hover:text-foreground transition-colors">
           <Pencil className="w-4 h-4" />
         </button>
       </div>

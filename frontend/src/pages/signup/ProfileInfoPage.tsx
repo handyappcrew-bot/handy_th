@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronDown, X, Check, CheckSquare, Square, ChevronRight } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
+import WheelPicker from "@/components/WheelPicker";
+import { loadProfileInfoDraft, saveProfileInfoDraft } from "@/utils/signupDraft";
 
 const TERMS = [
   { id: "service", label: "서비스 이용약관 동의", required: true },
@@ -16,20 +18,28 @@ const ProfileInfoPage = () => {
   const state = location.state as any;
   const phone = state?.phone || "";
   const password = state?.password || "";
-  const type = location.state?.type || "normal";
+  const type = state?.type === "social" ? "social" : "general";
 
-  const [name, setName] = useState("");
-  const [birthYear, setBirthYear] = useState<number | null>(null);
-  const [birthMonth, setBirthMonth] = useState<number | null>(null);
-  const [birthDay, setBirthDay] = useState<number | null>(null);
+  const initialDraft = loadProfileInfoDraft();
+
+  const [name, setName] = useState(initialDraft?.name ?? "");
+  const [nameFocused, setNameFocused] = useState(false);
+  const [birthYear, setBirthYear] = useState<number | null>(initialDraft?.birthYear ?? null);
+  const [birthMonth, setBirthMonth] = useState<number | null>(initialDraft?.birthMonth ?? null);
+  const [birthDay, setBirthDay] = useState<number | null>(initialDraft?.birthDay ?? null);
   const [showBirthSheet, setShowBirthSheet] = useState(false);
-  const [tempYear, setTempYear] = useState(2000);
-  const [tempMonth, setTempMonth] = useState(1);
-  const [tempDay, setTempDay] = useState(1);
-  const [gender, setGender] = useState("");
+  const [tempYear, setTempYear] = useState(initialDraft?.birthYear ?? 2000);
+  const [tempMonth, setTempMonth] = useState(initialDraft?.birthMonth ?? 1);
+  const [tempDay, setTempDay] = useState(initialDraft?.birthDay ?? 1);
+  const [gender, setGender] = useState(initialDraft?.gender ?? "");
   const [showGenderSheet, setShowGenderSheet] = useState(false);
   const [showTermsSheet, setShowTermsSheet] = useState(false);
-  const [agreed, setAgreed] = useState<Record<string, boolean>>({});
+  const [agreed, setAgreed] = useState<Record<string, boolean>>(initialDraft?.agreed ?? {});
+
+  // 입력값 변경 시 sessionStorage에 즉시 저장 (약관 상세 → 뒤로가기 시 복원)
+  useEffect(() => {
+    saveProfileInfoDraft({ name, birthYear, birthMonth, birthDay, gender, agreed });
+  }, [name, birthYear, birthMonth, birthDay, gender, agreed]);
 
   const birthdate = birthYear && birthMonth && birthDay
     ? `${birthYear}.${String(birthMonth).padStart(2, "0")}.${String(birthDay).padStart(2, "0")}`
@@ -69,28 +79,34 @@ const ProfileInfoPage = () => {
     if (!allRequiredAgreed) return;
     setShowTermsSheet(false);
     navigate("/profile-photo", {
-      state: { phone, password, name, birthdate, gender, type },
+      state: { phone, password, name, birthdate, gender, type, agreedTerms: true },
     });
   };
+
+  const nameBorder = nameFocused ? "border-input-focus" : "border-input";
 
   return (
     <>
       <PageLayout
+        headerTitle="회원가입"
         title={
           <>
-            <h1 className="text-[26px] font-bold leading-tight text-foreground">회원 정보를</h1>
-            <h1 className="text-[26px] font-bold leading-tight text-foreground">입력해주세요</h1>
+            <h2 className="text-[22px] font-bold leading-tight text-foreground">회원 정보를</h2>
+            <h2 className="text-[22px] font-bold leading-tight text-foreground">입력해주세요</h2>
           </>
         }
         subtitle="회원 식별을 위해 정보를 입력해 주세요."
-        onBack={() => navigate("/password", { state: { phone } })}
+        onBack={() => {
+          if (type === "social") navigate("/verify", { state: { phone, type } });
+          else navigate("/password", { state: { phone, type } });
+        }}
         bottom={
           <button
             disabled={!canNext}
             onClick={handleNextClick}
-            className={`w-full rounded-2xl py-4 text-[17px] font-semibold transition-colors ${canNext
+            className={`pressable w-full rounded-2xl py-4 text-[17px] font-semibold transition-colors ${canNext
                 ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground"
+                : "btn-disabled"
               }`}
           >
             다음
@@ -106,8 +122,11 @@ const ProfileInfoPage = () => {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onFocus={() => setNameFocused(true)}
+            onBlur={() => setNameFocused(false)}
             placeholder="이름 입력"
-            className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3.5 text-[16px] outline-none"
+            style={{ outline: 'none', boxShadow: 'none' }}
+            className={`mt-2 w-full rounded-xl border-2 bg-background px-4 py-3.5 text-[16px] transition-colors ${nameBorder}`}
           />
         </div>
 
@@ -126,7 +145,7 @@ const ProfileInfoPage = () => {
               }
               setShowBirthSheet(true);
             }}
-            className="mt-2 flex w-full items-center justify-between rounded-xl border border-input bg-background px-4 py-3.5 text-[16px]"
+            className="pressable mt-2 flex w-full items-center justify-between rounded-xl border-2 border-input bg-background px-4 py-3.5 text-[16px]"
           >
             <span className={birthdate ? "text-foreground" : "text-muted-foreground"}>
               {birthdate || "생년월일 선택"}
@@ -143,7 +162,7 @@ const ProfileInfoPage = () => {
           <button
             type="button"
             onClick={() => setShowGenderSheet(true)}
-            className="mt-2 flex w-full items-center justify-between rounded-xl border border-input bg-background px-4 py-3.5 text-[16px]"
+            className="pressable mt-2 flex w-full items-center justify-between rounded-xl border-2 border-input bg-background px-4 py-3.5 text-[16px]"
           >
             <span className={gender ? "text-foreground" : "text-muted-foreground"}>
               {gender || "성별 선택"}
@@ -155,70 +174,49 @@ const ProfileInfoPage = () => {
 
       {/* Birthdate Bottom Sheet */}
       {showBirthSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end touch-none sheet-overlay">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/50"
             onClick={() => setShowBirthSheet(false)}
           />
           <div className="relative rounded-t-2xl bg-background px-5 pb-8 pt-6">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-[18px] font-bold text-foreground">생년월일을 선택해주세요</h3>
-              <button onClick={() => setShowBirthSheet(false)}>
+              <button onClick={() => setShowBirthSheet(false)} className="pressable">
                 <X size={24} className="text-foreground" />
               </button>
             </div>
-            <div className="flex gap-2">
-              {/* Year */}
-              <div className="flex-1">
-                <label className="text-[13px] text-muted-foreground mb-1 block">년</label>
-                <div className="h-[200px] overflow-y-auto rounded-xl border border-input">
-                  {years.map((y) => (
-                    <button
-                      key={y}
-                      onClick={() => setTempYear(y)}
-                      className={`w-full px-3 py-2.5 text-[15px] text-center ${tempYear === y ? "bg-primary/10 text-primary font-semibold" : "text-foreground"
-                        }`}
-                    >
-                      {y}
-                    </button>
-                  ))}
-                </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="text-[13px] text-muted-foreground mb-1 block text-center">년</label>
+                <WheelPicker
+                  items={years}
+                  value={tempYear}
+                  onChange={setTempYear}
+                  formatItem={(y) => `${y}년`}
+                />
               </div>
-              {/* Month */}
-              <div className="flex-1">
-                <label className="text-[13px] text-muted-foreground mb-1 block">월</label>
-                <div className="h-[200px] overflow-y-auto rounded-xl border border-input">
-                  {months.map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => {
-                        setTempMonth(m);
-                        const maxDay = daysInMonth(tempYear, m);
-                        if (tempDay > maxDay) setTempDay(maxDay);
-                      }}
-                      className={`w-full px-3 py-2.5 text-[15px] text-center ${tempMonth === m ? "bg-primary/10 text-primary font-semibold" : "text-foreground"
-                        }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
+              <div>
+                <label className="text-[13px] text-muted-foreground mb-1 block text-center">월</label>
+                <WheelPicker
+                  items={months}
+                  value={tempMonth}
+                  onChange={(m) => {
+                    setTempMonth(m);
+                    const maxDay = daysInMonth(tempYear, m);
+                    if (tempDay > maxDay) setTempDay(maxDay);
+                  }}
+                  formatItem={(m) => `${m}월`}
+                />
               </div>
-              {/* Day */}
-              <div className="flex-1">
-                <label className="text-[13px] text-muted-foreground mb-1 block">일</label>
-                <div className="h-[200px] overflow-y-auto rounded-xl border border-input">
-                  {days.map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => setTempDay(d)}
-                      className={`w-full px-3 py-2.5 text-[15px] text-center ${tempDay === d ? "bg-primary/10 text-primary font-semibold" : "text-foreground"
-                        }`}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
+              <div>
+                <label className="text-[13px] text-muted-foreground mb-1 block text-center">일</label>
+                <WheelPicker
+                  items={days}
+                  value={Math.min(tempDay, days.length)}
+                  onChange={setTempDay}
+                  formatItem={(d) => `${d}일`}
+                />
               </div>
             </div>
             <button
@@ -228,7 +226,7 @@ const ProfileInfoPage = () => {
                 setBirthDay(tempDay);
                 setShowBirthSheet(false);
               }}
-              className="mt-5 w-full rounded-2xl bg-primary py-4 text-[17px] font-semibold text-primary-foreground"
+              className="pressable mt-5 w-full rounded-2xl bg-primary py-4 text-[17px] font-semibold text-primary-foreground"
             >
               선택 완료
             </button>
@@ -238,15 +236,15 @@ const ProfileInfoPage = () => {
 
       {/* Gender Bottom Sheet */}
       {showGenderSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end touch-none sheet-overlay">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/50"
             onClick={() => setShowGenderSheet(false)}
           />
           <div className="relative rounded-t-2xl bg-background px-5 pb-8 pt-6">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-[18px] font-bold text-foreground">성별을 선택해주세요</h3>
-              <button onClick={() => setShowGenderSheet(false)}>
+              <button onClick={() => setShowGenderSheet(false)} className="pressable">
                 <X size={24} className="text-foreground" />
               </button>
             </div>
@@ -257,7 +255,7 @@ const ProfileInfoPage = () => {
                   setGender(g);
                   setShowGenderSheet(false);
                 }}
-                className={`flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-[16px] mb-1 ${gender === g
+                className={`pressable flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-[16px] mb-1 ${gender === g
                     ? "bg-primary/10 text-primary font-semibold"
                     : "text-foreground"
                   }`}
@@ -272,33 +270,36 @@ const ProfileInfoPage = () => {
 
       {/* Terms Bottom Sheet */}
       {showTermsSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end touch-none sheet-overlay">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/50"
             onClick={() => setShowTermsSheet(false)}
           />
           <div className="relative rounded-t-2xl bg-background px-5 pb-8 pt-6">
             {/* Select all */}
             <button
               onClick={toggleAll}
-              className="flex w-full items-center gap-3 rounded-xl border border-input px-4 py-3.5 mb-4"
+              className="pressable flex w-full items-center gap-3 rounded-xl border border-input px-4 py-3.5 mb-4"
             >
               {allAgreed ? (
                 <CheckSquare size={22} className="text-primary" />
               ) : (
                 <Square size={22} className="text-muted-foreground" />
               )}
-              <span className="text-[16px] font-semibold text-foreground">전체약관 동의하기</span>
+              <span className="text-[16px] font-semibold text-foreground">전체 약관 동의하기</span>
             </button>
 
             {/* Individual terms */}
             {TERMS.map((term) => (
-              <button
+              <div
                 key={term.id}
-                onClick={() => toggleTerm(term.id)}
                 className="flex w-full items-center justify-between py-3 px-1"
               >
-                <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => toggleTerm(term.id)}
+                  className="pressable flex flex-1 items-center gap-3 text-left"
+                >
                   <Check
                     size={18}
                     className={agreed[term.id] ? "text-primary" : "text-muted-foreground"}
@@ -309,17 +310,24 @@ const ProfileInfoPage = () => {
                       ({term.required ? "필수" : "선택"})
                     </span>
                   </span>
-                </div>
-                <ChevronRight size={16} className="text-muted-foreground" />
-              </button>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/signup/terms/${term.id}`)}
+                  aria-label={`${term.label} 상세 보기`}
+                  className="pressable p-2 -mr-2"
+                >
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </button>
+              </div>
             ))}
 
             <button
               disabled={!allRequiredAgreed}
               onClick={handleAgreeSubmit}
-              className={`mt-5 w-full rounded-2xl py-4 text-[17px] font-semibold transition-colors ${allRequiredAgreed
+              className={`pressable mt-5 w-full rounded-2xl py-4 text-[17px] font-semibold transition-colors ${allRequiredAgreed
                   ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground"
+                  : "btn-disabled"
                 }`}
             >
               약관 동의하기

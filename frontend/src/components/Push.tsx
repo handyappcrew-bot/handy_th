@@ -21,19 +21,10 @@ export default function Push() {
         });
 
         // 🔥 리스너 먼저 등록
-        PushNotifications.addListener("registration", async t => {
+        PushNotifications.addListener("registration", t => {
             console.log("🔥 TOKEN:", t.value);
+            alert("토큰 발급됨");
             setToken(t.value);
-            try {
-                await fetch("/api/auth/fcm-token", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token: t.value }),
-                    credentials: "include",
-                });
-            } catch (e) {
-                console.warn("FCM 토큰 저장 실패", e);
-            }
         });
 
         PushNotifications.addListener("registrationError", e => {
@@ -112,8 +103,8 @@ export default function Push() {
                 onChange={e => setValue(e.target.value)}
             />
 
-            <button onClick={sendPush}>푸시 보내기</button><br></br>
-            <button onClick={testLocal}>로컬알림 테스트</button>
+            <button className="pressable" onClick={sendPush}>푸시 보내기</button><br></br>
+            <button className="pressable" onClick={testLocal}>로컬알림 테스트</button>
 
             <div>
                 <small>토큰: {token.slice(0, 25)}...</small>

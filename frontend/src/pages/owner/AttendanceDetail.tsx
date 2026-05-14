@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, ChevronDown, ChevronRight, X } from "lucide-react";
-import { staffStore } from "@/lib/staffStore";
 
 interface AttendanceRecord {
   date: string;
@@ -23,8 +22,45 @@ interface StaffMember {
   salaryAmount: number;
 }
 
-function getRecordsForStaff(_name: string): AttendanceRecord[] {
-  return [];
+const STAFF_LIST: StaffMember[] = [
+  { id: "1",  name: "김정민", shifts: ["오픈"],         type: "정규직", days: "월, 화, 수, 목, 금", avatarColor: "#6B4C3B", salaryType: "시급",  salaryAmount: 10000 },
+  { id: "2",  name: "문자영", shifts: ["오픈", "미들"], type: "알바생", days: "월, 화",             avatarColor: "#6B4C3B", salaryType: "시급",  salaryAmount: 11000 },
+  { id: "3",  name: "정수민", shifts: ["미들"],         type: "알바생", days: "월, 화, 수",         avatarColor: "#6B4C3B", salaryType: "월급",  salaryAmount: 1500000 },
+  { id: "4",  name: "김수민", shifts: ["미들"],         type: "알바생", days: "화, 수",             avatarColor: "#6B4C3B", salaryType: "연봉",  salaryAmount: 36000000 },
+  { id: "5",  name: "키키치", shifts: ["미들"],         type: "알바생", days: "목",                 avatarColor: "#6B4C3B", salaryType: "시급",  salaryAmount: 11000 },
+  { id: "10", name: "박지훈", shifts: ["오픈"],         type: "정규직", days: "월, 화, 수, 목",     avatarColor: "#4A90D9", salaryType: "월급",  salaryAmount: 2500000 },
+  { id: "11", name: "이수진", shifts: ["마감"],         type: "알바생", days: "수, 목, 금",         avatarColor: "#6B4FEC", salaryType: "시급",  salaryAmount: 9860 },
+];
+
+const RECORDS_DEFAULT: AttendanceRecord[] = [
+  { date: "10월 1일", dayOfWeek: "수", statuses: ["지각", "근무완료"], time: "08:00 - 13:00", actualTime: "08:10" },
+  { date: "10월 2일", dayOfWeek: "목", statuses: ["결근"],             time: "08:00 - 13:00" },
+  { date: "10월 5일", dayOfWeek: "일", statuses: ["휴일", "근무완료"], time: "08:00 - 13:00", actualTime: "13:00" },
+  { date: "10월 6일", dayOfWeek: "월", statuses: ["근무완료"],         time: "08:00 - 13:00", actualTime: "08:10" },
+  { date: "10월 7일", dayOfWeek: "화", statuses: ["근무완료"],         time: "08:00 - 13:00", actualTime: "08:10" },
+  { date: "10월 8일", dayOfWeek: "수", statuses: ["연장", "근무완료"], time: "08:00 - 13:00", actualTime: "12:30" },
+];
+const RECORDS_이수진: AttendanceRecord[] = [
+  { date: "10월 1일",  dayOfWeek: "수", statuses: ["야간", "근무완료"], time: "22:00 - 02:00", actualTime: "02:00" },
+  { date: "10월 3일",  dayOfWeek: "금", statuses: ["야간", "근무완료"], time: "22:00 - 02:00", actualTime: "02:00" },
+  { date: "10월 8일",  dayOfWeek: "수", statuses: ["야간", "근무완료"], time: "22:00 - 02:00", actualTime: "02:00" },
+  { date: "10월 10일", dayOfWeek: "금", statuses: ["근무완료"],         time: "22:00 - 02:00", actualTime: "01:30" },
+  { date: "10월 15일", dayOfWeek: "수", statuses: ["야간", "근무완료"], time: "22:00 - 02:00", actualTime: "02:00" },
+  { date: "10월 17일", dayOfWeek: "금", statuses: ["결근"],             time: "22:00 - 02:00" },
+];
+const RECORDS_박지훈: AttendanceRecord[] = [
+  { date: "10월 1일",  dayOfWeek: "수", statuses: ["근무완료"],         time: "08:00 - 14:30", actualTime: "13:00" },
+  { date: "10월 6일",  dayOfWeek: "월", statuses: ["연장", "근무완료"], time: "08:00 - 14:30", actualTime: "15:00" },
+  { date: "10월 8일",  dayOfWeek: "수", statuses: ["지각", "근무완료"], time: "08:00 - 14:30", actualTime: "08:25" },
+  { date: "10월 13일", dayOfWeek: "월", statuses: ["연장", "근무완료"], time: "08:00 - 14:30", actualTime: "14:30" },
+  { date: "10월 15일", dayOfWeek: "수", statuses: ["근무완료"],         time: "08:00 - 14:30", actualTime: "13:00" },
+];
+const RECORDS_MAP: Record<string, AttendanceRecord[]> = {
+  "이수진": RECORDS_이수진,
+  "박지훈": RECORDS_박지훈,
+};
+function getRecordsForStaff(name: string): AttendanceRecord[] {
+  return RECORDS_MAP[name] || RECORDS_DEFAULT;
 }
 
 const statusStyle: Record<string, { bg: string; color: string }> = {
@@ -191,7 +227,7 @@ function MonthlyCalendar({ year, month, selectedDay, onSelectDay, onClickMonthHe
     <div style={{ paddingBottom: '16px', marginTop: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '16px' }}>
         <button onClick={() => onNavigateMonth(-1)} className="pressable p-1"><ChevronLeft style={{ width: '20px', height: '20px', color: '#19191B' }} /></button>
-        <button onClick={onClickMonthHeader} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
+        <button className="pressable" onClick={onClickMonthHeader} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
           <span style={{ fontSize: '17px', fontWeight: 700, color: '#19191B' }}>{year}년 {month}월</span>
           <ChevronDown style={{ width: '16px', height: '16px', color: '#9EA3AD' }} />
         </button>
@@ -217,7 +253,7 @@ function MonthlyCalendar({ year, month, selectedDay, onSelectDay, onClickMonthHe
             const dateColor = isToday ? '#FFFFFF' : isSelected ? '#4261FF' : isSun ? '#FF5959' : isSat ? '#5DB1FF' : '#19191B';
             const wStyle = work ? workLabelStyle[work.type] || workLabelStyle.scheduled : null;
             return (
-              <button key={ci} onClick={() => onSelectDay(cell.day)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '72px', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <button className="pressable" key={ci} onClick={() => onSelectDay(cell.day)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '72px', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer' }}>
                 <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', backgroundColor: isToday ? '#4261FF' : isSelected ? 'rgba(66,97,255,0.1)' : 'transparent' }}>
                   <span style={{ fontSize: '14px', fontWeight: isToday || isSelected ? 700 : 500, color: dateColor }}>{cell.day}</span>
                 </div>
@@ -235,43 +271,21 @@ function MonthlyCalendar({ year, month, selectedDay, onSelectDay, onClickMonthHe
   );
 }
 
-function toStaffMember(s: ReturnType<typeof staffStore.getAll>[0]): StaffMember {
-  const shifts = [...new Set(s.workSchedule.flatMap(w => w.shifts))];
-  const amt = Number(s.salaryAmount.replace(/,/g, "")) || 0;
-  const salaryType = s.salaryType.includes("시급") ? "시급" : s.salaryType.includes("일급") ? "일급" : s.salaryType.includes("연봉") ? "연봉" : "월급";
-  return {
-    id: s.id, name: s.name, avatarColor: s.avatarColor,
-    shifts: shifts.length ? shifts : [],
-    type: s.employmentType,
-    days: s.workSchedule.map(w => w.day).join(", ") || "-",
-    salaryType, salaryAmount: amt,
-  };
-}
-
 export default function AttendanceDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const initialName = searchParams.get("name") || "";
+  const initialName = searchParams.get("name") || "정수민";
   const incomingStatuses = searchParams.get("statuses")?.split(",").filter(Boolean) || [];
   const incomingTime = searchParams.get("time") || "";
   const incomingActualTime = searchParams.get("actualTime") || "";
 
-  const [, forceUpdate] = useState(0);
-  useEffect(() => {
-    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
-    if (storeId) staffStore.loadFromApi(storeId);
-    return staffStore.subscribe(() => forceUpdate(n => n + 1));
-  }, []);
-
-  const staffList = staffStore.getAll().map(toStaffMember);
-  const defaultStaff = staffList.find(s => s.name === initialName) ?? staffList[0] ?? { id: "", name: initialName, shifts: [], type: "", days: "", avatarColor: "#9EA3AD", salaryType: "시급" as const, salaryAmount: 0 };
-  const [selectedStaff, setSelectedStaff] = useState<StaffMember>(defaultStaff);
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember>(STAFF_LIST.find(s => s.name === initialName) || STAFF_LIST[0]);
   const [staffPickerOpen, setStaffPickerOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
-  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState(2025);
+  const [selectedMonth, setSelectedMonth] = useState(10);
+  const [pickerYear, setPickerYear] = useState(2025);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [workInfoOpen, setWorkInfoOpen] = useState(false);
   const [workInfoData, setWorkInfoData] = useState<WorkInfoData | null>(null);
@@ -389,7 +403,7 @@ export default function AttendanceDetail() {
             <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: selectedStaff.avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 600, color: '#FFFFFF', flexShrink: 0 }}>
               {selectedStaff.name.slice(-2)}
             </div>
-            <button onClick={() => setStaffPickerOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <button className="pressable" onClick={() => setStaffPickerOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer' }}>
               <span style={{ fontSize: '18px', fontWeight: 700, color: '#19191B' }}>{selectedStaff.name}</span>
               {selectedStaff.shifts.map((shift, i) => (
                 <span key={i} className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${shiftColor[shift] || "bg-muted text-muted-foreground"}`}>{shift}</span>
@@ -474,7 +488,7 @@ export default function AttendanceDetail() {
               })();
               return (
                 <div key={i}>
-                  <button onClick={() => handleRecordClick(record)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '14px 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                  <button className="pressable" onClick={() => handleRecordClick(record)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '14px 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
                     <div>
                       <p style={{ fontSize: '15px', fontWeight: 600, color: '#19191B', marginBottom: '4px' }}>{record.date} ({record.dayOfWeek})</p>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -503,7 +517,7 @@ export default function AttendanceDetail() {
             })}
           </div>
           {!showAll && monthRecords.length > 5 && (
-            <button onClick={() => setShowAll(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%', padding: '12px 0', fontSize: '13px', color: '#9EA3AD', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <button className="pressable" onClick={() => setShowAll(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%', padding: '12px 0', fontSize: '13px', color: '#9EA3AD', background: 'none', border: 'none', cursor: 'pointer' }}>
               더보기 <ChevronDown style={{ width: '16px', height: '16px' }} />
             </button>
           )}
@@ -537,7 +551,7 @@ export default function AttendanceDetail() {
 
         {/* Staff picker */}
         {staffPickerOpen && createPortal(
-          <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none" onClick={() => setStaffPickerOpen(false)}>
+          <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setStaffPickerOpen(false)}>
             <div className="w-full max-w-lg rounded-t-2xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
               <div className="px-6 pt-6">
                 <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
@@ -546,11 +560,11 @@ export default function AttendanceDetail() {
                 </div>
                 <div className="flex items-center justify-between" style={{ marginBottom: '4px', marginTop: '4px' }}>
                   <span style={{ fontSize: '14px', color: '#AAB4BF' }}>근무 직원</span>
-                  <span style={{ fontSize: '14px', color: '#AAB4BF' }}>총 {staffList.length}명</span>
+                  <span style={{ fontSize: '14px', color: '#AAB4BF' }}>총 {STAFF_LIST.length}명</span>
                 </div>
               </div>
               <div className="overflow-y-auto py-[10px]" style={{ maxHeight: '60vh' }}>
-                {staffList.map((staff) => {
+                {STAFF_LIST.map((staff) => {
                   const isSel = staff.id === selectedStaff.id;
                   return (
                     <button key={staff.id} onClick={() => { setSelectedStaff(staff); setStaffPickerOpen(false); }}
@@ -581,7 +595,7 @@ export default function AttendanceDetail() {
 
         {/* Work info bottom sheet */}
         {workInfoOpen && createPortal(
-          <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none" onClick={() => setWorkInfoOpen(false)}>
+          <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setWorkInfoOpen(false)}>
             <div className="w-full max-w-lg rounded-t-2xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
               {workInfoData && (() => {
                 const primaryStatus = workInfoData.statuses.includes("지각") ? "지각"
@@ -649,6 +663,7 @@ export default function AttendanceDetail() {
                     </div>
 
                     <button onClick={() => {
+                      className="pressable"
                       setWorkInfoOpen(false);
                       const dayMatch = workInfoData.date.match(/(\d+)월\s*(\d+)일/);
                       const dw = dayMatch ? dayOfWeekNames[new Date(selectedYear, parseInt(dayMatch[1]) - 1, parseInt(dayMatch[2])).getDay()] : "";

@@ -33,23 +33,15 @@ export interface PostDetail {
     created_at: string;
     photos: string[];
     comment_count: number;
-    view_count: number;
     comments: Comment[];
+    isMyPost: boolean;
+    currentRole: string | null;
 }
 
-export interface Viewer {
+export interface BoardViewer {
     name: string;
     role: string;
     viewed_at: string;
-}
-
-// 게시글 조회자 목록 (사장 전용)
-export async function fetchBoardViewers(boardId: number): Promise<Viewer[]> {
-    const res = await fetch(`${BASE_URL}/api/common/board/${boardId}/viewers`, {
-        credentials: 'include',
-    });
-    if (!res.ok) throw new Error("조회자 목록 조회 실패");
-    return res.json();
 }
 
 // 게시글 목록 조회
@@ -60,6 +52,7 @@ export async function fetchBoardList(storeId: number): Promise<Post[]> {
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include',
             body: JSON.stringify({ "store_id": storeId })
         });
 
@@ -76,10 +69,12 @@ export async function fetchBoardList(storeId: number): Promise<Post[]> {
     }
 }
 
-// 게시글 상세 조회 
+// 게시글 상세 조회
 export async function fetchBoardInfo(boardId: number) {
     try {
-        const res = await fetch(`${BASE_URL}/api/common/board/${boardId}`);
+        const res = await fetch(`${BASE_URL}/api/common/board/${boardId}`, {
+            credentials: 'include',
+        });
 
         if (!res.ok) {
             throw new Error('게시글 데이터를 불러오는데 실패했습니다.');
@@ -112,7 +107,12 @@ export async function addBoard(store_id: number, category: string, title: string
         body: formData,
         credentials: 'include',
     });
-    if (!response.ok) throw new Error("게시글 등록 실패");
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const msg = data?.detail || `게시글 등록 실패 (HTTP ${response.status})`;
+        console.error("[addBoard]", response.status, msg);
+        throw new Error(msg);
+    }
     return response.json();
 }
 
@@ -147,7 +147,12 @@ export async function modifyBoard(
         body: formData,
         credentials: 'include',
     });
-    if (!response.ok) throw new Error("게시글 수정 실패");
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const msg = data?.detail || `게시글 수정 실패 (HTTP ${response.status})`;
+        console.error("[modifyBoard]", response.status, msg);
+        throw new Error(msg);
+    }
     return response.json();
 }
 
@@ -180,5 +185,14 @@ export async function deleteComment(commentId: number) {
         credentials: 'include',
     });
     if (!response.ok) throw new Error("댓글 삭제 실패");
+    return response.json();
+}
+
+// 게시글 조회자 목록 (사장 전용)
+export async function getBoardViewers(boardId: number): Promise<BoardViewer[]> {
+    const response = await fetch(`${BASE_URL}/api/common/board/${boardId}/viewers`, {
+        credentials: 'include',
+    });
+    if (!response.ok) throw new Error("조회자 목록 조회 실패");
     return response.json();
 }

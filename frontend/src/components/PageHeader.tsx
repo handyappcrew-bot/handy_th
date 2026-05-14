@@ -15,7 +15,7 @@ export const PageHeader = ({ title, showBack = false }: PageHeaderProps) => {
         {showBack && (
           <button
             onClick={() => navigate(-1)}
-            className="p-1 -ml-1 mr-2 text-foreground"
+            className="pressable p-1 -ml-1 mr-2 text-foreground"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>

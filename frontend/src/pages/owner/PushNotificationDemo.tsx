@@ -117,6 +117,7 @@ export default function PushNotificationDemo() {
           <div style={{ display: "flex", gap: 6 }}>
             {["owner", "employee"].map(r => (
               <button key={r} onClick={() => setRole(r)} style={{
+                className="pressable"
                 padding: "6px 14px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none",
                 backgroundColor: role === r ? "#4261FF" : "#F0F0F0",
                 color: role === r ? "#FFFFFF" : "#70737B",
@@ -141,7 +142,7 @@ export default function PushNotificationDemo() {
               </p>
             </div>
             {permission !== "denied" && (
-              <button onClick={handlePermission} style={{ padding: "6px 14px", backgroundColor: "#FF8F00", color: "#FFF", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
+              <button className="pressable" onClick={handlePermission} style={{ padding: "6px 14px", backgroundColor: "#FF8F00", color: "#FFF", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
                 허용하기
               </button>
             )}
@@ -156,6 +157,7 @@ export default function PushNotificationDemo() {
               <h2 style={{ fontSize: 20, fontWeight: 700, color: "#19191B", margin: 0 }}>직원 현황</h2>
               <div ref={panelRef} style={{ position: "relative" }}>
                 <button onClick={() => { setShowPanel(!showPanel); if (!showPanel) markAllRead(); }}
+                  className="pressable"
                   style={{ position: "relative", width: 42, height: 42, borderRadius: 12, backgroundColor: "#F0F0F0", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
                   🔔
                   {unread > 0 && (
@@ -171,7 +173,7 @@ export default function PushNotificationDemo() {
                     <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid #F0F0F0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ fontSize: 15, fontWeight: 700, color: "#19191B" }}>알림</span>
                       {notifications.length > 0 && (
-                        <button onClick={markAllRead} style={{ fontSize: 12, color: "#4261FF", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>모두 읽음</button>
+                        <button className="pressable" onClick={markAllRead} style={{ fontSize: 12, color: "#4261FF", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>모두 읽음</button>
                       )}
                     </div>
                     <div style={{ maxHeight: 360, overflowY: "auto" }}>
@@ -254,6 +256,7 @@ export default function PushNotificationDemo() {
               <div style={{ display: "flex", gap: 8 }}>
                 {EMPLOYEES.map(emp => (
                   <button key={emp.id} onClick={() => setSelectedEmp(emp)}
+                    className="pressable"
                     style={{ flex: 1, padding: "10px 8px", borderRadius: 12, border: selectedEmp.id === emp.id ? `2px solid ${emp.avatar}` : "2px solid #EBEBEB", backgroundColor: selectedEmp.id === emp.id ? "rgba(66,97,255,0.05)" : "#FFF", cursor: "pointer", textAlign: "center" }}>
                     <div style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: emp.avatar, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#FFF", margin: "0 auto 4px" }}>{emp.initial}</div>
                     <p style={{ fontSize: 12, fontWeight: 600, color: "#19191B", margin: 0 }}>{emp.name}</p>

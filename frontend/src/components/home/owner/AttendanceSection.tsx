@@ -193,11 +193,11 @@ export default function AttendanceSection({ stats, cards, date, hideDateSelector
       <div className="flex items-center justify-between" style={{ padding: '0 clamp(16px, 5.3vw, 20px)', marginBottom: 'clamp(10px, 3.2vw, 12px)', marginTop: 'clamp(20px, 6.4vw, 24px)' }}>
         <div className="flex items-center gap-1">
           <h2 style={{ fontSize: 'clamp(17px, 5.3vw, 20px)', fontWeight: 700, color: '#19191B', letterSpacing: '-0.02em' }}>근태 현황</h2>
-          <button onClick={() => setInfoOpen(true)}>
+          <button className="pressable" onClick={() => setInfoOpen(true)}>
             <Info className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
         </div>
-        <button onClick={() => navigate("/owner/attendance")} style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: 'clamp(12px, 3.5vw, 13px)', color: '#9EA3AD', background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '-0.02em' }}>
+        <button className="pressable" onClick={() => navigate("/owner/attendance")} style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: 'clamp(12px, 3.5vw, 13px)', color: '#9EA3AD', background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '-0.02em' }}>
           근태관리
           <ChevronRight style={{ width: '15px', height: '15px' }} />
         </button>

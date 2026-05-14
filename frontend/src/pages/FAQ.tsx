@@ -20,11 +20,23 @@ const CATEGORY_COLORS: Record<string, { bg: string; color: string }> = {
   "기타": { bg: '#F7F7F8', color: '#AAB4BF' },
 };
 
+const DotBounce = () => (
+  <div className="flex items-center justify-center py-20">
+    <div style={{ display: 'flex', gap: '9px', alignItems: 'center' }}>
+      {[0, 1, 2].map((i) => (
+        <div key={i} style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'linear-gradient(135deg, #4261FF, #6b8cff)', animation: `navDotBounce 0.72s ease-in-out ${i * 0.12}s infinite` }} />
+      ))}
+    </div>
+    <style>{`@keyframes navDotBounce { 0%, 80%, 100% { transform: scale(0.6) translateY(0); opacity: 0.3; } 40% { transform: scale(1.1) translateY(-4px); opacity: 1; } }`}</style>
+  </div>
+);
+
 const FAQ = () => {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("전체");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [faqData, setFaqData] = useState<FAQItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const filtered = activeCategory === "전체" ? faqData : faqData.filter((f) => f.category === activeCategory);
 
@@ -40,6 +52,8 @@ const FAQ = () => {
         setFaqData(mapped);
       } catch (err) {
         console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchFaq();
@@ -49,7 +63,7 @@ const FAQ = () => {
     <div className="mx-auto min-h-screen max-w-lg" style={{ backgroundColor: '#FFFFFF' }}>
       {/* Header */}
       <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => navigate(-1)} className="p-1">
+        <button onClick={() => navigate(-1)} className="pressable p-1">
           <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>자주 묻는 질문</h1>
@@ -64,7 +78,7 @@ const FAQ = () => {
             const isActive = activeCategory === cat;
             return (
               <button key={cat} onClick={() => { setActiveCategory(cat); setOpenIndex(null); }}
-                className="flex-shrink-0 rounded-full px-3 py-1.5"
+                className="pressable flex-shrink-0 rounded-full px-3 py-1.5"
                 style={{ fontSize: '13px', fontWeight: 500, letterSpacing: '-0.02em', whiteSpace: 'nowrap', border: `1px solid ${isActive ? '#4261FF' : '#DBDCDF'}`, backgroundColor: isActive ? '#E8F3FF' : '#FFFFFF', color: isActive ? '#4261FF' : '#AAB4BF' }}>
                 {cat}
               </button>
@@ -79,7 +93,7 @@ const FAQ = () => {
             const catStyle = CATEGORY_COLORS[item.category] || { bg: '#F7F7F8', color: '#AAB4BF' };
             return (
               <div key={i} className="rounded-2xl overflow-hidden bg-white" style={{ boxShadow: '2px 2px 12px rgba(0,0,0,0.06)' }}>
-                <button className="w-full flex items-start justify-between p-4"
+                <button className="pressable w-full flex items-start justify-between p-4"
                   onClick={() => setOpenIndex(isOpen ? null : i)}>
                   <div className="text-left flex-1 pr-3">
                     <span className="inline-block rounded-md px-2 py-0.5 mb-2"
@@ -105,7 +119,7 @@ const FAQ = () => {
             );
           })}
 
-          {filtered.length === 0 && (
+          {loading ? <DotBounce /> : filtered.length === 0 && (
             <div className="flex items-center justify-center py-20">
               <span style={{ fontSize: '14px', color: '#AAB4BF' }}>해당 카테고리의 질문이 없어요.</span>
             </div>

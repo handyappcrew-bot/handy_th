@@ -42,7 +42,7 @@ const AnnouncementDetail = () => {
     <div className="min-h-screen flex flex-col max-w-lg mx-auto" style={{ backgroundColor: '#FFFFFF' }}>
       {/* Header */}
       <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={() => navigate(-1)} className="p-1">
+        <button onClick={() => navigate(-1)} className="pressable p-1">
           <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>공지사항</h1>
@@ -61,7 +61,7 @@ const AnnouncementDetail = () => {
         {notice.image && notice.image.length > 0 && (
           <div className="flex gap-3 mt-6 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
             {notice.image.map((img, idx) => (
-              <button key={idx} onClick={() => setLightboxPhoto(img)} className="flex-shrink-0">
+              <button key={idx} onClick={() => setLightboxPhoto(img)} className="pressable flex-shrink-0">
                 <img src={img} alt="" className="rounded-xl object-cover" style={{ width: '160px', height: '160px' }} />
               </button>
             ))}
@@ -71,8 +71,8 @@ const AnnouncementDetail = () => {
 
       {/* 이미지 확대 라이트박스 */}
       {lightboxPhoto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onClick={() => setLightboxPhoto(null)}>
-          <button className="absolute top-4 right-4 p-2" onClick={() => setLightboxPhoto(null)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90" onClick={() => setLightboxPhoto(null)}>
+          <button className="pressable absolute top-4 right-4 p-2" onClick={() => setLightboxPhoto(null)}>
             <X className="h-7 w-7 text-white" />
           </button>
           <img src={lightboxPhoto} alt="" className="rounded-xl object-contain" style={{ maxWidth: '90vw', maxHeight: '85vh' }} onClick={e => e.stopPropagation()} />

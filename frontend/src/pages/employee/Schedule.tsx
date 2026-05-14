@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, X, CalendarClock, Palmtree, Trash2 } from "lucide-react";
+import { createPortal } from "react-dom";
+import { useIsPresent } from "framer-motion";
+import { ChevronLeft, ChevronRight, ChevronDown, X, Plus, CalendarClock, Palmtree, Trash2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import BottomNav from "@/components/home/employee/BottomNav";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { getMySchedule, getAllSchedule, getAllScheduleDetail, getScheduleChange, deleteScheduleChange } from "@/api/schedule";
@@ -120,6 +121,7 @@ const badgeStyle = (bg: string, color: string) => ({
 const Schedule = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const isPresent = useIsPresent();
   const [activeTab, setActiveTab] = useState<TabType>("my");
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -169,7 +171,8 @@ const Schedule = () => {
         const stores = await getMyStores();
         if (stores.length > 0) setStoreId(stores[0].store_id);
       } catch {
-        navigate("/");
+        if (import.meta.env.PROD) navigate("/");
+        else setStoreId(1); // 로컬 개발: 임시 storeId
       }
     };
     init();
@@ -328,14 +331,14 @@ const Schedule = () => {
       {/* Header + Tabs */}
       <div className="sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
         <div className="flex items-center gap-2 px-2 pt-4 pb-2">
-          <button onClick={() => navigate("/employee/home")} className="p-1">
+          <button onClick={() => navigate("/employee/home")} className="pressable p-1">
             <ChevronLeft className="h-6 w-6 text-foreground" />
           </button>
           <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>일정 확인</h1>
         </div>
         <div className="flex border-b border-border px-5 overflow-x-auto" style={{ gap: '24px' }}>
           {(["my", "all", "requests"] as TabType[]).map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)} className="py-3 relative whitespace-nowrap flex-shrink-0"
+            <button key={tab} onClick={() => setActiveTab(tab)} className="pressable py-3 relative whitespace-nowrap flex-shrink-0"
               style={{ fontSize: '16px', fontWeight: activeTab === tab ? 700 : 500, letterSpacing: '-0.02em', color: activeTab === tab ? '#4261FF' : '#AAB4BF' }}>
               {TAB_LABELS[tab]}
               {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-[3px] rounded-full" style={{ backgroundColor: '#4261FF' }} />}
@@ -348,12 +351,12 @@ const Schedule = () => {
       {showCalendar && (
         <>
           <div className="flex items-center justify-between px-5 py-4">
-            <button onClick={prevMonth} className="p-1"><ChevronLeft className="h-5 w-5 text-foreground" /></button>
-            <button className="flex items-center gap-1">
+            <button onClick={prevMonth} className="pressable p-1"><ChevronLeft className="h-5 w-5 text-foreground" /></button>
+            <button className="pressable flex items-center gap-1">
               <span className="text-[17px] font-bold text-foreground">{currentYear}년 {currentMonth + 1}월</span>
               <ChevronDown className="h-4 w-4 text-foreground" />
             </button>
-            <button onClick={nextMonth} className="p-1"><ChevronRight className="h-5 w-5 text-foreground" /></button>
+            <button onClick={nextMonth} className="pressable p-1"><ChevronRight className="h-5 w-5 text-foreground" /></button>
           </div>
 
           <div className="grid grid-cols-7 px-3">
@@ -367,7 +370,14 @@ const Schedule = () => {
 
           <div className="px-3">
             {isCalendarLoading ? (
-              <div className="flex items-center justify-center py-20 text-sm text-[#AAB4BF]">로딩 중...</div>
+              <div className="flex items-center justify-center py-20">
+                <div style={{ display: 'flex', gap: '9px', alignItems: 'center' }}>
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'linear-gradient(135deg, #4261FF, #6b8cff)', animation: `navDotBounce 0.72s ease-in-out ${i * 0.12}s infinite` }} />
+                  ))}
+                </div>
+                <style>{`@keyframes navDotBounce { 0%, 80%, 100% { transform: scale(0.6) translateY(0); opacity: 0.3; } 40% { transform: scale(1.1) translateY(-4px); opacity: 1; } }`}</style>
+              </div>
             ) : (
               weeks.map((week, wi) => (
                 <div key={wi} className="grid grid-cols-7 mb-1">
@@ -384,7 +394,7 @@ const Schedule = () => {
 
                     return (
                       <button key={di} onClick={() => handleDateClick(d.year, d.month, d.date, d.isOutside)}
-                        className="flex flex-col items-center py-1.5 w-full" style={{ minHeight: '90px' }} disabled={d.isOutside}>
+                        className="pressable flex flex-col items-center py-1.5 w-full" style={{ minHeight: '90px' }} disabled={d.isOutside}>
                         <div style={{ height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
                           <span style={{
                             fontSize: '14px', fontWeight: 500, letterSpacing: '-0.02em', color: dateColor,
@@ -447,7 +457,7 @@ const Schedule = () => {
               const isActive = filterTab === f;
               const label = f === "전체" ? `전체 ${scheduleRequests.length}` : f;
               return (
-                <button key={f} onClick={() => setFilterTab(f)}
+                <button className="pressable" key={f} onClick={() => setFilterTab(f)}
                   style={{ height: '28px', borderRadius: '9999px', padding: '0 14px', whiteSpace: 'nowrap', flexShrink: 0, fontSize: '14px', fontWeight: 600, letterSpacing: '-0.02em', backgroundColor: isActive ? '#E8F3FF' : '#FFFFFF', color: isActive ? '#4261FF' : '#AAB4BF', border: `1px solid ${isActive ? '#4261FF' : '#DBDCDF'}` }}>
                   {label}
                 </button>
@@ -457,7 +467,14 @@ const Schedule = () => {
 
           <div className="flex flex-col gap-4 px-5">
             {requestsLoading ? (
-              <div className="flex items-center justify-center py-20 text-sm text-[#AAB4BF]">로딩 중...</div>
+              <div className="flex items-center justify-center py-20">
+                <div style={{ display: 'flex', gap: '9px', alignItems: 'center' }}>
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'linear-gradient(135deg, #4261FF, #6b8cff)', animation: `navDotBounce 0.72s ease-in-out ${i * 0.12}s infinite` }} />
+                  ))}
+                </div>
+                <style>{`@keyframes navDotBounce { 0%, 80%, 100% { transform: scale(0.6) translateY(0); opacity: 0.3; } 40% { transform: scale(1.1) translateY(-4px); opacity: 1; } }`}</style>
+              </div>
             ) : filteredRequests.length === 0 ? (
               <div className="flex items-center justify-center py-20 text-sm text-[#AAB4BF]">요청 내역이 없어요.</div>
             ) : (
@@ -473,7 +490,7 @@ const Schedule = () => {
                         <span style={badgeStyle(REQUEST_TYPE_STYLE.bg, REQUEST_TYPE_STYLE.color)}>{req.requestType}</span>
                       </div>
                       {canDelete && (
-                        <button onClick={() => setDeleteTargetId(req.id)} className="p-1">
+                        <button onClick={() => setDeleteTargetId(req.id)} className="pressable p-1">
                           <Trash2 className="h-[18px] w-[18px]" style={{ color: '#AAB4BF' }} />
                         </button>
                       )}
@@ -516,7 +533,7 @@ const Schedule = () => {
         <SheetContent side="bottom" className="rounded-t-2xl px-6 pb-8 pt-6 border-0 bg-white [&>button]:hidden">
           <div className="flex items-start justify-between mb-6">
             <h2 className="text-[22px] font-bold text-foreground">{formatSelectedDate()}</h2>
-            <button onClick={() => setBottomSheetOpen(false)} className="mt-1">
+            <button onClick={() => setBottomSheetOpen(false)} className="pressable mt-1">
               <X className="h-6 w-6 text-foreground" />
             </button>
           </div>
@@ -551,7 +568,14 @@ const Schedule = () => {
           ) : (
             <div className="space-y-5">
               {allDetailLoading ? (
-                <p className="text-sm text-[#AAB4BF]">로딩 중...</p>
+                <div className="flex items-center justify-center py-10">
+                  <div style={{ display: 'flex', gap: '9px', alignItems: 'center' }}>
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'linear-gradient(135deg, #4261FF, #6b8cff)', animation: `navDotBounce 0.72s ease-in-out ${i * 0.12}s infinite` }} />
+                    ))}
+                  </div>
+                  <style>{`@keyframes navDotBounce { 0%, 80%, 100% { transform: scale(0.6) translateY(0); opacity: 0.3; } 40% { transform: scale(1.1) translateY(-4px); opacity: 1; } }`}</style>
+                </div>
               ) : allStaffDetail && allStaffDetail.length > 0 ? (
                 allStaffDetail.map((part) => {
                   const style =
@@ -587,7 +611,7 @@ const Schedule = () => {
           )}
 
           <div>
-            <button onClick={() => setBottomSheetOpen(false)} className="mt-8 w-full rounded-2xl py-4 text-[16px] font-semibold text-white" style={{ backgroundColor: '#4261FF' }}>확인</button>
+            <button onClick={() => setBottomSheetOpen(false)} className="pressable mt-8 w-full rounded-2xl py-4 text-[16px] font-semibold text-white" style={{ backgroundColor: '#4261FF' }}>확인</button>
           </div>
         </SheetContent>
       </Sheet>
@@ -597,29 +621,72 @@ const Schedule = () => {
         description={<>변경 요청 내역을 삭제 하시겠어요?<br />삭제 시 복구가 불가해요</>}
         buttons={[{ label: "취소", onClick: () => setDeleteTargetId(null), variant: "cancel" }, { label: "삭제하기", onClick: handleDeleteConfirm }]} />
 
-      {/* FAB */}
-      {fabOpen && <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setFabOpen(false)} />}
-      <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-3">
-        {fabOpen && (
-          <>
-            <div className="flex items-center gap-3">
-              <span className="text-[14px] font-medium text-foreground rounded-lg px-3 py-1.5" style={{ backgroundColor: '#FFFFFF' }}>일정 변경 요청</span>
-              <button onClick={() => { setFabOpen(false); navigate("/schedule/change-request"); }} className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FFFFFF' }}>
-                <CalendarClock className="h-5 w-5 text-foreground" />
+      {/* FAB 오버레이 + 액션 카드 (createPortal: BottomNav까지 덮기 위해) */}
+      {fabOpen && isPresent && createPortal(
+        <>
+          <div onClick={() => setFabOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.80)', zIndex: 190 }} />
+          <div style={{
+            position: 'fixed',
+            bottom: 'calc(74px + env(safe-area-inset-bottom) + 16px + clamp(52px, 14.9vw, 56px) + 12px)',
+            right: 'clamp(14px, 4vw, 20px)',
+            zIndex: 200,
+            backgroundColor: '#2B2D36',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+            minWidth: 'clamp(180px, 50vw, 210px)',
+            animation: 'fadeInUp 0.18s ease',
+          }}>
+            {[
+              { icon: <CalendarClock style={{ width: '20px', height: '20px' }} />, label: '일정 변경 요청', action: () => { setFabOpen(false); navigate('/schedule/change-request'); } },
+              { icon: <Palmtree style={{ width: '20px', height: '20px' }} />, label: '휴가 요청', action: () => { setFabOpen(false); navigate('/schedule/vacation-request'); } },
+            ].map((item, i, arr) => (
+              <button
+                className="pressable"
+                key={i}
+                onClick={item.action}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  width: '100%',
+                  padding: 'clamp(13px, 3.7vw, 16px) clamp(16px, 4.3vw, 20px)',
+                  background: 'none', border: 'none',
+                  borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                  cursor: 'pointer', textAlign: 'left' as const,
+                }}>
+                <div style={{ width: 'clamp(34px, 9.6vw, 38px)', height: 'clamp(34px, 9.6vw, 38px)', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', flexShrink: 0 }}>
+                  {item.icon}
+                </div>
+                <span style={{ fontSize: 'clamp(14px, 4vw, 15px)', fontWeight: 500, color: '#FFFFFF', letterSpacing: '-0.02em', whiteSpace: 'nowrap' as const }}>
+                  {item.label}
+                </span>
               </button>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-[14px] font-medium text-foreground rounded-lg px-3 py-1.5" style={{ backgroundColor: '#FFFFFF' }}>휴가 요청</span>
-              <button onClick={() => { setFabOpen(false); navigate("/schedule/vacation-request"); }} className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FFFFFF' }}>
-                <Palmtree className="h-5 w-5 text-foreground" />
-              </button>
-            </div>
-          </>
-        )}
-        <button onClick={() => setFabOpen(!fabOpen)} className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center" style={{ backgroundColor: '#4261FF' }}>
-          <X className={`h-6 w-6 text-white transition-transform ${fabOpen ? "rotate-0" : "rotate-45"}`} />
-        </button>
-      </div>
+            ))}
+          </div>
+        </>,
+        document.body
+      )}
+      {/* FAB 메인 버튼 (createPortal: 뷰포트 하단 고정) */}
+      {isPresent && createPortal(
+        <div style={{ position: 'fixed', bottom: 'calc(74px + env(safe-area-inset-bottom) + 16px)', right: 'clamp(14px, 4vw, 20px)', zIndex: 201 }}>
+          <button
+            className="pressable"
+            onClick={() => setFabOpen(!fabOpen)}
+            style={{
+              width: 'clamp(52px, 14.9vw, 56px)', height: 'clamp(52px, 14.9vw, 56px)',
+              borderRadius: '50%',
+              backgroundColor: fabOpen ? '#5C5F6B' : '#4261FF',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 16px rgba(66,97,255,0.35)',
+              border: 'none', cursor: 'pointer',
+              transition: 'background-color 0.15s',
+            }}>
+            {fabOpen
+              ? <X style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />
+              : <Plus style={{ width: '22px', height: '22px', color: '#FFFFFF' }} />}
+          </button>
+        </div>,
+        document.body
+      )}
 
       {/* <BottomNav activeTab="home" onTabChange={() => { }} /> */}
     </div>

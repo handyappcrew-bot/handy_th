@@ -1,3 +1,8 @@
+// staffStore.ts
+// StaffManagement / StaffDetail / StaffEdit 세 화면이 공유하는 단일 데이터 소스.
+// React Context 없이 모듈 스코프 객체로 관리 (목업 수준).
+// 실제 프로덕션에서는 서버 API + React Query로 교체.
+
 export type ShiftType = "오픈" | "미들" | "마감";
 export type EmploymentType = "정규직" | "알바생";
 
@@ -19,131 +24,238 @@ export interface StaffData {
   name: string;
   avatarColor: string;
   employmentType: EmploymentType;
-  gender: string;
+  gender: string;          // "남" | "여" (목록용 축약) — 상세/수정에서는 "남자"/"여자"
   age: number;
-  birthDate: string;
+  birthDate: string;       // "2001.02.03"
   birthAge: number;
-  hireDate: string;
+
+  // 계약 정보
+  hireDate: string;        // "2025.02.12"
   hireDaysAgo: number;
-  salaryType: string;
-  salaryAmount: string;
+  salaryType: string;      // "시급" | "월급 (연봉 포함)"
+  salaryAmount: string;    // 콤마 포함 숫자 문자열 "11,000"
   isAnnualSalary: boolean;
   annualSalary: string;
-  payCycle: string;
+  payCycle: string;        // "월 1회 (월급)" | "주급" | "월 2회"
   payDay: string;
   includeHolidayPay: boolean;
   includeBreakTime: boolean;
   breakMinutes: number;
   probation: boolean;
-  probationRate: string;
+  probationRate: string;   // "90%"
   probationStart: string;
   probationEnd: string;
   workSchedule: WorkScheduleEntry[];
+
+  // 세금
   incomeTax: TaxItem[];
   socialInsurance: TaxItem[];
+
+  // 인적 사항
   phone: string;
   bank: string;
   accountNumber: string;
+
+  // 메모
   memo: string;
+
+  // 계약서
   resume: string;
   laborContract: string;
   healthCert: string;
+
+  // 근무 상태
   workStatus: string;
-  isNew?: boolean;
+  isNew?: boolean;  // 가입 요청 수락 후 계약정보 미등록 상태
 }
 
-const DEFAULT_TAX: StaffData["incomeTax"] = [
-  { key: "income", label: "소득세", value: "3", active: true },
-  { key: "local", label: "지방소득세", value: "0.3", active: true },
+// ── 초기 데이터 ──────────────────────────────────────────
+const initialData: StaffData[] = [
+  {
+    id: "1", name: "정수민", avatarColor: "#1ABC9C",
+    employmentType: "정규직", gender: "여", age: 24,
+    birthDate: "2001.02.03", birthAge: 24,
+    hireDate: "2025.02.12", hireDaysAgo: 261,
+    salaryType: "시급", salaryAmount: "11,000",
+    isAnnualSalary: false, annualSalary: "",
+    payCycle: "월 1회 (월급)", payDay: "15일", includeHolidayPay: true, includeBreakTime: false, breakMinutes: 30,
+    probation: false, probationRate: "90%", probationStart: "", probationEnd: "",
+    workSchedule: [
+      { day: "월", time: "08:00 ~ 16:00", shifts: ["오픈", "미들"] },
+      { day: "화", time: "08:00 ~ 22:00", shifts: ["오픈", "미들", "마감"] },
+      { day: "수", time: "08:00 ~ 16:00", shifts: ["오픈", "미들"] },
+      { day: "목", time: "08:00 ~ 16:00", shifts: ["오픈", "미들"] },
+    ],
+    incomeTax: [
+      { key: "income", label: "소득세", value: "3", active: true },
+      { key: "local", label: "지방소득세", value: "0.3", active: true },
+    ],
+    socialInsurance: [
+      { key: "national", label: "국민연금", value: "4.75", active: true },
+      { key: "health", label: "건강보험", value: "3.595", active: true },
+      { key: "longterm", label: "장기요양보험", value: "4.75", active: true },
+      { key: "employment", label: "고용보험", value: "1.8", active: true },
+      { key: "industrial", label: "산재보험", value: "1.47", active: true },
+    ],
+    phone: "010-5050-5050", bank: "신한은행", accountNumber: "3333-33-333333",
+    memo: "하나둘 셋넷 2시 근무가 어렵고 옴\n추가 근무는 어려운 상황",
+    resume: "정수민_이력서.png", laborContract: "정수민_근로계약서.png", healthCert: "정수민_보건증.png",
+    workStatus: "재직",
+  },
+  {
+    id: "2", name: "문자영", avatarColor: "#C0392B",
+    employmentType: "알바생", gender: "여", age: 22,
+    birthDate: "2001.02.03", birthAge: 24,
+    hireDate: "2025.02.12", hireDaysAgo: 261,
+    salaryType: "시급", salaryAmount: "11,000",
+    isAnnualSalary: false, annualSalary: "",
+    payCycle: "월 1회 (월급)", payDay: "1, 15일", includeHolidayPay: true, includeBreakTime: false, breakMinutes: 30,
+    probation: true, probationRate: "90%", probationStart: "2025.02.12", probationEnd: "2025.05.12",
+    workSchedule: [
+      { day: "월", time: "08:00 ~ 16:00", shifts: ["오픈", "미들"] },
+      { day: "화", time: "08:00 ~ 22:00", shifts: ["오픈", "마감"] },
+      { day: "수", time: "08:00 ~ 16:00", shifts: ["오픈", "미들"] },
+    ],
+    incomeTax: [
+      { key: "income", label: "소득세", value: "3", active: true },
+      { key: "local", label: "지방소득세", value: "0.3", active: true },
+    ],
+    socialInsurance: [
+      { key: "national", label: "국민연금", value: "4.75", active: false },
+      { key: "health", label: "건강보험", value: "3.595", active: false },
+      { key: "longterm", label: "장기요양보험", value: "4.75", active: false },
+      { key: "employment", label: "고용보험", value: "1.8", active: false },
+      { key: "industrial", label: "산재보험", value: "1.47", active: false },
+    ],
+    phone: "010-5050-5050", bank: "신한은행", accountNumber: "3333-33-333333",
+    memo: "하나둘 셋넷 2시 근무가 어렵고 옴\n추가 근무는 어려운 상황",
+    resume: "문자영_이력서.png", laborContract: "문자영_근로계약서.png", healthCert: "문자영_보건증.png",
+    workStatus: "재직",
+  },
+  {
+    id: "3", name: "가나디", avatarColor: "#5C4033",
+    employmentType: "알바생", gender: "남", age: 24,
+    birthDate: "2001.02.03", birthAge: 24,
+    hireDate: "2025.10.12", hireDaysAgo: 31,
+    salaryType: "시급", salaryAmount: "12,000",
+    isAnnualSalary: false, annualSalary: "",
+    payCycle: "월 1회 (월급)", payDay: "15일", includeHolidayPay: true, includeBreakTime: false, breakMinutes: 30,
+    probation: false, probationRate: "90%", probationStart: "", probationEnd: "",
+    workSchedule: [
+      { day: "화", time: "08:00 ~ 16:00", shifts: ["오픈"] },
+      { day: "수", time: "08:00 ~ 16:00", shifts: ["오픈"] },
+    ],
+    incomeTax: [
+      { key: "income", label: "소득세", value: "3", active: true },
+      { key: "local", label: "지방소득세", value: "0.3", active: true },
+    ],
+    socialInsurance: [
+      { key: "national", label: "국민연금", value: "4.75", active: false },
+      { key: "health", label: "건강보험", value: "3.595", active: false },
+      { key: "longterm", label: "장기요양보험", value: "4.75", active: false },
+      { key: "employment", label: "고용보험", value: "1.8", active: false },
+      { key: "industrial", label: "산재보험", value: "1.47", active: false },
+    ],
+    phone: "010-5050-5050", bank: "신한은행", accountNumber: "3333-33-333333",
+    memo: "가나디 귀여워",
+    resume: "가나디_이력서.png", laborContract: "가나디_근로계약서.png", healthCert: "가나디_보건증.png",
+    workStatus: "재직",
+  },
+  {
+    id: "4", name: "최지혁", avatarColor: "#FF9800",
+    employmentType: "알바생", gender: "남", age: 24,
+    birthDate: "2001.02.03", birthAge: 24,
+    hireDate: "2025.09.12", hireDaysAgo: 61,
+    salaryType: "시급", salaryAmount: "10,320",
+    isAnnualSalary: false, annualSalary: "",
+    payCycle: "월 1회 (월급)", payDay: "15일", includeHolidayPay: true, includeBreakTime: false, breakMinutes: 30,
+    probation: false, probationRate: "90%", probationStart: "", probationEnd: "",
+    workSchedule: [
+      { day: "목", time: "08:00 ~ 16:00", shifts: ["미들"] },
+    ],
+    incomeTax: [
+      { key: "income", label: "소득세", value: "3", active: true },
+      { key: "local", label: "지방소득세", value: "0.3", active: true },
+    ],
+    socialInsurance: [
+      { key: "national", label: "국민연금", value: "4.75", active: false },
+      { key: "health", label: "건강보험", value: "3.595", active: false },
+      { key: "longterm", label: "장기요양보험", value: "4.75", active: false },
+      { key: "employment", label: "고용보험", value: "1.8", active: false },
+      { key: "industrial", label: "산재보험", value: "1.47", active: false },
+    ],
+    phone: "010-5050-5050", bank: "신한은행", accountNumber: "3333-33-333333",
+    memo: "가나디 귀여워",
+    resume: "", laborContract: "", healthCert: "",
+    workStatus: "재직",
+  },
+  {
+    id: "5", name: "이클립스", avatarColor: "#8E44AD",
+    employmentType: "정규직", gender: "남", age: 24,
+    birthDate: "2001.02.03", birthAge: 24,
+    hireDate: "2025.09.12", hireDaysAgo: 61,
+    salaryType: "월급 (연봉 포함)", salaryAmount: "1,280,000",
+    isAnnualSalary: false, annualSalary: "",
+    payCycle: "월 1회 (월급)", payDay: "15일", includeHolidayPay: true, includeBreakTime: false, breakMinutes: 30,
+    probation: false, probationRate: "90%", probationStart: "", probationEnd: "",
+    workSchedule: [
+      { day: "목", time: "08:00 ~ 16:00", shifts: ["미들", "마감"] },
+      { day: "금", time: "08:00 ~ 16:00", shifts: ["미들", "마감"] },
+    ],
+    incomeTax: [
+      { key: "income", label: "소득세", value: "3", active: true },
+      { key: "local", label: "지방소득세", value: "0.3", active: true },
+    ],
+    socialInsurance: [
+      { key: "national", label: "국민연금", value: "4.75", active: true },
+      { key: "health", label: "건강보험", value: "3.595", active: true },
+      { key: "longterm", label: "장기요양보험", value: "4.75", active: true },
+      { key: "employment", label: "고용보험", value: "1.8", active: true },
+      { key: "industrial", label: "산재보험", value: "1.47", active: true },
+    ],
+    phone: "010-5050-5050", bank: "신한은행", accountNumber: "3333-33-333333",
+    memo: "가나디 귀여워",
+    resume: "이클립스_이력서.png", laborContract: "이클립스_근로계약서.png", healthCert: "이클립스_보건증.png",
+    workStatus: "재직",
+  }
+  ,{
+    id: "ghost_1", name: "박서연", avatarColor: "#B0B8C1",
+    employmentType: "알바생", gender: "여", age: 23,
+    birthDate: "2002.05.14", birthAge: 23,
+    hireDate: "2024.11.01", hireDaysAgo: 540,
+    salaryType: "시급", salaryAmount: "10,030",
+    isAnnualSalary: false, annualSalary: "",
+    payCycle: "월 1회 (월급)", payDay: "15일", includeHolidayPay: false, includeBreakTime: false, breakMinutes: 0,
+    probation: false, probationRate: "", probationStart: "", probationEnd: "",
+    workSchedule: [
+      { day: "화", time: "10:00 ~ 16:00", shifts: ["미들"] as ShiftType[] },
+      { day: "목", time: "10:00 ~ 16:00", shifts: ["미들"] as ShiftType[] },
+    ],
+    incomeTax: [
+      { key: "income", label: "소득세", value: "3", active: false },
+      { key: "local", label: "지방소득세", value: "0.3", active: false },
+    ],
+    socialInsurance: [
+      { key: "national", label: "국민연금", value: "4.75", active: false },
+      { key: "health", label: "건강보험", value: "3.595", active: false },
+      { key: "longterm", label: "장기요양보험", value: "4.75", active: false },
+      { key: "employment", label: "고용보험", value: "1.8", active: false },
+      { key: "industrial", label: "산재보험", value: "1.47", active: false },
+    ],
+    phone: "010-2233-4455", bank: "카카오뱅크", accountNumber: "3333-12-3456789",
+    memo: "",
+    resume: "", laborContract: "박서연_근로계약서.png", healthCert: "",
+    workStatus: "앱탈퇴",
+  }
 ];
-const DEFAULT_INSURANCE: StaffData["socialInsurance"] = [
-  { key: "national", label: "국민연금", value: "4.75", active: false },
-  { key: "health", label: "건강보험", value: "3.595", active: false },
-  { key: "longterm", label: "장기요양보험", value: "4.75", active: false },
-  { key: "employment", label: "고용보험", value: "1.8", active: false },
-  { key: "industrial", label: "산재보험", value: "1.47", active: false },
-];
-const AVATAR_COLORS = ["#5C4033","#C0392B","#1ABC9C","#2C3E50","#8E44AD","#E67E22","#4261FF","#E74C3C","#27AE60","#F39C12"];
 
-function applyTaxFromApi(defaults: TaxItem[], keyMap: Record<string, number | null>): TaxItem[] {
-  return defaults.map(item => {
-    const val = keyMap[item.key];
-    if (val !== null && val !== undefined) {
-      return { ...item, value: String(val), active: true };
-    }
-    return item;
-  });
-}
-
-function apiToStaffData(s: any): StaffData {
-  const birth = s.birth ? s.birth.replace(/-/g, ".") : "";
-  const hired = s.joined_at ? s.joined_at.slice(0, 10).replace(/-/g, ".") : "";
-  const hireDaysAgo = hired ? Math.floor((Date.now() - new Date(s.joined_at).getTime()) / 86400000) : 0;
-  const c = s.contract ?? {};
-
-  const salaryType = c.hourly_rate ? "시급" : c.monthly_salary ? "월급 (연봉 포함)" : "";
-  const salaryAmount = c.hourly_rate
-    ? c.hourly_rate.toLocaleString()
-    : c.monthly_salary
-    ? c.monthly_salary.toLocaleString()
-    : "";
-
-  const incomeTax = applyTaxFromApi(DEFAULT_TAX, {
-    income: c.income_tax ?? null,
-    local: c.local_income_tax ?? null,
-  });
-  const socialInsurance = applyTaxFromApi(DEFAULT_INSURANCE, {
-    national: c.national_pension ?? null,
-    health: c.health_insurance ?? null,
-    longterm: c.long_term_care ?? null,
-    employment: c.employment_insurance ?? null,
-    industrial: c.industrial_accident ?? null,
-  });
-
-  return {
-    id: String(s.id),
-    name: s.name ?? "",
-    avatarColor: AVATAR_COLORS[s.id % AVATAR_COLORS.length],
-    employmentType: c.employee_type === "정직원" ? "정규직" : "알바생",
-    gender: s.gender === "female" ? "여" : "남",
-    age: birth ? new Date().getFullYear() - parseInt(birth.slice(0, 4)) : 0,
-    birthDate: birth,
-    birthAge: birth ? new Date().getFullYear() - parseInt(birth.slice(0, 4)) : 0,
-    hireDate: hired,
-    hireDaysAgo,
-    salaryType,
-    salaryAmount,
-    isAnnualSalary: false,
-    annualSalary: "",
-    payCycle: c.salary_cycle ?? "월 1회 (월급)",
-    payDay: c.salary_day ?? "15일",
-    includeHolidayPay: true,
-    includeBreakTime: false,
-    breakMinutes: 30,
-    probation: c.is_probation ?? false,
-    probationRate: "90%",
-    probationStart: "",
-    probationEnd: "",
-    workSchedule: [],
-    incomeTax,
-    socialInsurance,
-    phone: s.phone ?? "",
-    bank: s.bank ?? "",
-    accountNumber: s.account_number ?? "",
-    memo: c.memo ?? "",
-    resume: c.resume ?? "",
-    laborContract: c.employment_contract ?? "",
-    healthCert: c.health_certificate ?? "",
-    workStatus: c.working_status ?? "재직",
-  };
-}
-
-let _store: StaffData[] = [];
-let _loaded = false;
+// ── 모듈 스코프 스토어 ────────────────────────────────────
+let _store: StaffData[] = initialData.map(d => ({ ...d }));
 const _listeners: Set<() => void> = new Set();
 
 export const staffStore = {
   getAll(): StaffData[] {
+    // 퇴사 직원 제외, 신규 > 미등록 > 일반 > 앱탈퇴 순
     const active = _store.filter(s => s.workStatus !== "퇴사");
     const newStaff = active.filter(s => s.isNew);
     const empty = active.filter(s => !s.hireDate && !s.isNew && s.workStatus !== "앱탈퇴");
@@ -166,46 +278,27 @@ export const staffStore = {
     _listeners.add(fn);
     return () => _listeners.delete(fn);
   },
-  async loadFromApi(storeId: number): Promise<void> {
-    if (_loaded) return;
-    try {
-      const res = await fetch(`/api/owner/store/${storeId}/staffs`, { credentials: 'include' });
-      if (!res.ok) return;
-      const data = await res.json();
-      _store = data.map(apiToStaffData);
-      _loaded = true;
-      _listeners.forEach(fn => fn());
-    } catch {
-      // silently fail — store stays empty
-    }
-  },
-  reset(): void {
-    _loaded = false;
-    _store = [];
+  init(data: StaffData[]): void {
+    _store = data.map(d => ({ ...d }));
     _listeners.forEach(fn => fn());
   },
-  async saveToApi(staffId: string, storeId: number, patch: Record<string, any>): Promise<boolean> {
-    try {
-      const res = await fetch(`/api/owner/store/${storeId}/staff/${staffId}/contract`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(patch),
-      });
-      if (res.ok) _loaded = false; // 다음 loadFromApi 호출 시 최신 데이터 반영
-      return res.ok;
-    } catch {
-      return false;
-    }
+  isInitialized(): boolean {
+    return _store !== initialData.map(d => ({ ...d }));
   },
 };
 
+// ── 헬퍼: StaffData → StaffManagement 카드용 파생값 ────────
 export function deriveListFields(s: StaffData) {
+  // 근무일 문자열
   const workDays = s.workSchedule.map(w => w.day).join(", ");
+
+  // 시프트 목록 (중복 제거, 순서 유지)
   const shiftOrder: ShiftType[] = ["오픈", "미들", "마감"];
   const shifts = shiftOrder.filter(sh =>
     s.workSchedule.some(w => w.shifts.includes(sh))
   );
+
+  // 급여 표시 문자열
   let salary = "";
   if (s.isAnnualSalary && s.annualSalary) {
     salary = `연봉  ${Number(s.annualSalary.replace(/,/g, "")).toLocaleString()}원`;
@@ -214,5 +307,6 @@ export function deriveListFields(s: StaffData) {
   } else {
     salary = `${s.salaryType}  ${Number(s.salaryAmount.replace(/,/g, "")).toLocaleString()}원`;
   }
+
   return { workDays, shifts, salary };
 }

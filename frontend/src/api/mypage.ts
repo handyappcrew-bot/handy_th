@@ -7,15 +7,14 @@ export async function changeInfo(
     accountNumber: string,
     profileImage: string | null,
     originalImageUrl: string | null,
-    documents: { resume: File | null; employment_contract: File | null; health_certificate: File | null },
-    storeId?: number,
+    documents: { resume: File | null; employment_contract: File | null; health_certificate: File | null }
 ) {
     const formData = new FormData();
     formData.append("name", name);
     formData.append("bank", bank);
     formData.append("account_number", accountNumber);
-    const id = storeId ?? Number(localStorage.getItem("currentStoreId") ?? 0);
-    if (id > 0) formData.append("store_id", String(id));
+    const storeId = localStorage.getItem("currentStoreId");
+    if (storeId) formData.append("store_id", storeId);
 
     if (profileImage && profileImage.startsWith("data:")) {
         const [meta, base64] = profileImage.split(",");
@@ -33,8 +32,8 @@ export async function changeInfo(
 
     const response = await fetch(`${BASE_URL}/api/employee/mypage/edit`, {
         method: "POST",
-        body: formData,
         credentials: 'include',
+        body: formData,
     });
 
     if (!response.ok) {
@@ -43,6 +42,22 @@ export async function changeInfo(
         throw new Error(errorData.detail || "서버 오류가 발생했어요. 다시 시도해주세요.");
     }
 
+    return response.json();
+}
+
+
+// 프로필 이미지 삭제
+export async function deleteEmployeeProfileImage() {
+    const storeId = localStorage.getItem("currentStoreId");
+    const params = storeId ? `?store_id=${storeId}` : '';
+    const response = await fetch(`${BASE_URL}/api/employee/mypage/profile-image${params}`, {
+        method: 'DELETE',
+        credentials: 'include',
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "이미지 삭제에 실패했어요.");
+    }
     return response.json();
 }
 
@@ -78,18 +93,4 @@ export async function changePassword(oldPassword: string, newPassword: string) {
         console.error("비밀번호 변경 API 에러:", err);
         throw err;
     }
-}
-
-export async function deleteEmployeeProfileImage(storeId?: number) {
-    const id = storeId ?? Number(localStorage.getItem("currentStoreId") ?? 0);
-    const params = id > 0 ? `?store_id=${id}` : '';
-    const response = await fetch(`${BASE_URL}/api/employee/mypage/profile-image${params}`, {
-        method: 'DELETE',
-        credentials: 'include',
-    });
-    if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data?.detail ?? "프로필 이미지 삭제에 실패했어요.");
-    }
-    return response.json();
 }

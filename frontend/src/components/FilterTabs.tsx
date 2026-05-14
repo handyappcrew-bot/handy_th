@@ -13,7 +13,7 @@ export const FilterTabs = ({ tabs, activeTab, onTabChange }: FilterTabsProps) =>
         <button
           key={tab.label}
           onClick={() => onTabChange(tab.label)}
-          className={cn(
+          className={cn("pressable", 
             'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
             activeTab === tab.label
               ? 'bg-foreground text-background'

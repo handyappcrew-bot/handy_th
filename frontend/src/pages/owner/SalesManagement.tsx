@@ -1,20 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 
 const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
+const MONTHLY_SALES: Record<number, { net: number; gross: number }> = {};
+for (let d = 1; d <= 21; d++) {
+  MONTHLY_SALES[d] = { net: 520000, gross: 698000 };
+}
+
+// 미확인 날짜 (실제로는 서버에서 받아올 데이터)
+const INITIAL_UNREAD_DAYS = [3, 7, 12, 15, 19];
+
 function getUnreadKey(year: number, month: number) {
   return `sales_unread_${year}_${month + 1}`;
 }
 
-function loadUnreadDays(year: number, month: number, fallbackDays: number[]): Set<number> {
+function loadUnreadDays(year: number, month: number): Set<number> {
   try {
     const raw = localStorage.getItem(getUnreadKey(year, month));
-    if (raw === null) return new Set(fallbackDays);
+    if (raw === null) return new Set(INITIAL_UNREAD_DAYS);
     return new Set(JSON.parse(raw) as number[]);
-  } catch { return new Set(fallbackDays); }
+  } catch { return new Set(INITIAL_UNREAD_DAYS); }
 }
 
 function saveUnreadDays(year: number, month: number, days: Set<number>) {
@@ -31,11 +39,10 @@ function formatSales(n: number) {
 
 export default function SalesManagement() {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date(2025, 9, 22));
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [monthlySales, setMonthlySales] = useState<Record<number, { net: number; gross: number }>>({});
-  const [unreadDays, setUnreadDays] = useState<Set<number>>(new Set());
-  const [lastReportedDay, setLastReportedDay] = useState<number>(0);
+  const [unreadDays, setUnreadDays] = useState<Set<number>>(() => loadUnreadDays(new Date(2025, 9, 22).getFullYear(), new Date(2025, 9, 22).getMonth()));
+  
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
 
   const year = currentDate.getFullYear();
@@ -44,35 +51,15 @@ export default function SalesManagement() {
 
   const today = new Date();
 
-  useEffect(() => {
-    const storeId = localStorage.getItem("currentStoreId");
-    if (!storeId) return;
-    fetch(`/api/owner/store/${storeId}/closing-reports?year=${year}&month=${month + 1}`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : [])
-      .then((data: any[]) => {
-        const salesMap: Record<number, { net: number; gross: number }> = {};
-        let maxDay = 0;
-        for (const r of data) {
-          const day = parseInt(r.report_date.split('-')[2], 10);
-          salesMap[day] = { net: r.net_sales ?? 0, gross: r.gross_sales ?? 0 };
-          if (day > maxDay) maxDay = day;
-        }
-        setMonthlySales(salesMap);
-        setLastReportedDay(maxDay);
-        const reportedDays = Object.keys(salesMap).map(Number);
-        setUnreadDays(loadUnreadDays(year, month, reportedDays));
-      }).catch(() => {});
-  }, [year, month]);
-
   const prevMonth = () => {
     const newDate = new Date(year, month - 1, 1);
     setCurrentDate(newDate);
-    setMonthlySales({});
+    setUnreadDays(loadUnreadDays(newDate.getFullYear(), newDate.getMonth()));
   };
   const nextMonth = () => {
     const newDate = new Date(year, month + 1, 1);
     setCurrentDate(newDate);
-    setMonthlySales({});
+    setUnreadDays(loadUnreadDays(newDate.getFullYear(), newDate.getMonth()));
   };
 
   const isToday = (d: number) =>
@@ -111,8 +98,8 @@ export default function SalesManagement() {
     navigate(`/owner/sales/daily?date=${dateParam}`);
   };
 
-  const totalNetSales = Object.values(monthlySales).reduce((sum, s) => sum + s.net, 0);
-  const totalGrossSales = Object.values(monthlySales).reduce((sum, s) => sum + s.gross, 0);
+  const totalNetSales = 7457391;
+  const totalGrossSales = 9320000;
 
   return (
     <div className="min-h-screen max-w-lg mx-auto" style={{ backgroundColor: '#FFFFFF' }}>
@@ -138,7 +125,7 @@ export default function SalesManagement() {
         {/* Summary card */}
         <div style={{ margin: '16px 20px 0', backgroundColor: '#F0F7FF', borderRadius: '16px', padding: '16px' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '17px', borderRadius: '4px', padding: '0 8px', backgroundColor: '#D3DAFF', fontSize: '12px', fontWeight: 500, letterSpacing: '-0.02em', color: '#7488FE' }}>
-            *{month + 1}/1 ~ {month + 1}/{lastReportedDay || today.getDate()} 기준 매출 현황
+            *{month + 1}/1 ~ {month + 1}/21 기준 매출 현황
           </span>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
             <p style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>{month + 1}월 순매출</p>
@@ -188,7 +175,7 @@ export default function SalesManagement() {
               <div key={wi} className="grid grid-cols-7 mb-1">
                 {week.map((cell, ci) => {
                   const isFuture = !cell.isOutside && new Date(year, month, cell.day) > today;
-                  const sales = !cell.isOutside && !isFuture ? monthlySales[cell.day] : null;
+                  const sales = !cell.isOutside && !isFuture ? MONTHLY_SALES[cell.day] : null;
                   const isTodayCell = isToday(cell.day) && !cell.isOutside;
                   const isSun = ci === 0; const isSat = ci === 6;
                   const dateColor = cell.isOutside ? '#AAB4BF' : isTodayCell ? '#FFFFFF' : isSun ? '#FF5959' : isSat ? '#5DB1FF' : '#70737B';
@@ -246,7 +233,7 @@ export default function SalesManagement() {
 
       {/* Month Picker */}
       {monthPickerOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setMonthPickerOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 touch-none sheet-overlay" onClick={() => setMonthPickerOpen(false)}>
           <div className="relative rounded-2xl p-5 w-[320px] shadow-lg" style={{ backgroundColor: '#FFFFFF' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <button onClick={() => setPickerYear(pickerYear - 1)} className="pressable p-1"><ChevronLeft className="w-5 h-5 text-foreground" /></button>
@@ -257,7 +244,7 @@ export default function SalesManagement() {
               {Array.from({ length: 12 }, (_, i) => {
                 const isSelected = pickerYear === year && i === month;
                 return (
-                  <button key={i} onClick={() => { setCurrentDate(new Date(pickerYear, i, 1)); setMonthlySales({}); setMonthPickerOpen(false); }} className="pressable py-2.5 rounded-xl text-[14px] font-medium"
+                  <button key={i} onClick={() => { const nd = new Date(pickerYear, i, 1); setCurrentDate(nd); setUnreadDays(loadUnreadDays(pickerYear, i)); setMonthPickerOpen(false); }} className="pressable py-2.5 rounded-xl text-[14px] font-medium"
                     style={{ backgroundColor: isSelected ? '#4261FF' : '#F7F7F8', color: isSelected ? '#FFFFFF' : '#19191B' }}>
                     {i + 1}월
                   </button>

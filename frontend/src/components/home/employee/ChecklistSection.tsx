@@ -28,6 +28,7 @@ const ChecklistSection = ({ userName, storeId }: ChecklistSectionProps) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ "store_id": storeId, id })
       });
 
@@ -55,6 +56,7 @@ const ChecklistSection = ({ userName, storeId }: ChecklistSectionProps) => {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({ "store_id": storeId, "employee_id": employeeId })
         });
 

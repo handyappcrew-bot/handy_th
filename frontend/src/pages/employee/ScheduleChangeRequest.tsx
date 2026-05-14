@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown, X, Calendar as CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getMySchedule, postScheduleChange } from "@/api/schedule";
+import { MY_SCHEDULE, HOLIDAY_DAYS, VACATION_DAYS } from "@/lib/scheduleData";
 
 const DAYS_KR = ["일", "월", "화", "수", "목", "금", "토"];
 const typeLabels: Record<string, string> = { open: "오픈", middle: "미들", close: "마감" };
@@ -72,15 +72,6 @@ const ScheduleChangeRequest = () => {
   const [clockInPickerOpen, setClockInPickerOpen] = useState(false);
   const [clockOutPickerOpen, setClockOutPickerOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [mySchedule, setMySchedule] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
-    if (!storeId) return;
-    getMySchedule(storeId, currentYear, currentMonth + 1)
-      .then(data => setMySchedule(data))
-      .catch(() => {});
-  }, [currentYear, currentMonth]);
 
   const today = new Date();
   const isToday = (year: number, month: number, date: number) =>
@@ -117,30 +108,36 @@ const ScheduleChangeRequest = () => {
     }
   };
 
-  const selectedScheduleEntry = selectedScheduleDate ? mySchedule[selectedScheduleDate] : null;
+  const selectedSchedule = selectedScheduleDate ? MY_SCHEDULE[selectedScheduleDate] : null;
   const isFormValid = changeDate && clockIn && clockOut;
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     setConfirmDialogOpen(false);
-    const storeId = Number(localStorage.getItem("currentStoreId") ?? 0);
-    if (!storeId || !changeDate) return;
-    try {
-      await postScheduleChange({
-        store_id: storeId,
-        type: "schedule_change",
-        origin_date: selectedScheduleDate ?? undefined,
-        origin_start: selectedScheduleEntry?.work_start ?? undefined,
-        origin_end: selectedScheduleEntry?.work_end ?? undefined,
-        desired_date: changeDate,
-        desired_start: clockIn ?? undefined,
-        desired_end: clockOut ?? undefined,
-        reason: reason || undefined,
-      });
-      toast({ description: "일정 변경 요청이 완료 되었어요.", duration: 2000 });
-      navigate("/employee/schedule");
-    } catch {
-      toast({ description: "요청 중 오류가 발생했어요.", duration: 2000, variant: "destructive" });
-    }
+    toast({ description: "일정 변경 요청이 완료 되었어요.", duration: 2000 });
+    const fmtKey = (key: string | null) => {
+      if (!key) return "";
+      const parts = key.split("-").map(Number);
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      return `${parts[0]}년 ${parts[1]}월 ${parts[2]}일 (${DAYS_KR[d.getDay()]})`;
+    };
+    navigate("/schedule", { state: { newScheduleRequest: {
+      id: String(Date.now()),
+      requestStatus: "대기중" as const,
+      requestType: "일정 변경 요청" as const,
+      requestedAt: Date.now(),
+      date: fmtKey(selectedScheduleDate),
+      original: {
+        date: fmtKey(selectedScheduleDate),
+        startTime: selectedSchedule?.start,
+        endTime: selectedSchedule?.end,
+      },
+      desired: {
+        date: fmtKey(changeDate),
+        startTime: clockIn ?? undefined,
+        endTime: clockOut ?? undefined,
+      },
+      reason,
+    }}});
   };
 
   const handleBack = () => {
@@ -159,12 +156,12 @@ const ScheduleChangeRequest = () => {
   ) => (
     <>
       <div className="flex items-center justify-between px-5 py-4">
-        <button onClick={() => prevMonth(showSchedule ? "main" : "change")} className="p-1"><ChevronLeft className="h-5 w-5 text-foreground" /></button>
-        <button className="flex items-center gap-1">
+        <button onClick={() => prevMonth(showSchedule ? "main" : "change")} className="pressable p-1"><ChevronLeft className="h-5 w-5 text-foreground" /></button>
+        <button className="pressable flex items-center gap-1">
           <span className="text-[17px] font-bold text-foreground">{yearVal}년 {monthVal + 1}월</span>
           <ChevronDown className="h-4 w-4 text-foreground" />
         </button>
-        <button onClick={() => nextMonth(showSchedule ? "main" : "change")} className="p-1"><ChevronRight className="h-5 w-5 text-foreground" /></button>
+        <button onClick={() => nextMonth(showSchedule ? "main" : "change")} className="pressable p-1"><ChevronRight className="h-5 w-5 text-foreground" /></button>
       </div>
       <div className="grid grid-cols-7 px-3">
         {DAYS_KR.map((day, i) => (
@@ -176,10 +173,9 @@ const ScheduleChangeRequest = () => {
           <div key={wi} className="grid grid-cols-7 mb-1">
             {week.map((d, di) => {
               const key = getDateKey(d.year, d.month, d.date);
-              const schedEntry = !d.isOutside && showSchedule ? mySchedule[key] : null;
-              const schedule = schedEntry && !schedEntry.is_holiday ? { start: schedEntry.work_start, end: schedEntry.work_end, type: (schedEntry.shift_name === "오픈" ? "open" : schedEntry.shift_name === "미들" ? "middle" : "close") as "open" | "middle" | "close" } : null;
-              const isVacation = false;
-              const isHoliday = !d.isOutside && showSchedule && !!mySchedule[key]?.is_holiday;
+              const schedule = !d.isOutside && showSchedule ? MY_SCHEDULE[key] : null;
+              const isVacation = !d.isOutside && showSchedule && VACATION_DAYS.includes(key);
+              const isHoliday = !d.isOutside && showSchedule && HOLIDAY_DAYS.includes(key);
               const isTodayDate = !d.isOutside && isToday(d.year, d.month, d.date);
               const isSelected = !d.isOutside && key === selectedKey;
               const isSun = di === 0;
@@ -223,7 +219,7 @@ const ScheduleChangeRequest = () => {
   return (
     <div className="mx-auto min-h-screen max-w-lg bg-white flex flex-col">
       <div className="flex items-center gap-2 px-2 pt-4 pb-2 sticky top-0 z-10" style={{ backgroundColor: '#FFFFFF' }}>
-        <button onClick={handleBack} className="p-1"><ChevronLeft className="h-6 w-6 text-foreground" /></button>
+        <button onClick={handleBack} className="pressable p-1"><ChevronLeft className="h-6 w-6 text-foreground" /></button>
         <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: '#19191B' }}>일정 변경 요청</h1>
       </div>
       <div className="border-b border-border" />
@@ -234,9 +230,9 @@ const ScheduleChangeRequest = () => {
             <h2 className="text-[22px] font-bold text-foreground leading-tight">변경을 요청할</h2>
             <h2 className="text-[22px] font-bold text-foreground leading-tight">일정을 선택해 주세요</h2>
           </div>
-          {renderCalendar(weeks, currentYear, currentMonth, selectedScheduleDate, (key) => { if (mySchedule[key] && !mySchedule[key].is_holiday) setSelectedScheduleDate(key); }, true)}
+          {renderCalendar(weeks, currentYear, currentMonth, selectedScheduleDate, (key) => { if (MY_SCHEDULE[key]) setSelectedScheduleDate(key); }, true)}
           <div className="mt-auto px-5 pb-8 pt-4">
-            <button disabled={!selectedScheduleDate} onClick={() => setStep("form")} className="w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: selectedScheduleDate ? '#4261FF' : '#E5E7EB', color: selectedScheduleDate ? '#FFFFFF' : '#9CA3AF' }}>다음</button>
+            <button disabled={!selectedScheduleDate} onClick={() => setStep("form")} className="w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: selectedScheduleDate ? '#4261FF' : '#DBDCDF', color: selectedScheduleDate ? '#FFFFFF' : '#FFFFFF' }}>다음</button>
           </div>
         </div>
       )}
@@ -249,44 +245,44 @@ const ScheduleChangeRequest = () => {
           </div>
           <div className="px-5 pt-4">
             <p style={{ fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#93989E', marginBottom: '8px' }}>선택한 일정</p>
-            {selectedScheduleDate && selectedScheduleEntry && (
+            {selectedScheduleDate && selectedSchedule && (
               <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ backgroundColor: '#F0F7FF' }}>
-                <span className="rounded-full px-3 py-1 text-[13px] font-medium" style={{ backgroundColor: typeStyle[selectedScheduleEntry.shift_name === "오픈" ? "open" : selectedScheduleEntry.shift_name === "미들" ? "middle" : "close"].bg, color: typeStyle[selectedScheduleEntry.shift_name === "오픈" ? "open" : selectedScheduleEntry.shift_name === "미들" ? "middle" : "close"].text }}>{selectedScheduleEntry.shift_name}</span>
+                <span className="rounded-full px-3 py-1 text-[13px] font-medium" style={{ backgroundColor: typeStyle[selectedSchedule.type].bg, color: typeStyle[selectedSchedule.type].text }}>{typeLabels[selectedSchedule.type]}</span>
                 <span className="text-[15px] text-foreground font-medium">{formatDateDisplay(selectedScheduleDate)}</span>
-                <span className="text-[15px] text-muted-foreground">{selectedScheduleEntry.work_start} - {selectedScheduleEntry.work_end}</span>
+                <span className="text-[15px] text-muted-foreground">{selectedSchedule.start} - {selectedSchedule.end}</span>
               </div>
             )}
           </div>
           <div className="h-px bg-border mx-5 my-5" />
           <div className="px-5">
             <p style={{ fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#93989E', marginBottom: '8px' }}>변경할 날짜 <span style={{ color: '#FF5959' }}>*</span></p>
-            <button onClick={() => setStep("select-change-date")} className="w-full flex items-center justify-between rounded-xl border border-input px-4 py-3.5">
+            <button onClick={() => setStep("select-change-date")} className="pressable w-full flex items-center justify-between rounded-xl border border-input px-4 py-3.5">
               <span className={`text-[15px] ${changeDate ? "text-foreground" : "text-muted-foreground"}`}>{changeDate ? formatDateDisplay(changeDate) : "날짜를 선택해 주세요"}</span>
               <CalendarIcon className="h-5 w-5 text-muted-foreground" />
             </button>
           </div>
           <div className="px-5 mt-4">
             <p style={{ fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#93989E', marginBottom: '8px' }}>출근 시간 <span style={{ color: '#FF5959' }}>*</span></p>
-            <button onClick={() => setClockInPickerOpen(true)} className="w-full flex items-center justify-between rounded-xl border border-input px-4 py-3.5">
+            <button onClick={() => setClockInPickerOpen(true)} className="pressable w-full flex items-center justify-between rounded-xl border border-input px-4 py-3.5">
               <span className={`text-[15px] ${clockIn ? "text-foreground" : "text-muted-foreground"}`}>{clockIn || "출근 시간 선택"}</span>
               <ChevronDown className="h-5 w-5 text-muted-foreground" />
             </button>
           </div>
           <div className="px-5 mt-4">
             <p style={{ fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#93989E', marginBottom: '8px' }}>퇴근 시간 <span style={{ color: '#FF5959' }}>*</span></p>
-            <button onClick={() => setClockOutPickerOpen(true)} className="w-full flex items-center justify-between rounded-xl border border-input px-4 py-3.5">
+            <button onClick={() => setClockOutPickerOpen(true)} className="pressable w-full flex items-center justify-between rounded-xl border border-input px-4 py-3.5">
               <span className={`text-[15px] ${clockOut ? "text-foreground" : "text-muted-foreground"}`}>{clockOut || "퇴근 시간 선택"}</span>
               <ChevronDown className="h-5 w-5 text-muted-foreground" />
             </button>
           </div>
           <div className="px-5 mt-4">
             <p style={{ fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#93989E', marginBottom: '8px' }}>변경 요청 사유</p>
-            <button onClick={() => { setReasonDraft(reason); setReasonSheetOpen(true); }} className="w-full flex items-center rounded-xl border border-input px-4 py-3.5">
+            <button onClick={() => { setReasonDraft(reason); setReasonSheetOpen(true); }} className="pressable w-full flex items-center rounded-xl border border-input px-4 py-3.5">
               <span className={`text-[15px] ${reason ? "text-foreground" : "text-muted-foreground"}`}>{reason || "변경 사유 입력"}</span>
             </button>
           </div>
           <div className="mt-auto px-5 pb-8 pt-4">
-            <button disabled={!isFormValid} onClick={() => setConfirmDialogOpen(true)} className="w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: isFormValid ? '#4261FF' : '#E5E7EB', color: isFormValid ? '#FFFFFF' : '#9CA3AF' }}>일정 변경 요청하기</button>
+            <button disabled={!isFormValid} onClick={() => setConfirmDialogOpen(true)} className="w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: isFormValid ? '#4261FF' : '#DBDCDF', color: isFormValid ? '#FFFFFF' : '#FFFFFF' }}>일정 변경 요청하기</button>
           </div>
         </div>
       )}
@@ -299,7 +295,7 @@ const ScheduleChangeRequest = () => {
           </div>
           {renderCalendar(changeDateWeeks, changeDateYear, changeDateMonth, changeDate, (key) => { setChangeDate(key); }, false)}
           <div className="mt-auto px-5 pb-8 pt-4">
-            <button disabled={!changeDate} onClick={() => setStep("form")} className="w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: changeDate ? '#4261FF' : '#E5E7EB', color: changeDate ? '#FFFFFF' : '#9CA3AF' }}>다음</button>
+            <button disabled={!changeDate} onClick={() => setStep("form")} className="w-full rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: changeDate ? '#4261FF' : '#DBDCDF', color: changeDate ? '#FFFFFF' : '#FFFFFF' }}>다음</button>
           </div>
         </div>
       )}
@@ -308,11 +304,11 @@ const ScheduleChangeRequest = () => {
         <SheetContent side="bottom" className="rounded-t-2xl px-6 pb-8 pt-6 border-0 bg-white [&>button]:hidden max-h-[50vh]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[18px] font-bold text-foreground">출근 시간 선택</h3>
-            <button onClick={() => setClockInPickerOpen(false)}><X className="h-6 w-6 text-foreground" /></button>
+            <button onClick={() => setClockInPickerOpen(false)}><X className="pressable h-6 w-6 text-foreground" /></button>
           </div>
           <div className="overflow-y-auto max-h-[30vh] space-y-1">
             {TIME_OPTIONS.map((t) => (
-              <button key={t} onClick={() => { setClockIn(t); setClockInPickerOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl text-[15px] ${clockIn === t ? "font-semibold text-white" : "text-foreground hover:bg-muted"}`} style={clockIn === t ? { backgroundColor: '#4261FF' } : {}}>{t}</button>
+              <button key={t} onClick={() => { setClockIn(t); setClockInPickerOpen(false); }} className={`pressable w-full text-left px-4 py-3 rounded-xl text-[15px] ${clockIn === t ? "font-semibold text-white" : "text-foreground hover:bg-muted"}`} style={clockIn === t ? { backgroundColor: '#4261FF' } : {}}>{t}</button>
             ))}
           </div>
         </SheetContent>
@@ -322,11 +318,11 @@ const ScheduleChangeRequest = () => {
         <SheetContent side="bottom" className="rounded-t-2xl px-6 pb-8 pt-6 border-0 bg-white [&>button]:hidden max-h-[50vh]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[18px] font-bold text-foreground">퇴근 시간 선택</h3>
-            <button onClick={() => setClockOutPickerOpen(false)}><X className="h-6 w-6 text-foreground" /></button>
+            <button onClick={() => setClockOutPickerOpen(false)}><X className="pressable h-6 w-6 text-foreground" /></button>
           </div>
           <div className="overflow-y-auto max-h-[30vh] space-y-1">
             {TIME_OPTIONS.map((t) => (
-              <button key={t} onClick={() => { setClockOut(t); setClockOutPickerOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl text-[15px] ${clockOut === t ? "font-semibold text-white" : "text-foreground hover:bg-muted"}`} style={clockOut === t ? { backgroundColor: '#4261FF' } : {}}>{t}</button>
+              <button key={t} onClick={() => { setClockOut(t); setClockOutPickerOpen(false); }} className={`pressable w-full text-left px-4 py-3 rounded-xl text-[15px] ${clockOut === t ? "font-semibold text-white" : "text-foreground hover:bg-muted"}`} style={clockOut === t ? { backgroundColor: '#4261FF' } : {}}>{t}</button>
             ))}
           </div>
         </SheetContent>
@@ -336,7 +332,7 @@ const ScheduleChangeRequest = () => {
         <SheetContent side="bottom" className="rounded-t-2xl px-6 pb-8 pt-6 border-0 bg-white [&>button]:hidden">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-[18px] font-bold text-foreground">변경 요청 사유 입력</h3>
-            <button onClick={() => setReasonSheetOpen(false)}><X className="h-6 w-6 text-foreground" /></button>
+            <button onClick={() => setReasonSheetOpen(false)}><X className="pressable h-6 w-6 text-foreground" /></button>
           </div>
           <div className="relative">
             <textarea value={reasonDraft} onChange={(e) => { if (e.target.value.length <= 50) setReasonDraft(e.target.value); }} placeholder="변경 사유를 입력해 주세요" className="w-full min-h-[180px] rounded-xl border border-input bg-white px-4 py-3 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none resize-none" maxLength={50} />
@@ -344,7 +340,7 @@ const ScheduleChangeRequest = () => {
           </div>
           <div className="flex mt-6" style={{ gap: '10px' }}>
             <button onClick={() => setReasonSheetOpen(false)} className="flex-1 rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: '#DEEBFF', color: '#4261FF' }}>취소</button>
-            <button disabled={!reasonDraft.trim()} onClick={() => { setReason(reasonDraft.trim()); setReasonSheetOpen(false); }} className="flex-1 rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: reasonDraft.trim() ? '#4261FF' : '#E5E7EB', color: reasonDraft.trim() ? '#FFFFFF' : '#9CA3AF' }}>입력하기</button>
+            <button disabled={!reasonDraft.trim()} onClick={() => { setReason(reasonDraft.trim()); setReasonSheetOpen(false); }} className="flex-1 rounded-2xl py-4 text-[16px] font-semibold" style={{ backgroundColor: reasonDraft.trim() ? '#4261FF' : '#DBDCDF', color: reasonDraft.trim() ? '#FFFFFF' : '#FFFFFF' }}>입력하기</button>
           </div>
         </SheetContent>
       </Sheet>
@@ -359,10 +355,10 @@ const ScheduleChangeRequest = () => {
             <DialogDescription style={{ fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#70737B', lineHeight: '24px', textAlign: 'center', padding: '12px 20px 0', margin: 0 }}>
               아래와 같이 일정을 변경하시겠어요?<br />사장님이 확인 후 일정이 변경돼요
             </DialogDescription>
-            {selectedScheduleDate && selectedScheduleEntry && (
+            {selectedScheduleDate && selectedSchedule && (
               <div className="flex items-center justify-center gap-2 px-5 pt-4">
                 <span style={{ fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#70737B', whiteSpace: 'nowrap' }}>선택한 일정</span>
-                <span style={{ fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#19191B' }}>{formatDateShort(selectedScheduleDate)} | {selectedScheduleEntry.work_start}-{selectedScheduleEntry.work_end}</span>
+                <span style={{ fontSize: '16px', fontWeight: 500, letterSpacing: '-0.02em', color: '#19191B' }}>{formatDateShort(selectedScheduleDate)} | {selectedSchedule.start}-{selectedSchedule.end}</span>
               </div>
             )}
             {changeDate && clockIn && clockOut && (
@@ -372,8 +368,8 @@ const ScheduleChangeRequest = () => {
               </div>
             )}
             <div style={{ display: 'flex', gap: '8px', padding: '0 16px 16px 16px', width: '100%' }}>
-              <button onClick={() => setConfirmDialogOpen(false)} style={{ flex: 1, height: '48px', backgroundColor: '#DBDCDF', color: '#70737B', borderRadius: '10px', fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer' }}>취소</button>
-              <button onClick={handleConfirm} style={{ flex: 1, height: '48px', backgroundColor: '#4261FF', color: '#FFFFFF', borderRadius: '10px', fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer' }}>확인</button>
+              <button className="pressable" onClick={() => setConfirmDialogOpen(false)} style={{ flex: 1, height: '48px', backgroundColor: '#DBDCDF', color: '#70737B', borderRadius: '10px', fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer' }}>취소</button>
+              <button className="pressable" onClick={handleConfirm} style={{ flex: 1, height: '48px', backgroundColor: '#4261FF', color: '#FFFFFF', borderRadius: '10px', fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer' }}>확인</button>
             </div>
           </div>
         </DialogContent>
