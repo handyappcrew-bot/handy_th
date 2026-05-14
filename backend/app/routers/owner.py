@@ -1464,14 +1464,8 @@ def get_member_requests(
 
 
 # ===== 직원 가입신청 승인/거절 =====
-@router.put("/store/{store_id}/member-requests/{req_id}", summary="직원 가입 요청 승인/거절 (사장용)", description="직원 가입 신청을 승인 또는 거절합니다. 요청: { status: 'approved'|'rejected' }")
-def handle_member_request(
-    store_id: int,
-    req_id: int,
-    body: dict,
-    current_member: Member = Depends(get_current_member_with_refresh),
-    db: Session = Depends(get_db),
-):
+def _process_member_request(store_id: int, req_id: int, new_status: str, current_member: Member, db: Session):
+    """가입 신청 승인/거절 공통 로직"""
     verify_owner(store_id, current_member.id, db)
 
     req = db.query(MemberRequest).filter(
@@ -1481,7 +1475,6 @@ def handle_member_request(
     if not req:
         raise HTTPException(status_code=404, detail="가입신청을 찾을 수 없습니다.")
 
-    new_status = body.get("status")
     if new_status not in ("approved", "rejected"):
         raise HTTPException(status_code=400, detail="status는 approved 또는 rejected만 가능합니다.")
 
@@ -1512,3 +1505,34 @@ def handle_member_request(
 
     db.commit()
     return {"ok": True}
+
+
+@router.put("/store/{store_id}/member-requests/{req_id}", summary="직원 가입 요청 승인/거절 (사장용) - 레거시", description="요청: { status: 'approved'|'rejected' }. 신규는 /accept, /reject 사용 권장.")
+def handle_member_request(
+    store_id: int,
+    req_id: int,
+    body: dict,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    return _process_member_request(store_id, req_id, body.get("status"), current_member, db)
+
+
+@router.post("/store/{store_id}/member-requests/{req_id}/accept", summary="직원 가입 요청 승인 (사장용)", description="가입 신청을 승인합니다. 승인 시 StoreMembers 레코드 + StaffContract 생성됩니다.")
+def accept_member_request(
+    store_id: int,
+    req_id: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    return _process_member_request(store_id, req_id, "approved", current_member, db)
+
+
+@router.post("/store/{store_id}/member-requests/{req_id}/reject", summary="직원 가입 요청 거절 (사장용)", description="가입 신청을 거절합니다.")
+def reject_member_request(
+    store_id: int,
+    req_id: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    return _process_member_request(store_id, req_id, "rejected", current_member, db)
