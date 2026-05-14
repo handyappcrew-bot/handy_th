@@ -50,36 +50,47 @@ def verify_owner(store_id: int, member_id: int, db: Session):
 # ===== 사업자등록번호 조회 =====
 @router.get("/business/{bno}",
     summary="사업자등록번호 검증",
-    description="""국세청 API로 사업자등록번호 유효성을 검증합니다. path: bno=사업자번호(10자리)
+    description="""국세청 API로 사업자등록번호 유효성을 검증하고, 동시에 매장 등록 가능 여부를 반환합니다. 로그인 필수.
 
-**중요**: `b_stt_cd === "01"` 인 경우만 정상 사업자.
+**`data[0].b_stt_cd`** (국세청 응답): `01`만 정상사업자
 - `01`: 계속사업자 (정상)
 - `02`: 휴업자
 - `03`: 폐업자
-- 빈 값: 국세청에 등록되지 않은 번호""",
+- 빈 값: 국세청 미등록
+
+**`registration_status`** (자체 추가 필드): 매장 등록 가능 여부
+- `none`: 등록 가능
+- `already_owner`: 본인이 이미 등록한 매장 → 등록 불가
+- `registered_by_other`: 다른 사장이 이미 등록한 매장 → 등록 불가""",
     responses={200: {"content": {"application/json": {"examples": {
-        "정상사업자": {"value": {
+        "정상_등록가능": {"value": {
             "request_cnt": 1, "match_cnt": 1, "status_code": "OK",
             "data": [{
-                "b_no": "1208147521",
-                "b_stt": "계속사업자",
-                "b_stt_cd": "01",
-                "tax_type": "부가가치세 일반과세자",
-                "tax_type_cd": "01"
-            }]
+                "b_no": "1208147521", "b_stt": "계속사업자", "b_stt_cd": "01",
+                "tax_type": "부가가치세 일반과세자", "tax_type_cd": "01"
+            }],
+            "registration_status": "none"
+        }},
+        "본인이_이미_등록": {"value": {
+            "request_cnt": 1, "match_cnt": 1, "status_code": "OK",
+            "data": [{"b_no": "1208147521", "b_stt": "계속사업자", "b_stt_cd": "01"}],
+            "registration_status": "already_owner"
         }},
         "미등록번호": {"value": {
             "request_cnt": 1, "status_code": "OK",
             "data": [{
-                "b_no": "0000000000",
-                "b_stt": "",
-                "b_stt_cd": "",
+                "b_no": "0000000000", "b_stt": "", "b_stt_cd": "",
                 "tax_type": "국세청에 등록되지 않은 사업자등록번호입니다."
-            }]
+            }],
+            "registration_status": "none"
         }}
     }}}}},
 )
-async def verify_business(bno: str):
+async def verify_business(
+    bno: str,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
     if not BUSINESS_KEY:
         raise HTTPException(status_code=500, detail="VITE_BUSINESS_API_KEY 환경변수가 설정되지 않았습니다.")
 
@@ -97,9 +108,25 @@ async def verify_business(bno: str):
     print(f"[business-verify] body={res.text[:500]}")
 
     try:
-        return res.json()
+        nts_data = res.json()
     except Exception:
         raise HTTPException(status_code=502, detail=f"국세청 API 응답 파싱 실패: {res.text[:200]}")
+
+    registration_status = "none"
+    existing_store = db.query(Store).filter(
+        Store.raw_digits == digits,
+        Store.is_deleted == False,
+    ).first()
+    if existing_store:
+        is_my_store = db.query(StoreMembers).filter(
+            StoreMembers.store_id == existing_store.id,
+            StoreMembers.member_id == current_member.id,
+            StoreMembers.role == "owner",
+            StoreMembers.is_deleted == False,
+        ).first()
+        registration_status = "already_owner" if is_my_store else "registered_by_other"
+
+    return {**nts_data, "registration_status": registration_status}
 
 
 # ===== 매장 등록 =====
@@ -124,6 +151,22 @@ async def add_store_request(
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    digits = "".join(ch for ch in raw_digits if ch.isdigit())
+    existing_store = db.query(Store).filter(
+        Store.raw_digits == digits,
+        Store.is_deleted == False,
+    ).first()
+    if existing_store:
+        is_my_store = db.query(StoreMembers).filter(
+            StoreMembers.store_id == existing_store.id,
+            StoreMembers.member_id == current_member.id,
+            StoreMembers.role == "owner",
+            StoreMembers.is_deleted == False,
+        ).first()
+        if is_my_store:
+            raise HTTPException(status_code=409, detail="이미 등록한 매장이에요.")
+        raise HTTPException(status_code=409, detail="이미 다른 사장님이 등록한 매장이에요.")
+
     ext = os.path.splitext(image.filename)[1]
     filename = f"{uuid.uuid4()}{ext}"
     content = await image.read()

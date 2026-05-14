@@ -70,20 +70,47 @@ async def save_file(file: UploadFile, upload_dir: str) -> str:
 # ======= 매장코드 조회 =======
 @router.post("/verify-code",
     summary="매장코드 확인",
-    description="매장 코드를 검색해 매장 정보를 반환합니다.",
+    description="""매장 코드를 검색해 매장 정보를 반환합니다. 로그인 필수.
+
+**membership_status 값**:
+- `active`: 이미 이 매장의 활성 멤버 (사장 또는 직원) → 재가입 불가
+- `pending`: 가입 신청을 보냈고 사장 승인 대기 중 → 중복 신청 불가
+- `none`: 가입 가능""",
     responses={200: {"content": {"application/json": {"example": {
         "id": 5,
         "name": "노량물산",
         "address": "서울 동작구 노량진로 100 2층",
         "phone": "02-1234-5678",
         "lat": 37.513,
-        "lng": 126.942
+        "lng": 126.942,
+        "membership_status": "none"
     }}}}},
 )
-async def verify_store_code(req: VerifyCode, db: Session = Depends(get_db)):
-    store = db.query(Store).filter(Store.code == req.code).first()
+async def verify_store_code(
+    req: VerifyCode,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    store = db.query(Store).filter(Store.code == req.code, Store.is_deleted == False).first()
     if not store:
         raise HTTPException(status_code=404, detail="조회되지 않는 매장 코드에요")
+
+    membership_status = "none"
+    active_membership = db.query(StoreMembers).filter(
+        StoreMembers.store_id == store.id,
+        StoreMembers.member_id == current_member.id,
+        StoreMembers.is_deleted == False,
+    ).first()
+    if active_membership:
+        membership_status = "active"
+    else:
+        pending_req = db.query(MemberRequest).filter(
+            MemberRequest.store_id == store.id,
+            MemberRequest.member_id == current_member.id,
+            MemberRequest.status == "pending",
+        ).first()
+        if pending_req:
+            membership_status = "pending"
 
     store_map = db.query(StoreMap).filter(StoreMap.store_id == store.id).first()
     full_address = " ".join(filter(None, [store.address, store.address_detail]))
@@ -102,16 +129,33 @@ async def verify_store_code(req: VerifyCode, db: Session = Depends(get_db)):
         "phone": format_phone_number(store.phone),
         "lat": float(store_map.lat),
         "lng": float(store_map.lng),
+        "membership_status": membership_status,
     }
 
 
 # ======= 가입신청 =======
-@router.post("/member/request", summary="매장 가입 신청", description="직원이 매장 코드로 가입을 신청합니다. 요청: { store_id, bank, account_name, account_number }")
+@router.post("/member/request", summary="매장 가입 신청", description="직원이 매장 코드로 가입을 신청합니다. 이미 가입된 매장이거나 pending 신청이 있으면 409 반환. 요청: { store_id, bank, account_name, account_number }")
 async def add_member_request(
     req: MemberRequestSchema,
     current_member: Member = Depends(get_current_member_with_refresh),
     db: Session = Depends(get_db),
 ):
+    active_membership = db.query(StoreMembers).filter(
+        StoreMembers.store_id == req.store_id,
+        StoreMembers.member_id == current_member.id,
+        StoreMembers.is_deleted == False,
+    ).first()
+    if active_membership:
+        raise HTTPException(status_code=409, detail="이미 가입된 매장이에요.")
+
+    pending_req = db.query(MemberRequest).filter(
+        MemberRequest.store_id == req.store_id,
+        MemberRequest.member_id == current_member.id,
+        MemberRequest.status == "pending",
+    ).first()
+    if pending_req:
+        raise HTTPException(status_code=409, detail="이미 가입 신청이 진행 중이에요.")
+
     try:
         db.add(MemberRequest(
             store_id=req.store_id,
