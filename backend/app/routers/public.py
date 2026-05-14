@@ -511,6 +511,32 @@ async def mark_notification_read(id: int, db: Session = Depends(get_db)):
     return {"success": True}
 
 
+@router.patch(
+    "/notification/read-all",
+    summary="알림 전체 읽음 처리",
+    description="해당 매장 내 본인 알림을 모두 읽음 상태로 변경합니다. query: store_id 필수.",
+    responses={200: {"content": {"application/json": {"example": {"success": True, "updated": 7}}}}},
+)
+async def mark_all_notifications_read(
+    store_id: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    sm = db.query(StoreMembers).filter(
+        and_(StoreMembers.store_id == store_id, StoreMembers.member_id == current_member.id)
+    ).first()
+    if not sm:
+        raise HTTPException(status_code=403, detail="해당 매장에 대한 접근 권한이 없습니다.")
+
+    updated = db.query(Notification).filter(
+        Notification.employee_id == sm.id,
+        Notification.store_id == store_id,
+        Notification.is_read == False,
+    ).update({"is_read": True})
+    db.commit()
+    return {"success": True, "updated": updated}
+
+
 # ===== 탈퇴 사유 =====
 @router.post("/withdrawal", summary="탈퇴 사유 저장", description="회원탈퇴 시 사유를 저장합니다. 요청: { member_id, reason }")
 async def save_withdrawal_reason(req: WithdrawalReq, db: Session = Depends(get_db)):
