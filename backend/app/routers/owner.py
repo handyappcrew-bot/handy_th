@@ -616,6 +616,39 @@ async def get_staff_detail(
 
 
 # ===== 직원 계약 수정 =====
+@router.patch(
+    "/store/{store_id}/staff/{staff_id}/memo",
+    summary="직원 메모 수정 (사장용)",
+    description="직원에 대한 사장 메모만 빠르게 수정합니다. 요청: { memo: string }",
+    responses={200: {"content": {"application/json": {"example": {"memo": "성실하고 책임감 강함"}}}}},
+)
+def update_staff_memo(
+    store_id: int,
+    staff_id: int,
+    body: dict,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    verify_owner(store_id, current_member.id, db)
+
+    staff = db.query(StoreMembers).filter(
+        StoreMembers.store_id == store_id,
+        StoreMembers.id == staff_id,
+    ).first()
+    if not staff:
+        raise HTTPException(status_code=404, detail="직원을 찾을 수 없습니다.")
+
+    contract = db.query(StaffContract).filter(StaffContract.store_member_id == staff.id).first()
+    if not contract:
+        contract = StaffContract(store_member_id=staff.id)
+        db.add(contract)
+        db.flush()
+
+    contract.memo = body.get("memo")
+    db.commit()
+    return {"memo": contract.memo}
+
+
 @router.put("/store/{store_id}/staff/{staff_id}/contract", summary="직원 계약정보 수정", description="직원의 계약 정보(시급, 월급, 고용형태, 급여일, 세금 등)를 수정합니다.")
 async def update_staff_contract(
     store_id: int, staff_id: int,
@@ -856,6 +889,114 @@ async def delete_store(
         raise HTTPException(status_code=404, detail="일치하는 매장 정보를 찾을 수 없습니다.")
     store.is_deleted = True
     db.commit()
+
+
+# ===== 매출 조회 (사장) =====
+@router.get(
+    "/store/{store_id}/sales/monthly",
+    summary="월간 매출 조회 (사장용)",
+    description="해당 월의 일별 매출(순매출/총매출)과 월 합계를 반환합니다. 마감보고 데이터를 집계합니다. query: year, month 필수.",
+    responses={200: {"content": {"application/json": {"example": {
+        "year": 2026, "month": 5,
+        "daily": {
+            "13": {"net": 405000, "gross": 420000},
+            "14": {"net": 380000, "gross": 395000}
+        },
+        "total_net": 785000,
+        "total_gross": 815000,
+        "report_count": 2
+    }}}}},
+)
+def get_monthly_sales(
+    store_id: int,
+    year: int,
+    month: int,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    verify_owner(store_id, current_member.id, db)
+    from sqlalchemy import extract
+
+    reports = db.query(DailyClosingReport).filter(
+        DailyClosingReport.store_id == store_id,
+        extract("year", DailyClosingReport.report_date) == year,
+        extract("month", DailyClosingReport.report_date) == month,
+    ).all()
+
+    daily = {}
+    total_net = 0
+    total_gross = 0
+    for r in reports:
+        gross = (r.card_sales or 0) + (r.cash_sales or 0) + (r.transfer_sales or 0) + (r.gift_sales or 0)
+        net = gross - (r.discount_amount or 0) - (r.refund_amount or 0)
+        daily[str(r.report_date.day)] = {"net": net, "gross": gross}
+        total_net += net
+        total_gross += gross
+
+    return {
+        "year": year, "month": month,
+        "daily": daily,
+        "total_net": total_net,
+        "total_gross": total_gross,
+        "report_count": len(reports),
+    }
+
+
+@router.get(
+    "/store/{store_id}/sales/daily",
+    summary="일별 매출 상세 조회 (사장용)",
+    description="특정 날짜의 매출 상세를 반환합니다. query: date(YYYY-MM-DD) 필수. 해당 일자에 마감보고가 없으면 404.",
+    responses={200: {"content": {"application/json": {"example": {
+        "date": "2026-05-13",
+        "card_sales": 200000, "cash_sales": 150000,
+        "transfer_sales": 50000, "gift_sales": 20000,
+        "gross_sales": 420000,
+        "discount_amount": 10000, "refund_amount": 5000,
+        "net_sales": 405000,
+        "cash_on_hand": 145000, "cash_shortage": 5000,
+        "receipt_image_url": None,
+        "manager_note": "이상 없음"
+    }}}}},
+)
+def get_daily_sales(
+    store_id: int,
+    date: str,
+    current_member: Member = Depends(get_current_member_with_refresh),
+    db: Session = Depends(get_db),
+):
+    verify_owner(store_id, current_member.id, db)
+    from datetime import date as date_cls
+
+    try:
+        target = date_cls.fromisoformat(date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date는 YYYY-MM-DD 형식이어야 합니다.")
+
+    r = db.query(DailyClosingReport).filter(
+        DailyClosingReport.store_id == store_id,
+        DailyClosingReport.report_date == target,
+    ).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="해당 날짜의 마감 보고가 없습니다.")
+
+    gross = (r.card_sales or 0) + (r.cash_sales or 0) + (r.transfer_sales or 0) + (r.gift_sales or 0)
+    net = gross - (r.discount_amount or 0) - (r.refund_amount or 0)
+
+    return {
+        "date": str(r.report_date),
+        "card_sales": r.card_sales,
+        "cash_sales": r.cash_sales,
+        "transfer_sales": r.transfer_sales,
+        "gift_sales": r.gift_sales,
+        "gross_sales": gross,
+        "discount_amount": r.discount_amount,
+        "refund_amount": r.refund_amount,
+        "net_sales": net,
+        "cash_on_hand": r.cash_on_hand,
+        "cash_shortage": (r.cash_sales or 0) - (r.cash_on_hand or 0),
+        "receipt_image_url": r.receipt_image_url,
+        "manager_note": r.manager_note,
+    }
 
 
 # ===== 마감 보고 조회 (사장) =====
